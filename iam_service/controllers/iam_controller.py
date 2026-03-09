@@ -1,41 +1,43 @@
-from flask import request, jsonify
+from flask import jsonify, request
+from iam_service.services.keycloak_service import introspect_token
 
-# base de dados fake
+# Base de dados fake para teste
 USERS = {
-    "1": {
-        "id": "1",
-        "name": "Alice",
-        "email": "alice@email.com"
-    }
+    "1": {"id": "1", "name": "Alice", "email": "alice@email.com"},
+    "2": {"id": "2", "name": "Bob", "email": "bob@email.com"},
 }
 
+def require_token(f):
+    """Decorator para proteger rotas usando Keycloak"""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"error": "Authorization header missing"}), 401
+        try:
+            #token = auth_header.split()[1]  # Bearer <token>
+            parts = auth_header.split()
+
+            if len(parts) != 2 or parts[0] != "Bearer":
+                return jsonify({"error": "Invalid Authorization header"}), 401
+
+            token = parts[1]
+        except IndexError:
+            return jsonify({"error": "Invalid Authorization header"}), 401
+
+        if not introspect_token(token):
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        return f(*args, **kwargs)
+    return decorated
 
 def register_routes(app):
-
-    VALID_TOKEN = "service-token-123"
-
-    @app.route("/v1/tokens", methods=["POST"])
-    def create_service_token():
-        # retorna token default
-        return jsonify({"service_token": VALID_TOKEN}), 201
-
-    @app.route("/v1/tokens", methods=["PATCH"])
-    def validate_token():
-        data = request.get_json()
-        token = data.get("token")
-
-        if token == VALID_TOKEN:
-            return jsonify({"valid": True}), 200
-
-        return jsonify({"valid": False}), 401
-
-
+    """Registra todas as rotas do IAM Service"""
     @app.route("/v1/users/<id>", methods=["GET"])
+    @require_token
     def get_user(id):
-
         user = USERS.get(id)
-
         if not user:
             return jsonify({"error": "user not found"}), 404
-
         return jsonify(user), 200

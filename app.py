@@ -1,24 +1,32 @@
 from flask import Flask, send_from_directory
-from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 from iam_service.controllers.iam_controller import register_routes
 import os
+
+"""
+docker pull quay.io/keycloak/keycloak:26.1
+
+docker run -d \
+  --name keycloak \
+  -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:26.1 start-dev
+
+docker ps   # para ver se está a correr
+"""
 
 app = Flask(__name__)
 CORS(app)
 
-# -------------------------------
-# Swagger UI - IAM Service
-# -------------------------------
+# Swagger UI
 SWAGGER_URL_IAM = "/iam/docs"
 API_URL_IAM = "/iam_service/static/openapi.yaml"
 swagger_iam = get_swaggerui_blueprint(SWAGGER_URL_IAM, API_URL_IAM)
 app.register_blueprint(swagger_iam, url_prefix=SWAGGER_URL_IAM)
 
-
-# -------------------------------
-# Static route - IAM Service
-# -------------------------------
+# Static files
 @app.route("/iam_service/static/<path:filename>")
 def iam_static(filename):
     return send_from_directory(
@@ -26,9 +34,7 @@ def iam_static(filename):
         filename
     )
 
-# -------------------------------
-# Rotas do IAM Service
-# -------------------------------
+# Registrar rotas IAM
 register_routes(app)
 
 if __name__ == "__main__":
