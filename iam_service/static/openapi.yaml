@@ -1,0 +1,81 @@
+openapi: 3.0.0
+info:
+  title: IAM Service
+  description: Serviço responsável por autenticação e gestão de tokens entre microserviços.
+  version: 1.0.0
+
+servers:
+  - url: http://127.0.0.1:5000
+
+components:
+  securitySchemes:
+    ServiceToken:
+      type: http
+      scheme: bearer
+      description: Token interno para comunicação entre serviços.
+
+  schemas:
+    TokenValidationRequest:
+      type: object
+      properties:
+        token:
+          type: string
+
+    ServiceTokenResponse:
+      type: object
+      properties:
+        service_token:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+
+paths:
+
+  /v1/tokens:
+    post:
+      summary: Gera SERVICE_TOKEN
+      responses:
+        '201':
+          description: Token criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceTokenResponse'
+
+    patch:
+      summary: Valida token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenValidationRequest'
+      responses:
+        '200':
+          description: Token válido
+
+  /v1/users/{id}:
+    get:
+      summary: Consulta dados do utilizador
+      security:
+        - ServiceToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dados do utilizador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
