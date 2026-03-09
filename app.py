@@ -4,19 +4,6 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from iam_service.controllers.iam_controller import register_routes
 import os
 
-"""
-docker pull quay.io/keycloak/keycloak:26.1
-
-docker run -d \
-  --name keycloak \
-  -p 8080:8080 \
-  -e KEYCLOAK_ADMIN=admin \
-  -e KEYCLOAK_ADMIN_PASSWORD=admin \
-  quay.io/keycloak/keycloak:26.1 start-dev
-
-docker ps   # para ver se está a correr
-"""
-
 app = Flask(__name__)
 CORS(app)
 
