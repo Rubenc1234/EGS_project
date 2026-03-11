@@ -1,6 +1,7 @@
 # docker pull quay.io/keycloak/keycloak:26.1  -> imagem baixada
 
 # docker compose up -d
+# docker-compose down
 
 version: "3.8"
 

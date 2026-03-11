@@ -2,7 +2,6 @@ import requests
 from iam_service.config import KEYCLOAK_URL, REALM, CLIENT_ID, CLIENT_SECRET
 
 def get_user_token(username: str, password: str) -> str:
-    print(KEYCLOAK_URL, REALM, CLIENT_ID, CLIENT_SECRET)
     url = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/token"
 
     data = {
