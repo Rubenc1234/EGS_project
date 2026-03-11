@@ -25,11 +25,3 @@ def update_status(payment_id: str, status: str) -> Payment | None:
     payment_repository.update(payment)
     return payment
 
-
-def refund_payment(payment_id: str) -> Payment | None:
-    payment = payment_repository.find_by_id(payment_id)
-    if not payment:
-        return None
-    payment = _provider.refund_payment(payment)
-    payment_repository.update(payment)
-    return payment

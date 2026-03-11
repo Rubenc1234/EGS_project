@@ -30,7 +30,7 @@ components:
           type: number
         status:
           type: string
-          enum: [cancelled, pending, concluded, refunded]
+          enum: [cancelled, pending, concluded]
 
     CreatePayment:
       type: object
@@ -45,7 +45,7 @@ components:
       properties:
         status:
           type: string
-          enum: [cancelled, pending, concluded, refunded]
+          enum: [cancelled, pending, concluded]
 
 paths:
 
@@ -104,18 +104,3 @@ paths:
       responses:
         '200':
           description: Estado atualizado
-
-  /v1/payments/{id}/refund:
-    post:
-      summary: Cria refund
-      security:
-        - ServiceToken: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Refund realizado

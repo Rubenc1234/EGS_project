@@ -7,7 +7,3 @@ class MockPaymentProvider(BasePaymentProvider):
         # Simula aprovação imediata
         payment.status = PaymentStatus.PENDING
         return payment
-
-    def refund_payment(self, payment: Payment) -> Payment:
-        payment.status = PaymentStatus.REFUNDED
-        return payment

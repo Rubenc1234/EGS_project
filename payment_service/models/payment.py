@@ -6,7 +6,6 @@ class PaymentStatus(str, Enum):
     PENDING = "pending"
     CONCLUDED = "concluded"
     CANCELLED = "cancelled"
-    REFUNDED = "refunded"
 
 @dataclass
 class Payment:

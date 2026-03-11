@@ -28,18 +28,11 @@ def register_routes(app):
         data = request.json or {}
         status = data.get("status")
 
-        valid_statuses = {"cancelled", "pending", "concluded", "refunded"}
+        valid_statuses = {"cancelled", "pending", "concluded"}
         if status not in valid_statuses:
             return jsonify({"error": f"Invalid status. Must be one of {valid_statuses}"}), 400
 
         payment = payment_service.update_status(payment_id, status)
-        if not payment:
-            return jsonify({"error": "Payment not found"}), 404
-        return jsonify(payment.to_dict()), 200
-
-    @app.route("/v1/payments/<payment_id>/refund", methods=["POST"])
-    def refund_payment(payment_id):
-        payment = payment_service.refund_payment(payment_id)
         if not payment:
             return jsonify({"error": "Payment not found"}), 404
         return jsonify(payment.to_dict()), 200

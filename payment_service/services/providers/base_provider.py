@@ -7,8 +7,3 @@ class BasePaymentProvider(ABC):
     def initiate_payment(self, payment: Payment) -> Payment:
         """Inicia o pagamento no provider externo."""
         ...
-
-    @abstractmethod
-    def refund_payment(self, payment: Payment) -> Payment:
-        """Inicia o reembolso no provider externo."""
-        ...
