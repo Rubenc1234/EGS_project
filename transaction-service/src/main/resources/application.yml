@@ -1,0 +1,29 @@
+server:
+  port: 8081 # Porta do microserviço
+
+spring:
+  application:
+    name: transaction-service
+  
+  # Configuração do PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5432/transaction_db
+    username: myuser
+    password: mypassword
+    driver-class-name: org.postgresql.Driver
+
+  # Configuração do JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true # Mostra os comandos SQL no terminal
+    properties:
+      hibernate:
+        format_sql: true
+
+# Configurações personalizadas para a App
+blockchain:
+  node:
+    url: "https://polygon-rpc.com/" # Ou a URL do teu nó Infura/Alchemy
+  contract:
+    address: "0xTeuEnderecoDoSmartContractAqui"

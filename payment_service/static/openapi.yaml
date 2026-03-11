@@ -1,0 +1,106 @@
+openapi: 3.0.0
+info:
+  title: Payment Service
+  description: Serviço responsável por criar e gerir pagamentos MB WAY.
+  version: 1.0.0
+
+servers:
+  - url: http://127.0.0.1:5000
+    description: Servidor local
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/egs-74e/EGS-payment/1.0.0
+
+components:
+
+  securitySchemes:
+    ServiceToken:
+      type: http
+      scheme: bearer
+
+  schemas:
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [cancelled, pending, concluded]
+
+    CreatePayment:
+      type: object
+      properties:
+        user_id:
+          type: string
+        amount:
+          type: number
+
+    UpdatePaymentStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [cancelled, pending, concluded]
+
+paths:
+
+  /v1/payments:
+    post:
+      summary: Cria pagamento MB WAY
+      security:
+        - ServiceToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePayment'
+      responses:
+        '201':
+          description: Pagamento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  /v1/payments/{payment_id}:
+    get:
+      summary: Consulta pagamento
+      security:
+        - ServiceToken: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pagamento encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+    patch:
+      summary: Atualiza estado do pagamento
+      security:
+        - ServiceToken: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePaymentStatus'
+      responses:
+        '200':
+          description: Estado atualizado
