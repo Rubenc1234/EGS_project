@@ -1,0 +1,69 @@
+basePath: /
+definitions:
+  internal_sse.NotificationPayload:
+    properties:
+      message:
+        type: string
+      user_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - message
+    - user_ids
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: SSE Notifications Service built with Gin
+  title: Notifications API
+  version: "1.0"
+paths:
+  /events/{userID}:
+    get:
+      description: Establishes a Server-Sent Events connection for a specific user.
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE Stream connected
+          schema:
+            type: string
+      summary: Connect to SSE stream
+      tags:
+      - events
+  /notify:
+    post:
+      consumes:
+      - application/json
+      description: Queues a notification to be sent to specified users.
+      parameters:
+      - description: Notification payload containing targets and message
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_sse.NotificationPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: notifications queued'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: error details
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Send a notification
+      tags:
+      - notifications
+swagger: "2.0"
