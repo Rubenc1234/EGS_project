@@ -8,20 +8,6 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Swagger UI
-SWAGGER_URL_IAM = "/iam/docs"
-API_URL_IAM = "/iam_service/static/openapi.yaml"
-swagger_iam = get_swaggerui_blueprint(SWAGGER_URL_IAM, API_URL_IAM, blueprint_name="iam_swagger")
-app.register_blueprint(swagger_iam, url_prefix=SWAGGER_URL_IAM)
-
-# Static files
-@app.route("/iam_service/static/<path:filename>")
-def iam_static(filename):
-    return send_from_directory(
-        os.path.join(app.root_path, "iam_service", "static"),
-        filename
-    )
-
 # Swagger UI para payment
 SWAGGER_URL_PAY = "/payment/docs"
 API_URL_PAY = "/payment_service/static/openapi.yaml"
@@ -34,10 +20,6 @@ def payment_static(filename):
         os.path.join(app.root_path, "payment_service", "static"),
         filename
     )
-
-
-# Registrar rotas IAM
-register_routes(app)
 
 #Registrar rotas Payment
 register_payment_routes(app)

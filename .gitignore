@@ -5,3 +5,4 @@ venv/
 
 # Bytecode
 __pycache__/
+*.pyc
