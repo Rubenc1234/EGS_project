@@ -41,12 +41,47 @@ def register_routes(app):
     # ----------------------
     @app.route("/v1/tokens", methods=["POST"])
     def create_token():
+        data = request.get_json() or {}
 
-        token = get_user_token("john.doe", "password1234")
+        # Token de utilizador via username/password
+        username = data.get("username")
+        password = data.get("password")
+        if username and password:
+            try:
+                token_data = get_user_token(username, password)
+                return jsonify({"access_token": token_data.get("access_token"), "expires_in": token_data.get("expires_in"), "token_type": "bearer"}), 201
+            except Exception as e:
+                return jsonify({"error": "failed_to_get_user_token", "detail": str(e)}), 502
 
-        return jsonify({
-            "service_token": token
-        }), 201
+        # Pedido de service token (client credentials)
+        service = data.get("service")
+        if service:
+            try:
+                # try to obtain service token from Keycloak
+                from iam_service.services.keycloak_service import get_service_token
+
+                token_data = get_service_token()
+                # token_data expected to be dict with access_token and expires_in
+                return jsonify({
+                    "service_token": token_data.get("access_token"),
+                    "expires_in": token_data.get("expires_in", 300),
+                    "service": service
+                }), 201
+            except Exception as e:
+                # fallback: generate a dev token if Keycloak not available
+                import secrets, time, logging
+
+                logging.warning("Keycloak unavailable: returning dev fallback service token")
+                fallback = secrets.token_urlsafe(32)
+                return jsonify({
+                    "service_token": fallback,
+                    "expires_in": 300,
+                    "service": service,
+                    "dev": True,
+                    "note": "fallback-token; keycloak unavailable",
+                }), 201
+
+        return jsonify({"error": "username and password or service required"}), 400
 
     # ----------------------
     # VALIDATE TOKEN

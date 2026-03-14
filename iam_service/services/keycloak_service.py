@@ -13,14 +13,11 @@ def get_user_token(username: str, password: str) -> str:
         "scope": "openid",
     }
 
-    res = requests.post(url, data=data)
-
-    print("STATUS:", res.status_code)
-    print("BODY:", res.text)
-
+    res = requests.post(url, data=data, timeout=5)
     res.raise_for_status()
-
-    return res.json()["access_token"]
+    js = res.json()
+    # return structured data so callers can access expires_in
+    return {"access_token": js.get("access_token"), "expires_in": js.get("expires_in")}
 
 
 def introspect_token(token: str) -> bool:
@@ -37,3 +34,21 @@ def introspect_token(token: str) -> bool:
     if res.status_code != 200:
         return False
     return res.json().get("active", False)
+
+
+def get_service_token() -> dict:
+    """
+    Obtém um token via client_credentials do Keycloak.
+    Retorna dict com keys: access_token, expires_in
+    Pode lançar exceção se Keycloak estiver indisponível.
+    """
+    url = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/token"
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    }
+    res = requests.post(url, data=data, timeout=5)
+    res.raise_for_status()
+    js = res.json()
+    return {"access_token": js.get("access_token"), "expires_in": js.get("expires_in")}
