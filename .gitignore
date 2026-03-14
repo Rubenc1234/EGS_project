@@ -1,3 +1,7 @@
-# Ignorar a virtual environment
+# Virtual envs
 venv/
+.venv/
 .env
+
+# Bytecode
+__pycache__/
