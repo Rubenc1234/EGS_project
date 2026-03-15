@@ -88,4 +88,104 @@ paths:
                 properties:
                   active:
                     type: boolean
+
+  /v1/composer/payments:
+    post:
+      summary: Create a payment via composer (for authenticated user)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                amount:
+                  type: number
+              required: [user_id, amount]
+      responses:
+        '201':
+          description: payment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user_id:
+                    type: string
+                  amount:
+                    type: number
+                  status:
+                    type: string
+
+  /v1/composer/payments/{payment_id}:
+    get:
+      summary: Get a payment by id (composer forwards to payment service)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: payment found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user_id:
+                    type: string
+                  amount:
+                    type: number
+                  status:
+                    type: string
+
+    patch:
+      summary: Update payment status via composer
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [cancelled, pending, concluded]
+              required: [status]
+      responses:
+        '200':
+          description: status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user_id:
+                    type: string
+                  amount:
+                    type: number
+                  status:
+                    type: string
   
