@@ -18,7 +18,7 @@ import (
 // @title Notifications API
 // @version 1.0
 // @description SSE Notifications Service built with Gin
-// @host localhost:8080
+// @host localhost:5003
 // @BasePath /
 func main() {
 	// Load .env file if it exists
@@ -28,7 +28,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // default fallback
+		port = "5003" // default fallback
 	}
 
 	// Initialize the SSE broker

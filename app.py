@@ -16,6 +16,8 @@ iam = IAMClient(IAM_BASE_URL)
 
 # endereço do Payment Service (composer -> payment_service)
 PAYMENT_BASE_URL = "http://localhost:5002"
+# endereço do Notifications Service (composer -> notifications_service)
+NOTIFICATIONS_BASE_URL = "http://localhost:5003"
 
 # Swagger UI para composer
 SWAGGER_URL_COMPOSER = "/composer/docs"
@@ -110,6 +112,71 @@ def composer_create_payment():
         return jsonify(body), res.status_code
     except requests.RequestException as e:
         return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502
+
+
+# -----------------------------
+# NOTIFICATIONS (composer -> notifications_service)
+# -----------------------------
+
+
+@app.route("/v1/composer/notifications", methods=["POST"])
+def composer_send_notification():
+    data = request.get_json() or {}
+    # expected fields: message, user_ids (list)
+    message = data.get("message")
+    user_ids = data.get("user_ids")
+
+    if not message or not user_ids:
+        return jsonify({"error": "message and user_ids required"}), 400
+
+    try:
+        token_data = iam.get_service_token()
+        service_token = token_data.get("service_token") or token_data.get("access_token")
+        headers = {"Content-Type": "application/json"}
+        if service_token:
+            headers["Authorization"] = f"Bearer {service_token}"
+
+        res = requests.post(f"{NOTIFICATIONS_BASE_URL}/notify", json={"message": message, "user_ids": user_ids}, headers=headers, timeout=5)
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "notifications_service_unreachable", "detail": str(e)}), 502
+
+
+@app.route("/v1/composer/events/<user_id>", methods=["GET"])
+def composer_events_sse(user_id):
+    """Proxy SSE stream from notifications service to the client.
+    This keeps the composer as the single service communicating with other services.
+    """
+    try:
+        token_data = iam.get_service_token()
+        service_token = token_data.get("service_token") or token_data.get("access_token")
+        headers = {}
+        if service_token:
+            headers["Authorization"] = f"Bearer {service_token}"
+
+        # open a streaming request to the notifications service
+        upstream = requests.get(f"{NOTIFICATIONS_BASE_URL}/events/{user_id}", headers=headers, stream=True, timeout=(5, None))
+        upstream.raise_for_status()
+
+        def generate():
+            try:
+                for chunk in upstream.iter_lines(decode_unicode=True):
+                    if chunk:
+                        # yield exactly what upstream sent (SSE formatted)
+                        yield chunk + "\n\n"
+            finally:
+                try:
+                    upstream.close()
+                except Exception:
+                    pass
+
+        return app.response_class(generate(), mimetype="text/event-stream")
+    except requests.RequestException as e:
+        return jsonify({"error": "notifications_service_unreachable", "detail": str(e)}), 502
     except Exception as e:
         return jsonify({"error": "internal_error", "detail": str(e)}), 500
 

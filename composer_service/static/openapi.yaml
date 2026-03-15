@@ -189,3 +189,55 @@ paths:
                   status:
                     type: string
   
+  /v1/composer/notifications:
+    post:
+      summary: Send a notification via composer (for authenticated callers)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+              required: [message, user_ids]
+      responses:
+        '200':
+          description: notifications queued
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/composer/events/{userID}:
+    get:
+      summary: Connect to user's SSE events stream via composer (proxied)
+      description: |
+        Estabelece uma ligação Server-Sent Events (SSE) para receber notificações em
+        tempo real. Use curl ou um cliente SSE — o Swagger UI pode não suportar streaming.
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSE stream (text/event-stream)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                event:message
+                data:hello from server
+
+                event:message
+                data:another event
+  
