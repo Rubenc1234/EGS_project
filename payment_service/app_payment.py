@@ -17,7 +17,7 @@ app.register_blueprint(swagger_pay, url_prefix=SWAGGER_URL_PAY)
 @app.route("/payment_service/static/<path:filename>")
 def payment_static(filename):
     return send_from_directory(
-        os.path.join(app.root_path, "payment_service", "static"),
+        os.path.join(app.root_path, "static"),
         filename
     )
 
@@ -25,4 +25,4 @@ def payment_static(filename):
 register_payment_routes(app)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5002)
