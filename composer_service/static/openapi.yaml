@@ -8,6 +8,77 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    TransactionRequest:
+      type: object
+      properties:
+        from_wallet:
+          type: string
+        to_wallet:
+          type: string
+        amount:
+          type: number
+        asset:
+          type: string
+      required: [from_wallet, to_wallet, amount]
+
+    TransactionResponse:
+      type: object
+      properties:
+        tx_id:
+          type: string
+        hash:
+          type: string
+        status:
+          type: string
+        estimated_fee:
+          type: string
+        created_at:
+          type: string
+
+    TransactionItem:
+      type: object
+      properties:
+        tx_id:
+          type: string
+        hash:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        amount:
+          type: string
+        status:
+          type: string
+        confirmed_at:
+          type: string
+
+    TransactionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionItem'
+        total:
+          type: integer
+
+    Balance:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+        symbol:
+          type: string
+        balance:
+          type: string
+        balance_in_fiat:
+          type: number
+        currency:
+          type: string
+        updated_at:
+          type: string
 
 security:
   - BearerAuth: []
@@ -240,4 +311,111 @@ paths:
 
                 event:message
                 data:another event
+
+  /v1/composer/transactions:
+    post:
+      summary: Create a transaction via composer
+      description: "This endpoint proxies to the transactions service at POST /v1/transactions/ (composer forwards the request)."
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+            example:
+              amount: 30
+              asset: "010"
+              from_wallet: "1"
+              to_wallet: "2"
+      responses:
+        '200':
+          description: transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+
+    get:
+      summary: List transactions via composer
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: wallet_id
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: list of transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+
+  /v1/composer/transactions/{wallet_id}/balance:
+    get:
+      summary: Get wallet balance via composer
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: wallet_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+
+  /v1/composer/transactions/refund:
+    post:
+      summary: Request a refund via composer
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                original_tx_id:
+                  type: string
+              required: [original_tx_id]
+      responses:
+        '200':
+          description: refund initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refund_tx_id:
+                    type: string
+                  original_tx_id:
+                    type: string
+                  status:
+                    type: string
+                  message:
+                    type: string
+
+  
   

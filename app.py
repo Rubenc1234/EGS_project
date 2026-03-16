@@ -18,6 +18,8 @@ iam = IAMClient(IAM_BASE_URL)
 PAYMENT_BASE_URL = "http://localhost:5002"
 # endereço do Notifications Service (composer -> notifications_service)
 NOTIFICATIONS_BASE_URL = "http://localhost:5003"
+# endereço do Transactions Service (composer -> transactions_service)
+TRANSACTIONS_BASE_URL = "http://localhost:8081"
 
 # Swagger UI para composer
 SWAGGER_URL_COMPOSER = "/composer/docs"
@@ -95,14 +97,8 @@ def composer_create_payment():
         return jsonify({"error": "user_id and amount required"}), 400
 
     try:
-        # get service token to call payment_service (may be unused by current payment_service)
-        token_data = iam.get_service_token()
-        service_token = token_data.get("service_token") or token_data.get("access_token")
-
-        headers = {}
-        if service_token:
-            headers["Authorization"] = f"Bearer {service_token}"
-
+        # Dev: forward payment request without requesting a service token
+        headers = {"Content-Type": "application/json"}
         res = requests.post(f"{PAYMENT_BASE_URL}/v1/payments", json={"user_id": user_id, "amount": amount}, headers=headers, timeout=5)
         try:
             body = res.json()
@@ -130,12 +126,8 @@ def composer_send_notification():
         return jsonify({"error": "message and user_ids required"}), 400
 
     try:
-        token_data = iam.get_service_token()
-        service_token = token_data.get("service_token") or token_data.get("access_token")
+        # Dev: forward notification without requesting a service token
         headers = {"Content-Type": "application/json"}
-        if service_token:
-            headers["Authorization"] = f"Bearer {service_token}"
-
         res = requests.post(f"{NOTIFICATIONS_BASE_URL}/notify", json={"message": message, "user_ids": user_ids}, headers=headers, timeout=5)
         try:
             body = res.json()
@@ -152,14 +144,9 @@ def composer_events_sse(user_id):
     This keeps the composer as the single service communicating with other services.
     """
     try:
-        token_data = iam.get_service_token()
-        service_token = token_data.get("service_token") or token_data.get("access_token")
-        headers = {}
-        if service_token:
-            headers["Authorization"] = f"Bearer {service_token}"
-
+        # Dev: proxy SSE without adding a service token
         # open a streaming request to the notifications service
-        upstream = requests.get(f"{NOTIFICATIONS_BASE_URL}/events/{user_id}", headers=headers, stream=True, timeout=(5, None))
+        upstream = requests.get(f"{NOTIFICATIONS_BASE_URL}/events/{user_id}", stream=True, timeout=(5, None))
         upstream.raise_for_status()
 
         def generate():
@@ -184,13 +171,8 @@ def composer_events_sse(user_id):
 @app.route("/v1/composer/payments/<payment_id>", methods=["GET"])
 def composer_get_payment(payment_id):
     try:
-        token_data = iam.get_service_token()
-        service_token = token_data.get("service_token") or token_data.get("access_token")
-        headers = {}
-        if service_token:
-            headers["Authorization"] = f"Bearer {service_token}"
-
-        res = requests.get(f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}", headers=headers, timeout=5)
+        # Dev: call payment service without requesting a service token
+        res = requests.get(f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}", timeout=5)
         try:
             body = res.json()
         except Exception:
@@ -209,12 +191,8 @@ def composer_update_payment(payment_id):
         return jsonify({"error": "status required"}), 400
 
     try:
-        token_data = iam.get_service_token()
-        service_token = token_data.get("service_token") or token_data.get("access_token")
+        # Dev: forward update without requesting a service token
         headers = {"Content-Type": "application/json"}
-        if service_token:
-            headers["Authorization"] = f"Bearer {service_token}"
-
         res = requests.patch(f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}", json={"status": status}, headers=headers, timeout=5)
         try:
             body = res.json()
@@ -223,6 +201,103 @@ def composer_update_payment(payment_id):
         return jsonify(body), res.status_code
     except requests.RequestException as e:
         return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502
+
+
+# -----------------------------
+# TRANSACTIONS (composer -> transactions_service)
+# -----------------------------
+
+
+@app.route("/v1/composer/transactions", methods=["POST"])
+def composer_create_transaction():
+    data = request.get_json() or {}
+    # expected fields: from_wallet, to_wallet, amount, asset
+    from_wallet = data.get("from_wallet")
+    to_wallet = data.get("to_wallet")
+    amount = data.get("amount")
+
+    if not from_wallet or not to_wallet or amount is None:
+        return jsonify({"error": "from_wallet, to_wallet and amount required"}), 400
+
+    try:
+        # Development mode: do not request a service token from IAM for transactions.
+        # Composer forwards requests directly to the transactions service for now.
+        headers = {"Content-Type": "application/json"}
+
+        res = requests.post(f"{TRANSACTIONS_BASE_URL}/v1/transactions/", json=data, headers=headers, timeout=5)
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "transactions_service_unreachable", "detail": str(e)}), 502
+
+
+@app.route("/v1/composer/transactions", methods=["GET"])
+def composer_list_transactions():
+    wallet_id = request.args.get("wallet_id")
+    status = request.args.get("status")
+    limit = request.args.get("limit")
+    offset = request.args.get("offset")
+
+    params = {}
+    if wallet_id:
+        params["wallet_id"] = wallet_id
+    if status:
+        params["status"] = status
+    if limit:
+        params["limit"] = limit
+    if offset:
+        params["offset"] = offset
+
+    try:
+        # Dev: skip service-token step and call transactions service directly
+        headers = {}
+        res = requests.get(f"{TRANSACTIONS_BASE_URL}/v1/transactions/", params=params, headers=headers, timeout=5)
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "transactions_service_unreachable", "detail": str(e)}), 502
+
+
+@app.route("/v1/composer/transactions/<wallet_id>/balance", methods=["GET"])
+def composer_get_balance(wallet_id):
+    try:
+        # Dev: call transactions service without requesting a service token
+        res = requests.get(f"{TRANSACTIONS_BASE_URL}/v1/transactions/{wallet_id}/balance", timeout=5)
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "transactions_service_unreachable", "detail": str(e)}), 502
+
+
+@app.route("/v1/composer/transactions/refund", methods=["POST"])
+def composer_refund_transaction():
+    data = request.get_json() or {}
+    original_tx_id = data.get("original_tx_id")
+
+    if not original_tx_id:
+        return jsonify({"error": "original_tx_id required"}), 400
+
+    try:
+        # Dev: forward refund request without adding a service token
+        headers = {"Content-Type": "application/json"}
+        res = requests.post(f"{TRANSACTIONS_BASE_URL}/v1/transactions/refund", json={"original_tx_id": original_tx_id}, headers=headers, timeout=5)
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "transactions_service_unreachable", "detail": str(e)}), 502
 
 
 # -----------------------------
