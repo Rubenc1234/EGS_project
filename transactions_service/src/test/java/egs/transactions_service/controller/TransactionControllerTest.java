@@ -31,26 +31,30 @@ public class TransactionControllerTest {
 
     @Test
     public void testGetBalance() throws Exception {
-        String walletId = "0x123";
+        String walletId = "0x1234567890123456789012345678901234567890";
         BalanceDTO balanceDTO = BalanceDTO.builder()
                 .walletId(walletId)
-                .symbol("ETH")
-                .balance("1.50000000")
-                .balanceInFiat(new BigDecimal("3500.50"))
-                .currency("BRL")
+                .symbol("EUR")
+                .balance("100.00")
+                .nativeBalance("1.5")
+                .nativeSymbol("MATIC")
+                .balanceInFiat(new BigDecimal("100.00"))
+                .currency("EUR")
                 .updatedAt(OffsetDateTime.now())
                 .build();
 
         when(transactionService.getBalance(anyString())).thenReturn(balanceDTO);
 
-        mockMvc.perform(get("/v1/transactions/{wallet_id}/balance", walletId)
+        mockMvc.perform(get("/v1/wallets/{wallet_id}/balance", walletId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.wallet_id").value(walletId))
-                .andExpect(jsonPath("$.symbol").value("ETH"))
-                .andExpect(jsonPath("$.balance").value("1.50000000"))
-                .andExpect(jsonPath("$.balance_in_fiat").value(3500.50))
-                .andExpect(jsonPath("$.currency").value("BRL"))
+                .andExpect(jsonPath("$.symbol").value("EUR"))
+                .andExpect(jsonPath("$.balance").value("100.00"))
+                .andExpect(jsonPath("$.native_balance").value("1.5"))
+                .andExpect(jsonPath("$.native_symbol").value("MATIC"))
+                .andExpect(jsonPath("$.balance_in_fiat").value(100.00))
+                .andExpect(jsonPath("$.currency").value("EUR"))
                 .andExpect(jsonPath("$.updated_at").exists());
     }
 
@@ -68,14 +72,14 @@ public class TransactionControllerTest {
 
         String requestBody = """
                 {
-                  "from_wallet": "0x123",
-                  "to_wallet": "0x456",
+                  "from_wallet": "0x1234567890123456789012345678901234567890",
+                  "to_wallet": "0x4567890123456789012345678901234567890123",
                   "amount": 1.5,
-                  "asset": "ETH"
+                  "asset": "EUR"
                 }
                 """;
 
-        mockMvc.perform(post("/v1/transactions/")
+        mockMvc.perform(post("/v1/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -91,8 +95,8 @@ public class TransactionControllerTest {
         TransactionItemDTO item = TransactionItemDTO.builder()
                 .txId("internal-uuid-001")
                 .hash("0xabc123")
-                .from("0x123")
-                .to("0x456")
+                .from("0x1234567890123456789012345678901234567890")
+                .to("0x4567890123456789012345678901234567890123")
                 .amount("0.5")
                 .status("CONFIRMED")
                 .confirmedAt(OffsetDateTime.now())
@@ -105,8 +109,8 @@ public class TransactionControllerTest {
 
         when(transactionService.listTransactions(any(), any(), anyInt(), anyInt())).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/v1/transactions/")
-                .param("wallet_id", "0x123")
+        mockMvc.perform(get("/v1/transactions")
+                .param("wallet_id", "0x1234567890123456789012345678901234567890")
                 .param("status", "CONFIRMED")
                 .param("limit", "10")
                 .param("offset", "0")
@@ -114,8 +118,8 @@ public class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].tx_id").value("internal-uuid-001"))
                 .andExpect(jsonPath("$.items[0].hash").value("0xabc123"))
-                .andExpect(jsonPath("$.items[0].from").value("0x123"))
-                .andExpect(jsonPath("$.items[0].to").value("0x456"))
+                .andExpect(jsonPath("$.items[0].from").value("0x1234567890123456789012345678901234567890"))
+                .andExpect(jsonPath("$.items[0].to").value("0x4567890123456789012345678901234567890123"))
                 .andExpect(jsonPath("$.items[0].amount").value("0.5"))
                 .andExpect(jsonPath("$.items[0].status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.items[0].confirmed_at").exists())
@@ -128,7 +132,7 @@ public class TransactionControllerTest {
                 .refundTxId("internal-uuid-099")
                 .originalTxId("internal-uuid-001")
                 .status("INITIATED")
-                .message("Refund transaction iniciated.")
+                .message("Refund transaction broadcasted to network.")
                 .build();
 
         when(transactionService.refundTransaction(any(RefundRequestDTO.class))).thenReturn(responseDTO);

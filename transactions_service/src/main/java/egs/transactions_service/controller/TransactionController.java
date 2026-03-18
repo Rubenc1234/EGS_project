@@ -7,25 +7,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/v1/transactions")
+@RequestMapping("/v1")
 @RequiredArgsConstructor
 public class TransactionController {
 
     private final TransactionService transactionService;
 
-    @GetMapping("/{wallet_id}/balance")
+    @GetMapping("/wallets/{wallet_id}/balance")
     public ResponseEntity<BalanceDTO> getBalance(@PathVariable("wallet_id") String walletId) {
         BalanceDTO balance = transactionService.getBalance(walletId);
         return ResponseEntity.ok(balance);
     }
 
-    @PostMapping("/")
+    @PostMapping("/transactions")
     public ResponseEntity<TransactionResponseDTO> createTransaction(@RequestBody TransactionRequestDTO request) {
         TransactionResponseDTO response = transactionService.createTransaction(request);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/")
+    @GetMapping("/transactions")
     public ResponseEntity<TransactionListResponseDTO> listTransactions(
             @RequestParam(name = "wallet_id", required = false) String walletId,
             @RequestParam(name = "status", required = false) String status,
@@ -35,7 +35,7 @@ public class TransactionController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/refund")
+    @PostMapping("/transactions/refund")
     public ResponseEntity<RefundResponseDTO> refundTransaction(@RequestBody RefundRequestDTO request) {
         RefundResponseDTO response = transactionService.refundTransaction(request);
         return ResponseEntity.ok(response);

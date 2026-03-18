@@ -24,6 +24,8 @@ public class TransactionItemDTO {
     private String to;
     
     private String amount;
+
+    private String asset;
     
     private String status;
     

@@ -19,6 +19,10 @@ public class BalanceDTO {
     private String walletId;
     private String symbol;
     private String balance;
+    @JsonProperty("native_balance")
+    private String nativeBalance;
+    @JsonProperty("native_symbol")
+    private String nativeSymbol;
     @JsonProperty("balance_in_fiat")
     private BigDecimal balanceInFiat;
     private String currency;
