@@ -6,52 +6,61 @@ import (
 	"os"
 	"time"
 
+	"egs-notifications/internal/db"
 	"egs-notifications/internal/server"
 	"egs-notifications/internal/sse"
 
 	"github.com/joho/godotenv"
 
-	// Import the generated docs folder (will error until you run 'swag init')
 	_ "egs-notifications/docs"
 )
 
 // @title Notifications API
 // @version 1.0
-// @description SSE Notifications Service built with Gin
-// @host localhost:5003
-// @BasePath /
+// @description Multi-Tenant SSE Notifications Service
+// @BasePath /v1
+// @securityDefinitions.apikey MasterAuth
+// @in header
+// @name Authorization
+// @description Master Admin Secret for platform management (Format: Bearer <secret>)
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Composer API Key OR 4-hour Subscriber JWT (Format: Bearer <token>)
 func main() {
-	// Load .env file if it exists
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, relying on system environment variables")
+		log.Println("No .env file found, reading system environment variables")
 	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "5003" // default fallback
+		port = "8080"
 	}
 
-	// Initialize the SSE broker
-	broker := sse.NewBroker()
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
 
-	// Start the broker's event loop in a separate goroutine
+	if os.Getenv("MASTER_ADMIN_SECRET") == "" || os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("MASTER_ADMIN_SECRET and JWT_SECRET are required in environment")
+	}
+
+	database := db.InitDB(dsn)
+	broker := sse.NewBroker()
 	go broker.Start()
 
-	// Set up our Gin router
-	router := server.SetupRoutes(broker)
+	router := server.SetupRoutes(database, broker)
 
-	// Define the HTTP server with sensible timeouts
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: router, // Pass the Gin Engine directly as the Handler
-		// ReadTimeout covers the time to read the request headers/body.
+		Addr:         ":" + port,
+		Handler:      router,
 		ReadTimeout:  10 * time.Second,
-		// WriteTimeout is explicitly set to 0 (infinite) because SSE requires keeping the connection open.
 		WriteTimeout: 0,
 	}
 
-	log.Printf("Notification service running on http://localhost:%s\n", port)
+	log.Printf("Service running on http://localhost:%s\n", port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Server failed to start: %v", err)
+		log.Fatalf("Server failed: %v", err)
 	}
 }

@@ -32,3 +32,6 @@ Thumbs.db
 # Project specific binaries
 egs-notifications
 main
+
+# Keep API HTTP tests
+!tests/

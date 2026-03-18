@@ -1,6 +1,45 @@
-basePath: /
+basePath: /v1
 definitions:
-  internal_sse.NotificationPayload:
+  egs-notifications_internal_models.Client:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  egs-notifications_internal_models.Notification:
+    properties:
+      client_id:
+        description: Tenant isolation
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_read:
+        type: boolean
+      message:
+        type: string
+      user_id:
+        type: string
+    type: object
+  internal_handlers.ClientTokenRequest:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  internal_handlers.CreateClientRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  internal_handlers.NotificationPayload:
     properties:
       message:
         type: string
@@ -12,21 +51,218 @@ definitions:
     - message
     - user_ids
     type: object
-host: localhost:8080
+  internal_handlers.NotifyResponse:
+    properties:
+      notifications:
+        items:
+          $ref: '#/definitions/egs-notifications_internal_models.Notification'
+        type: array
+      status:
+        type: string
+      targets:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_handlers.SetUserEmailRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
 info:
   contact: {}
-  description: SSE Notifications Service built with Gin
+  description: Multi-Tenant SSE Notifications Service
   title: Notifications API
   version: "1.0"
 paths:
-  /events/{userID}:
+  /admin/clients:
     get:
-      description: Establishes a Server-Sent Events connection for a specific user.
+      description: Returns all registered tenant applications.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/egs-notifications_internal_models.Client'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - MasterAuth: []
+      summary: List all clients
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Registers a new client app and generates their forever API Key.
+        This raw key is returned ONLY ONCE.
       parameters:
-      - description: User ID
-        in: path
-        name: userID
+      - description: Client Name
+        in: body
+        name: payload
         required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.CreateClientRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: client_id, api_key, message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - MasterAuth: []
+      summary: Create a new client tenant
+      tags:
+      - admin
+  /admin/clients/{id}:
+    delete:
+      description: Permanently deletes a client and all associated notifications from
+        the database.
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - MasterAuth: []
+      summary: Revoke and delete client
+      tags:
+      - admin
+  /admin/clients/{id}/key:
+    patch:
+      description: Revokes the old API key and generates a new one. The old key will
+        immediately stop working.
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: client_id, new_api_key
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - MasterAuth: []
+      summary: Regenerate client API Key
+      tags:
+      - admin
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Generates a 4-hour JWT for the frontend browser to connect to the
+        SSE stream.
+      parameters:
+      - description: User ID Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.ClientTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: token, expires_in
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate Subscriber Token
+      tags:
+      - auth
+  /events:
+    get:
+      description: Establishes a Server-Sent Events connection and sends unread notifications.
+      parameters:
+      - description: JWT Token (Alternative to Bearer header for web browsers)
+        in: query
+        name: token
         type: string
       produces:
       - text/event-stream
@@ -35,35 +271,203 @@ paths:
           description: SSE Stream connected
           schema:
             type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
       summary: Connect to SSE stream
       tags:
       - events
-  /notify:
     post:
       consumes:
       - application/json
-      description: Queues a notification to be sent to specified users.
+      description: Saves and broadcasts a notification to specific users of the authenticated
+        client.
       parameters:
-      - description: Notification payload containing targets and message
+      - description: Notification payload
         in: body
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/internal_sse.NotificationPayload'
+          $ref: '#/definitions/internal_handlers.NotificationPayload'
       produces:
       - application/json
       responses:
         "200":
-          description: 'status: notifications queued'
+          description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/internal_handlers.NotifyResponse'
         "400":
-          description: error details
+          description: Bad Request
           schema:
             additionalProperties: true
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
       summary: Send a notification
       tags:
-      - notifications
+      - events
+  /events/{id}:
+    patch:
+      description: Updates the notification status to read. Strict IDOR protection
+        ensures users only update their own notifications.
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark notification as read
+      tags:
+      - events
+  /users/{user_id}/email:
+    delete:
+      description: Placeholder endpoint to delete a user's notification email for
+        the authenticated client.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user notification email
+      tags:
+      - users
+    get:
+      description: Placeholder endpoint to retrieve a user's notification email for
+        the authenticated client.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user notification email
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Placeholder endpoint to create/update a user's notification email
+        for the authenticated client.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Email payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.SetUserEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set user notification email
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Composer API Key OR 4-hour Subscriber JWT (Format: Bearer <token>)'
+    in: header
+    name: Authorization
+    type: apiKey
+  MasterAuth:
+    description: 'Master Admin Secret for platform management (Format: Bearer <secret>)'
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

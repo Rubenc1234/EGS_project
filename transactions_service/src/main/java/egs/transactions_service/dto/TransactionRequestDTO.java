@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -19,7 +18,10 @@ public class TransactionRequestDTO {
     @JsonProperty("to_wallet")
     private String toWallet;
     
-    private BigDecimal amount;
+    private String amount;
     
     private String asset;
+
+    @JsonProperty("idempotency_key")
+    private String idempotencyKey;
 }

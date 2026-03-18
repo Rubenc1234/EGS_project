@@ -13,11 +13,16 @@ import lombok.NoArgsConstructor;
 public class RefundResponseDTO {
     @JsonProperty("refund_tx_id")
     private String refundTxId;
-    
+
     @JsonProperty("original_tx_id")
     private String originalTxId;
-    
+
     private String status;
-    
     private String message;
+
+    @JsonProperty("amount_refunded")
+    private String amountRefunded;
+
+    private String asset;
 }
+
