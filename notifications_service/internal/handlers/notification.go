@@ -112,35 +112,3 @@ func MarkAsRead(db *gorm.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"status": "marked as read"})
 	}
 }
-
-// MarkAllAsRead acknowledges all unread notifications for the authenticated subscriber.
-// @Summary Mark all notifications as read
-// @Description Updates all unread notifications to read for the authenticated user within their client scope.
-// @Tags events
-// @Security BearerAuth
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /events [patch]
-func MarkAllAsRead(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authClientID := c.MustGet("authClientID").(uint) // from Subscriber JWT
-		authUserID := c.MustGet("authUserID").(string)   // from Subscriber JWT
-
-		result := db.Model(&models.Notification{}).
-			Where("client_id = ? AND user_id = ? AND is_read = ?", authClientID, authUserID, false).
-			Update("is_read", true)
-
-		if result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update notifications"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"status":        "all notifications marked as read",
-			"updated_count": result.RowsAffected,
-		})
-	}
-}

@@ -48,7 +48,7 @@ Requires ``Authorization: Bearer <MASTER_ADMIN_SECRET>``. Used by the platform o
 
 - ``POST /v1/admin/clients``: Register a new client and generate their initial API Key.
 - ``GET /v1/admin/clients``: List all registered clients.
-- ``POST /v1/admin/clients/{id}/regenerate-key``: Invalidate the old API key and instantly issue a new one.
+- ``PATCH /v1/admin/clients/{id}/key``: Invalidate the old API key and instantly issue a new one.
 - ``DELETE /v1/admin/clients/{id}``: Revoke a client and permanently delete their notification data.
 
 ### 2. Client Apps/Composers (``BearerAuth``)
@@ -57,6 +57,9 @@ Requires ``Authorization: Bearer <CLIENT_API_KEY>``. Used by your customers' bac
 
 - ``POST /v1/auth/token``: Generates a 4-hour listener token for the client's frontend.
 - ``POST /v1/events``: Saves and broadcasts a notification to specific users.
+- ``PUT /v1/users/{user_id}/email``: Placeholder endpoint to set/update a user's notification email (currently returns 501).
+- ``GET /v1/users/{user_id}/email``: Placeholder endpoint to fetch a user's notification email (currently returns 501).
+- ``DELETE /v1/users/{user_id}/email``: Placeholder endpoint to remove a user's notification email (currently returns 501).
 
 ### 3. End Users/Subscribers (``BearerAuth``)
 
@@ -64,7 +67,6 @@ Requires Authorization: ``Bearer <4_HOUR_JWT>`` or ``?token=<4_HOUR_JWT>``. Used
 
 - ``GET /v1/events``: Opens an SSE connection for the authenticated subscriber. Automatically pushes unread notifications.
 - ``PATCH /v1/events/:id``: ACKs a notification. Marks it as read. Strict IDOR protection ensures users only affect their own data.
-- ``PATCH /v1/events``: Marks all unread notifications as read for the authenticated user.
 
 ## Setup & Initialization
 
@@ -91,73 +93,3 @@ swag init -g cmd/api/main.go
 go run cmd/api/main.go
 ```
 
-## Test Flow (The "Buy-In" Process)
-
-### Step 1: You (Admin) create a Client App
-
-```bash
-curl -X POST http://localhost:8080/v1/admin/clients \
-  -H "Authorization: Bearer super_secret_master_key" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "My Cool Startup App"}'
-```
-
-*Save the ``api_key`` it returns (e.g., ``sk_live_1234abcd...``). You hand this to your customer.*
-
-### Step 2: Customer Backend asks for a Frontend Token
-
-```bash
-curl -X POST http://localhost:8080/v1/auth/token \
-  -H "Authorization: Bearer <sk_live_...>" \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user123"}'
-```
-
-### Step 3: End User Connects
-
-```bash
-curl -N "http://localhost:8080/v1/events?token=<4_HOUR_JWT>"
-```
-
-### Step 4: Customer Backend Pushes Notification
-
-```bash
-curl -X POST http://localhost:8080/v1/events \
-  -H "Authorization: Bearer <sk_live_...>" \
-  -H "Content-Type: application/json" \
-  -d '{"user_ids": ["user123"], "message": "Welcome to My Cool Startup!"}'
-```
-
-### Step 5: Mark Notification as Read
-
-```bash
-curl -X PATCH http://localhost:8080/v1/events/<notification_id> \
-  -H "Authorization Bearer <4_HOUR_JWT>" \
-  -H "Content-Type: application/json"
-```
-
-### Step 6: Mark All Notifications as Read
-
-```bash
-curl -X PATCH http://localhost:8080/v1/events \
-  -H "Authorization Bearer <4_HOUR_JWT>" \
-  -H "Content-Type: application/json"
-```
-
-### Extra: You can also test the admin's ability to regenerate API keys or delete clients, ensuring that old keys are invalidated and data is properly isolated.
-
-1. Regenerate Key:
-
-```bash
-curl -X POST http://localhost:8080/v1/admin/clients/<client_id>/regenerate-key \
-  -H "Authorization Bearer super_secret_master_key" \
-  -H "Content-Type: application/json"
-```
-
-2. Delete Client:
-
-```bash
-curl -X DELETE http://localhost:8080/v1/admin/clients/<client_id> \
-  -H "Authorization Bearer super_secret_master_key" \
-  -H "Content-Type: application/json"
-```

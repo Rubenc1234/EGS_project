@@ -73,7 +73,7 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Production-ready Multi-Tenant SSE Notifications Service
+  description: Multi-Tenant SSE Notifications Service
   title: Notifications API
   version: "1.0"
 paths:
@@ -279,37 +279,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Connect to SSE stream
-      tags:
-      - events
-    patch:
-      description: Updates all unread notifications to read for the authenticated
-        user within their client scope.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Mark all notifications as read
       tags:
       - events
     post:

@@ -2,7 +2,7 @@
 ### Extra 1: Regenerate Key
 ### Tests invalidating old keys.
 ### ============================================================================
-POST {{baseUrl}}/admin/clients/{{client_id}}/regenerate-key
+PATCH {{baseUrl}}/admin/clients/{{client_id}}/key
 Authorization: Bearer {{masterKey}}
 Content-Type: application/json
 

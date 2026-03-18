@@ -53,7 +53,6 @@ func SetupRoutes(db *gorm.DB, broker *sse.Broker) *gin.Engine {
 	subscriberOnly.Use(middleware.RequireSubscriber())
 	{
 		subscriberOnly.GET("", handlers.HandleSSE(db, broker))
-		subscriberOnly.PATCH("", handlers.MarkAllAsRead(db))
 		subscriberOnly.PATCH("/:id", handlers.MarkAsRead(db))
 	}
 

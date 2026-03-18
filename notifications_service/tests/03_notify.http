@@ -24,12 +24,3 @@ PATCH {{baseUrl}}/events/{{notification_id}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-
-### ============================================================================
-### Step 6: Mark All Notifications as Read
-### ============================================================================
-PATCH {{baseUrl}}/events
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-
