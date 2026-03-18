@@ -5,8 +5,8 @@ from payment_service.services.providers.stripe_provider import StripePaymentProv
 _provider = StripePaymentProvider()
 
 
-def create_payment(user_id: str, amount: float, to_wallet: str, phone_number: str | None = None) -> Payment:
-    payment = Payment(user_id=user_id, amount=amount, to_wallet=to_wallet, phone_number=phone_number)
+def create_payment(user_id: str, amount: float, phone_number: str | None = None) -> Payment:
+    payment = Payment(user_id=user_id, amount=amount, phone_number=phone_number)
     payment = _provider.initiate_payment(payment)
     payment_repository.save(payment)
     return payment

@@ -176,6 +176,8 @@ paths:
                   type: string
                 amount:
                   type: number
+                phone_number:
+                  type: string
               required: [user_id, amount]
       responses:
         '201':
@@ -192,6 +194,8 @@ paths:
                   amount:
                     type: number
                   status:
+                    type: string
+                  stripe_payment_intent_id:
                     type: string
 
   /v1/composer/payments/{payment_id}:
@@ -220,6 +224,10 @@ paths:
                   amount:
                     type: number
                   status:
+                    type: string
+                  phone_number:
+                    type: string
+                  stripe_payment_intent_id:
                     type: string
 
     patch:
@@ -258,6 +266,10 @@ paths:
                   amount:
                     type: number
                   status:
+                    type: string
+                  phone_number:
+                    type: string
+                  stripe_payment_intent_id:
                     type: string
   
   /v1/composer/notifications:

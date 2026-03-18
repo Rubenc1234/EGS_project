@@ -9,14 +9,13 @@ def register_routes(app):
         data = request.get_json(silent=True) or {}
         user_id = data.get("user_id")
         amount = data.get("amount")
-        to_wallet = data.get("to_wallet")
         phone_number = data.get("phone_number")
 
-        if not user_id or amount is None or not to_wallet:
-            return jsonify({"error": "user_id, amount and to_wallet are required"}), 400
+        if not user_id or amount is None:
+            return jsonify({"error": "user_id and amount are required"}), 400
 
         try:
-            payment = payment_service.create_payment(user_id, float(amount), to_wallet, phone_number=phone_number)
+            payment = payment_service.create_payment(user_id, float(amount), phone_number=phone_number)
         except RuntimeError as exc:
             return jsonify({"error": "payment_provider_error", "detail": str(exc)}), 502
         return jsonify(payment.to_dict()), 201

@@ -16,7 +16,6 @@ class Payment(db.Model):
     user_id = db.Column(db.String, nullable=False)
     amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String, nullable=False, default=PaymentStatus.PENDING.value)
-    to_wallet = db.Column(db.String, nullable=True)
     phone_number = db.Column(db.String, nullable=True)
     stripe_payment_intent_id = db.Column(db.String, nullable=True)
 
@@ -26,7 +25,6 @@ class Payment(db.Model):
             "user_id": self.user_id,
             "amount": self.amount,
             "status": self.status,
-            "to_wallet": self.to_wallet,
             "phone_number": self.phone_number,
             "stripe_payment_intent_id": self.stripe_payment_intent_id,
         }
