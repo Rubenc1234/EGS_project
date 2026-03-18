@@ -1,23 +1,32 @@
 import uuid
-from dataclasses import dataclass, field
 from enum import Enum
+from payment_service.database import db
+
 
 class PaymentStatus(str, Enum):
     PENDING = "pending"
     CONCLUDED = "concluded"
     CANCELLED = "cancelled"
 
-@dataclass
-class Payment:
-    user_id: str
-    amount: float
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    status: PaymentStatus = PaymentStatus.PENDING
+
+class Payment(db.Model):
+    __tablename__ = "payments"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String, nullable=False, default=PaymentStatus.PENDING.value)
+    to_wallet = db.Column(db.String, nullable=True)
+    phone_number = db.Column(db.String, nullable=True)
+    stripe_payment_intent_id = db.Column(db.String, nullable=True)
 
     def to_dict(self):
         return {
             "id": self.id,
             "user_id": self.user_id,
             "amount": self.amount,
-            "status": self.status.value,
+            "status": self.status,
+            "to_wallet": self.to_wallet,
+            "phone_number": self.phone_number,
+            "stripe_payment_intent_id": self.stripe_payment_intent_id,
         }

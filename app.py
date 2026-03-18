@@ -2,8 +2,12 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 import os
+from dotenv import load_dotenv
+import stripe
 from clients.iam_client import IAMClient
 import requests
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "payment_service", ".env"))
 
 app = Flask(__name__)
 CORS(app)
@@ -20,6 +24,9 @@ PAYMENT_BASE_URL = "http://localhost:5002"
 NOTIFICATIONS_BASE_URL = "http://localhost:5003"
 # endereço do Transactions Service (composer -> transactions_service)
 TRANSACTIONS_BASE_URL = "http://localhost:8081"
+# wallet do banco (origem das transações geradas por pagamentos)
+BANK_WALLET = os.environ.get("BANK_WALLET", "bank-wallet-default")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
 # Swagger UI para composer
 SWAGGER_URL_COMPOSER = "/composer/docs"
@@ -87,25 +94,102 @@ def validate_user_token():
 # -----------------------------
 
 
+def _trigger_transaction_for_payment(payment_id: str) -> None:
+    """Fetch full payment and create a blockchain transaction. Best-effort."""
+    try:
+        pay_res = requests.get(f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}", timeout=5)
+        if pay_res.status_code != 200:
+            return
+        payment = pay_res.json()
+        to_wallet = payment.get("to_wallet")
+        amount = payment.get("amount")
+        if not to_wallet or amount is None:
+            return
+        tx_payload = {
+            "from_wallet": BANK_WALLET,
+            "to_wallet": to_wallet,
+            "amount": amount,
+            "asset": "EUR",
+        }
+        requests.post(
+            f"{TRANSACTIONS_BASE_URL}/v1/transactions/",
+            json=tx_payload,
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+    except Exception:
+        pass  # best-effort: falha na transação não deve reverter o update de status
+
+
 @app.route("/v1/composer/payments", methods=["POST"])
 def composer_create_payment():
     data = request.get_json() or {}
     user_id = data.get("user_id")
     amount = data.get("amount")
+    to_wallet = data.get("to_wallet")
 
-    if not user_id or amount is None:
-        return jsonify({"error": "user_id and amount required"}), 400
+    if not user_id or amount is None or not to_wallet:
+        return jsonify({"error": "user_id, amount and to_wallet required"}), 400
 
     try:
-        # Dev: forward payment request without requesting a service token
         headers = {"Content-Type": "application/json"}
-        res = requests.post(f"{PAYMENT_BASE_URL}/v1/payments", json={"user_id": user_id, "amount": amount}, headers=headers, timeout=5)
+        res = requests.post(
+            f"{PAYMENT_BASE_URL}/v1/payments",
+            json={"user_id": user_id, "amount": amount, "to_wallet": to_wallet},
+            headers=headers,
+            timeout=5,
+        )
         try:
             body = res.json()
         except Exception:
             body = {"detail": res.text}
 
         return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502
+
+
+# Webhook Stripe — deve ficar ANTES da rota /<payment_id> para Flask não tratar "webhook" como payment_id
+@app.route("/v1/composer/payments/webhook", methods=["POST"])
+def composer_payment_webhook():
+    """
+    Stripe faz POST aqui quando o estado de um PaymentIntent muda.
+    Eventos tratados: payment_intent.succeeded, payment_intent.payment_failed
+    """
+    payload = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature", "")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except ValueError:
+        return jsonify({"error": "invalid payload"}), 400
+    except stripe.error.SignatureVerificationError:
+        return jsonify({"error": "invalid signature"}), 400
+
+    STATUS_MAP = {
+        "payment_intent.succeeded": "concluded",
+        "payment_intent.payment_failed": "cancelled",
+    }
+    internal_status = STATUS_MAP.get(event["type"])
+    if not internal_status:
+        return jsonify({"received": True}), 200
+
+    payment_intent = event["data"]["object"]
+    payment_id = (payment_intent.get("metadata") or {}).get("payment_id")
+    if not payment_id:
+        return jsonify({"error": "missing payment_id in metadata"}), 400
+
+    try:
+        headers = {"Content-Type": "application/json"}
+        res = requests.patch(
+            f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}",
+            json={"status": internal_status},
+            headers=headers,
+            timeout=5,
+        )
+        if res.status_code == 200 and internal_status == "concluded":
+            _trigger_transaction_for_payment(payment_id)
+        return jsonify({"received": True}), 200
     except requests.RequestException as e:
         return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502
 
@@ -191,13 +275,16 @@ def composer_update_payment(payment_id):
         return jsonify({"error": "status required"}), 400
 
     try:
-        # Dev: forward update without requesting a service token
         headers = {"Content-Type": "application/json"}
         res = requests.patch(f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}", json={"status": status}, headers=headers, timeout=5)
         try:
             body = res.json()
         except Exception:
             body = {"detail": res.text}
+
+        if res.status_code == 200 and status == "concluded":
+            _trigger_transaction_for_payment(payment_id)
+
         return jsonify(body), res.status_code
     except requests.RequestException as e:
         return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502

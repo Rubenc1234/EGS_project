@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Payment Service
-  description: Serviço responsável por criar e gerir pagamentos MB WAY.
+  description: Serviço responsável por criar e gerir pagamentos via Stripe.
   version: 1.0.0
 
 servers:
@@ -31,14 +31,28 @@ components:
         status:
           type: string
           enum: [cancelled, pending, concluded]
+        to_wallet:
+          type: string
+        phone_number:
+          type: string
+          description: "Telefone opcional do pagador"
+        stripe_payment_intent_id:
+          type: string
+          description: "Stripe PaymentIntent ID (pi_...)"
 
     CreatePayment:
       type: object
+      required: [user_id, amount, to_wallet]
       properties:
         user_id:
           type: string
         amount:
           type: number
+        to_wallet:
+          type: string
+        phone_number:
+          type: string
+          description: "Telefone opcional do pagador"
 
     UpdatePaymentStatus:
       type: object
@@ -51,7 +65,7 @@ paths:
 
   /v1/payments:
     post:
-      summary: Cria pagamento MB WAY
+      summary: Cria pagamento via Stripe
       security:
         - ServiceToken: []
       requestBody:

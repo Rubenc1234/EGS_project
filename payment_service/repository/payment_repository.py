@@ -1,14 +1,15 @@
-# In-memory store — substituir por DB no futuro
+from payment_service.database import db
 from payment_service.models.payment import Payment
 
 
-_payments: dict[str, "Payment"] = {}
-
 def save(payment: Payment) -> None:
-    _payments[payment.id] = payment
+    db.session.add(payment)
+    db.session.commit()
+
 
 def find_by_id(payment_id: str) -> Payment | None:
-    return _payments.get(payment_id)
+    return db.session.get(Payment, payment_id)
+
 
 def update(payment: Payment) -> None:
-    _payments[payment.id] = payment
+    db.session.commit()

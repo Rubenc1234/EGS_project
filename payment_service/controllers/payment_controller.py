@@ -6,14 +6,19 @@ def register_routes(app):
 
     @app.route("/v1/payments", methods=["POST"])
     def create_payment():
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         user_id = data.get("user_id")
         amount = data.get("amount")
+        to_wallet = data.get("to_wallet")
+        phone_number = data.get("phone_number")
 
-        if not user_id or amount is None:
-            return jsonify({"error": "user_id and amount are required"}), 400
+        if not user_id or amount is None or not to_wallet:
+            return jsonify({"error": "user_id, amount and to_wallet are required"}), 400
 
-        payment = payment_service.create_payment(user_id, float(amount))
+        try:
+            payment = payment_service.create_payment(user_id, float(amount), to_wallet, phone_number=phone_number)
+        except RuntimeError as exc:
+            return jsonify({"error": "payment_provider_error", "detail": str(exc)}), 502
         return jsonify(payment.to_dict()), 201
 
     @app.route("/v1/payments/<payment_id>", methods=["GET"])
@@ -25,7 +30,7 @@ def register_routes(app):
 
     @app.route("/v1/payments/<payment_id>", methods=["PATCH"])
     def update_payment(payment_id):
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         status = data.get("status")
 
         valid_statuses = {"cancelled", "pending", "concluded"}

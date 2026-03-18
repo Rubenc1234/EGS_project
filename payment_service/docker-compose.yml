@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  payment-postgres:
+    image: postgres:15
+    container_name: payment-postgres
+    environment:
+      POSTGRES_USER: payuser
+      POSTGRES_PASSWORD: paypassword
+      POSTGRES_DB: payment_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - payment_pgdata:/var/lib/postgresql/data
+
+volumes:
+  payment_pgdata:

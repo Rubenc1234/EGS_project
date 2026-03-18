@@ -1,12 +1,22 @@
+import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 from iam_service.controllers.iam_controller import register_routes
 from payment_service.controllers.payment_controller import register_routes as register_payment_routes
-import os
+from payment_service.database import init_db
 
 app = Flask(__name__)
 CORS(app)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL", "postgresql://payuser:paypassword@localhost:5433/payment_db"
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+init_db(app)
 
 # Swagger UI para payment
 SWAGGER_URL_PAY = "/payment/docs"
@@ -21,7 +31,7 @@ def payment_static(filename):
         filename
     )
 
-#Registrar rotas Payment
+# Registrar rotas Payment
 register_payment_routes(app)
 
 if __name__ == "__main__":
