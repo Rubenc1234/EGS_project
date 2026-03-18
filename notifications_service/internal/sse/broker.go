@@ -1,80 +1,78 @@
 package sse
 
 import (
-	"io"
+	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"egs-notifications/internal/models"
 )
 
-// ClientEvent represents a client connecting or disconnecting.
-type ClientEvent struct {
-	userID string
-	c      chan string
+type SubscriberEvent struct {
+	clientID uint
+	userID   string
+	c        chan models.Notification
 }
 
-// MessageEvent represents a message to be sent to specific users.
 type MessageEvent struct {
-	userIDs []string
-	msg     string
+	clientID     uint
+	userIDs      []string
+	notification models.Notification
 }
 
-// Broker manages active SSE clients and pushes messages to specific users.
+// Broker manages active SSE clients.
 type Broker struct {
-	// clients maps userID to a map of active client channels.
-	// We use a nested map because one user might have multiple tabs/devices open.
-	clients        map[string]map[chan string]bool
-	newClients     chan ClientEvent
-	defunctClients chan ClientEvent
-	messages       chan MessageEvent
+	// Key is "{clientID}:{userID}" to guarantee tenant isolation
+	clients            map[string]map[chan models.Notification]bool
+	newSubscribers     chan SubscriberEvent
+	defunctSubscribers chan SubscriberEvent
+	messages           chan MessageEvent
 }
 
-// NewBroker initializes a new Broker instance.
 func NewBroker() *Broker {
 	return &Broker{
-		clients:        make(map[string]map[chan string]bool),
-		newClients:     make(chan ClientEvent),
-		defunctClients: make(chan ClientEvent),
-		messages:       make(chan MessageEvent),
+		clients:            make(map[string]map[chan models.Notification]bool),
+		newSubscribers:     make(chan SubscriberEvent),
+		defunctSubscribers: make(chan SubscriberEvent),
+		messages:           make(chan MessageEvent),
 	}
 }
 
-// Start runs the broker's main event loop.
+func getRoutingKey(clientID uint, userID string) string {
+	return fmt.Sprintf("%d:%s", clientID, userID)
+}
+
 func (b *Broker) Start() {
 	for {
 		select {
-		case evt := <-b.newClients:
-			// Initialize the inner map if this is the user's first connection
-			if b.clients[evt.userID] == nil {
-				b.clients[evt.userID] = make(map[chan string]bool)
+		case evt := <-b.newSubscribers:
+			key := getRoutingKey(evt.clientID, evt.userID)
+			if b.clients[key] == nil {
+				b.clients[key] = make(map[chan models.Notification]bool)
 			}
-			b.clients[evt.userID][evt.c] = true
-			log.Printf("Client added for user %s. Active connections for user: %d", evt.userID, len(b.clients[evt.userID]))
+			b.clients[key][evt.c] = true
+			log.Printf("Client added for Route %s. Active connections: %d", key, len(b.clients[key]))
 
-		case evt := <-b.defunctClients:
-			if connections, ok := b.clients[evt.userID]; ok {
+		case evt := <-b.defunctSubscribers:
+			key := getRoutingKey(evt.clientID, evt.userID)
+			if connections, ok := b.clients[key]; ok {
 				delete(connections, evt.c)
 				close(evt.c)
-				log.Printf("Client removed for user %s. Remaining connections: %d", evt.userID, len(connections))
+				log.Printf("Client removed for Route %s. Remaining connections: %d", key, len(connections))
 
-				// If the user has no more open connections, clean up their map entry
-				// to prevent slow memory leaks over time.
 				if len(connections) == 0 {
-					delete(b.clients, evt.userID)
+					delete(b.clients, key)
 				}
 			}
 
 		case evt := <-b.messages:
-			// Unicast / Multicast logic
 			for _, uid := range evt.userIDs {
-				if connections, ok := b.clients[uid]; ok {
-					// Send to all active devices for this user
+				key := getRoutingKey(evt.clientID, uid)
+				if connections, ok := b.clients[key]; ok {
 					for c := range connections {
 						select {
-						case c <- evt.msg:
+						case c <- evt.notification:
 						default:
-							log.Printf("Skipping connection for user %s, buffer full", uid)
+							log.Printf("Skipping connection for Route %s, buffer full", key)
 						}
 					}
 				}
@@ -83,78 +81,14 @@ func (b *Broker) Start() {
 	}
 }
 
-// Notify queues a message to be sent to specific users.
-func (b *Broker) Notify(userIDs []string, msg string) {
-	b.messages <- MessageEvent{userIDs: userIDs, msg: msg}
+func (b *Broker) AddSubscriber(clientID uint, userID string, c chan models.Notification) {
+	b.newSubscribers <- SubscriberEvent{clientID: clientID, userID: userID, c: c}
 }
 
-// HandleSSE handles incoming HTTP requests and establishes the SSE connection.
-// @Summary Connect to SSE stream
-// @Description Establishes a Server-Sent Events connection for a specific user.
-// @Tags events
-// @Param userID path string true "User ID"
-// @Produce text/event-stream
-// @Success 200 {string} string "SSE Stream connected"
-// @Router /events/{userID} [get]
-func (b *Broker) HandleSSE(c *gin.Context) {
-	userID := c.Param("userID")
-	if userID == "" {
-		c.String(http.StatusBadRequest, "User ID is required")
-		return
-	}
-
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-
-	messageChan := make(chan string, 10)
-	clientEvt := ClientEvent{userID: userID, c: messageChan}
-
-	b.newClients <- clientEvt
-
-	defer func() {
-		b.defunctClients <- clientEvt
-	}()
-
-	c.Stream(func(w io.Writer) bool {
-		select {
-		case <-c.Request.Context().Done():
-			return false
-		case msg := <-messageChan:
-			c.SSEvent("message", msg)
-			return true
-		}
-	})
+func (b *Broker) RemoveSubscriber(clientID uint, userID string, c chan models.Notification) {
+	b.defunctSubscribers <- SubscriberEvent{clientID: clientID, userID: userID, c: c}
 }
 
-// NotificationPayload defines the expected JSON structure for sending notifications.
-type NotificationPayload struct {
-	UserIDs []string `json:"user_ids" binding:"required"`
-	Message string   `json:"message" binding:"required"`
-}
-
-// HandleNotify processes POST requests to trigger notifications.
-// @Summary Send a notification
-// @Description Queues a notification to be sent to specified users.
-// @Tags notifications
-// @Accept json
-// @Produce json
-// @Param payload body NotificationPayload true "Notification payload containing targets and message"
-// @Success 200 {object} map[string]interface{} "status: notifications queued"
-// @Failure 400 {object} map[string]interface{} "error details"
-// @Router /notify [post]
-func (b *Broker) HandleNotify(c *gin.Context) {
-	var payload NotificationPayload
-
-	// ShouldBindJSON handles validation based on the struct tags
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if len(payload.UserIDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one user_id must be provided"})
-		return
-	}
-
-	b.Notify(payload.UserIDs, payload.Message)
-	c.JSON(http.StatusOK, gin.H{"status": "notifications queued", "targets": payload.UserIDs})
+func (b *Broker) Notify(clientID uint, userIDs []string, notification models.Notification) {
+	b.messages <- MessageEvent{clientID: clientID, userIDs: userIDs, notification: notification}
 }

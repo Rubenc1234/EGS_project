@@ -1,0 +1,35 @@
+### ============================================================================
+### Step 4: Customer Backend Pushes Notification
+### Stores: notification id into a global variable
+### ============================================================================
+POST {{baseUrl}}/events
+Authorization: Bearer {{api_key}}
+Content-Type: application/json
+
+{
+  "user_ids": [
+    "{{userId}}"
+  ],
+  "message": "Welcome to My Startup!"
+}
+
+> {%
+    client.global.set("notification_id", response.body.notifications[0].id);
+%}
+
+### ============================================================================
+### Step 5: Mark Notification as Read
+### ============================================================================
+PATCH {{baseUrl}}/events/{{notification_id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### ============================================================================
+### Step 6: Mark All Notifications as Read
+### ============================================================================
+PATCH {{baseUrl}}/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+

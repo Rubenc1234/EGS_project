@@ -1,0 +1,15 @@
+### ============================================================================
+### Extra 1: Regenerate Key
+### Tests invalidating old keys.
+### ============================================================================
+POST {{baseUrl}}/admin/clients/{{client_id}}/regenerate-key
+Authorization: Bearer {{masterKey}}
+Content-Type: application/json
+
+### ============================================================================
+### Extra 2: Delete Client
+### Tests data isolation and cleanup.
+### ============================================================================
+DELETE {{baseUrl}}/admin/clients/{{client_id}}
+Authorization: Bearer {{masterKey}}
+Content-Type: application/json

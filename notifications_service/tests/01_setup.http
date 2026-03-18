@@ -1,0 +1,33 @@
+### ============================================================================
+### Step 1: Admin creates a Client App
+### Stores: client_id and api_key into global variables
+### ============================================================================
+POST {{baseUrl}}/admin/clients
+Authorization: Bearer {{masterKey}}
+Content-Type: application/json
+
+{
+  "name": "My Startup App"
+}
+
+> {%
+    client.global.set("client_id", response.body.client_id);
+    client.global.set("api_key", response.body.api_key);
+%}
+
+### ============================================================================
+### Step 2: Customer Backend asks for a Frontend Token
+### Stores: token into a global variable
+### ============================================================================
+POST {{baseUrl}}/auth/token
+Authorization: Bearer {{api_key}}
+Content-Type: application/json
+
+{
+  "user_id": "{{userId}}"
+}
+
+> {%
+    client.global.set("token", response.body.token);
+%}
+
