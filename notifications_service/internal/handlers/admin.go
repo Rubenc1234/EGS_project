@@ -5,6 +5,7 @@ import (
 
 	"egs-notifications/internal/auth"
 	"egs-notifications/internal/models"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -65,7 +66,7 @@ func CreateClient(db *gorm.DB) gin.HandlerFunc {
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /admin/clients/{id}/regenerate-key [post]
+// @Router /admin/clients/{id}/key [patch]
 func RegenerateClientKey(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientID := c.Param("id")

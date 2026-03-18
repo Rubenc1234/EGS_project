@@ -33,7 +33,7 @@ func SetupRoutes(db *gorm.DB, broker *sse.Broker) *gin.Engine {
 	{
 		adminOnly.POST("/clients", handlers.CreateClient(db))
 		adminOnly.GET("/clients", handlers.ListClients(db))
-		adminOnly.POST("/clients/:id/regenerate-key", handlers.RegenerateClientKey(db))
+		adminOnly.PATCH("/clients/:id/key", handlers.RegenerateClientKey(db))
 		adminOnly.DELETE("/clients/:id", handlers.DeleteClient(db))
 	}
 
@@ -43,6 +43,9 @@ func SetupRoutes(db *gorm.DB, broker *sse.Broker) *gin.Engine {
 	{
 		composerOnly.POST("/auth/token", handlers.GenerateClientToken())
 		composerOnly.POST("/events", handlers.HandleNotify(db, broker))
+		composerOnly.PUT("/users/:user_id/email", handlers.SetUserEmail())
+		composerOnly.GET("/users/:user_id/email", handlers.GetUserEmail())
+		composerOnly.DELETE("/users/:user_id/email", handlers.DeleteUserEmail())
 	}
 
 	// Subscriber Routes (End-user Web Browsers)

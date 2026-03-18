@@ -64,6 +64,13 @@ definitions:
           type: string
         type: array
     type: object
+  internal_handlers.SetUserEmailRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
 info:
   contact: {}
   description: Production-ready Multi-Tenant SSE Notifications Service
@@ -170,8 +177,8 @@ paths:
       summary: Revoke and delete client
       tags:
       - admin
-  /admin/clients/{id}/regenerate-key:
-    post:
+  /admin/clients/{id}/key:
+    patch:
       description: Revokes the old API key and generates a new one. The old key will
         immediately stop working.
       parameters:
@@ -388,6 +395,101 @@ paths:
       summary: Mark notification as read
       tags:
       - events
+  /users/{user_id}/email:
+    delete:
+      description: Placeholder endpoint to delete a user's notification email for
+        the authenticated client.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user notification email
+      tags:
+      - users
+    get:
+      description: Placeholder endpoint to retrieve a user's notification email for
+        the authenticated client.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user notification email
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Placeholder endpoint to create/update a user's notification email
+        for the authenticated client.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Email payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.SetUserEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set user notification email
+      tags:
+      - users
 securityDefinitions:
   BearerAuth:
     description: 'Composer API Key OR 4-hour Subscriber JWT (Format: Bearer <token>)'
