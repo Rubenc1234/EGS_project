@@ -7,7 +7,7 @@ export default function Dashboard() {
   const { data: wallet } = useQuery(['wallet'], getWallet)
   const { data: txs } = useQuery(['transactions'], () => listTransactions({ limit: 20 }))
 
-  useSSE('/v1/composer/events/me')
+  useSSE('/v1/events/me')
 
   return (
     <div>

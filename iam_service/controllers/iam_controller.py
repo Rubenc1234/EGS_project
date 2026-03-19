@@ -1,5 +1,7 @@
 from flask import jsonify, request
 from iam_service.services.keycloak_service import introspect_token, get_user_token
+from iam_service.config import KEYCLOAK_URL, REALM, CLIENT_ID
+import urllib.parse
 
 # Base de dados fake para teste
 USERS = {
@@ -35,6 +37,59 @@ def require_token(f):
 
 
 def register_routes(app):
+
+    # ----------------------
+    # LOGIN URL (OAuth Authorization Code Flow)
+    # ----------------------
+    @app.route("/v1/login", methods=["GET"])
+    def get_login_url():
+        """
+        Retorna a URL de redirecionamento para o Keycloak.
+        O frontend deve redirecionar o utilizador para esta URL.
+        """
+        # callback_url deve ser onde o frontend espera ser redirecionado após login
+        callback_url = request.args.get("redirect_uri", "http://localhost:5173/callback")
+        
+        state = request.args.get("state", "state123")  # em produção, gerar aleatoriamente
+        
+        login_url = (
+            f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/auth?"
+            f"client_id={urllib.parse.quote(CLIENT_ID)}&"
+            f"response_type=code&"
+            f"redirect_uri={urllib.parse.quote(callback_url)}&"
+            f"state={urllib.parse.quote(state)}&"
+            f"scope=openid%20profile%20email"
+        )
+        
+        return jsonify({"login_url": login_url}), 200
+
+    # ----------------------
+    # CALLBACK (trocar código por token)
+    # ----------------------
+    @app.route("/v1/callback", methods=["POST"])
+    def handle_callback():
+        """
+        Recebe o código do Keycloak e troca-o por um token.
+        O frontend envia o código que recebeu após o redirecionamento.
+        """
+        from iam_service.services.keycloak_service import exchange_code_for_token
+        
+        data = request.get_json() or {}
+        code = data.get("code")
+        redirect_uri = data.get("redirect_uri", "http://localhost:5173/callback")
+        
+        if not code:
+            return jsonify({"error": "code required"}), 400
+        
+        try:
+            token_data = exchange_code_for_token(code, redirect_uri)
+            return jsonify({
+                "access_token": token_data.get("access_token"),
+                "expires_in": token_data.get("expires_in"),
+                "token_type": "bearer"
+            }), 200
+        except Exception as e:
+            return jsonify({"error": "failed_to_exchange_code", "detail": str(e)}), 502
 
     # ----------------------
     # CREATE TOKEN

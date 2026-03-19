@@ -18,7 +18,7 @@ export default function Header() {
   const [unread, setUnread] = useState(0)
   const { toggleColorMode, mode } = useColorMode()
 
-  useSSE('/v1/composer/events/me', (data) => {
+  useSSE('/v1/events/me', (data) => {
     // show toast and increment badge
     toast.info(`Event: ${data}`)
     setUnread((u) => u + 1)

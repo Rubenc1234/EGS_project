@@ -7,8 +7,9 @@ import Stack from '@mui/material/Stack'
 import Paper from '@mui/material/Paper'
 
 const COMPOSER_BASE = import.meta.env.VITE_COMPOSER_BASE || 'http://localhost:5001'
-const LOGIN_REDIRECT = import.meta.env.VITE_LOGIN_URL || `${COMPOSER_BASE}/v1/composer/auth/redirect`
-const SIGNUP_REDIRECT = import.meta.env.VITE_SIGNUP_URL || `${COMPOSER_BASE}/v1/composer/auth/redirect?signup=true`
+// When using the Python Composer (app.py) we use a local login page that POSTs to /v1/composer/login
+const LOGIN_REDIRECT = '/login'
+const SIGNUP_REDIRECT = '/login'
 
 export default function Home() {
   return (

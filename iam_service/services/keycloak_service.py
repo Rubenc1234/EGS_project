@@ -20,6 +20,27 @@ def get_user_token(username: str, password: str) -> str:
     return {"access_token": js.get("access_token"), "expires_in": js.get("expires_in")}
 
 
+def exchange_code_for_token(code: str, redirect_uri: str) -> dict:
+    """
+    Troca um authorization code por um access token.
+    Utilizado no OAuth 2.0 Authorization Code Flow.
+    """
+    url = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/token"
+    
+    data = {
+        "grant_type": "authorization_code",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "code": code,
+        "redirect_uri": redirect_uri,
+    }
+    
+    res = requests.post(url, data=data, timeout=5)
+    res.raise_for_status()
+    js = res.json()
+    return {"access_token": js.get("access_token"), "expires_in": js.get("expires_in")}
+
+
 def introspect_token(token: str) -> bool:
     """
     Valida token JWT no Keycloak (introspection endpoint).

@@ -3,7 +3,6 @@ from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 import os
 from dotenv import load_dotenv
-import stripe
 from clients.iam_client import IAMClient
 import requests
 
@@ -26,7 +25,6 @@ NOTIFICATIONS_BASE_URL = "http://localhost:5003"
 TRANSACTIONS_BASE_URL = "http://localhost:8081"
 # wallet do banco (origem das transações geradas por pagamentos)
 BANK_WALLET = os.environ.get("BANK_WALLET", "bank-wallet-default")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
 # Swagger UI para composer
 SWAGGER_URL_COMPOSER = "/composer/docs"
@@ -46,6 +44,49 @@ def composer_static(filename):
 # -----------------------------
 # LOGIN
 # -----------------------------
+@app.route("/v1/composer/login", methods=["GET"])
+def composer_get_login_url():
+    """Retorna a URL para redirecionamento ao Keycloak"""
+    redirect_uri = request.args.get("redirect_uri", "http://localhost:5173/callback")
+    state = request.args.get("state", "state123")
+    
+    try:
+        res = requests.get(f"{IAM_BASE_URL}/v1/login", params={"redirect_uri": redirect_uri, "state": state}, timeout=5)
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "iam_unreachable", "detail": str(e)}), 502
+
+
+@app.route("/v1/composer/callback", methods=["POST"])
+def composer_callback():
+    """Recebe o código do Keycloak e troca-o por token"""
+    data = request.get_json() or {}
+    code = data.get("code")
+    redirect_uri = data.get("redirect_uri", "http://localhost:5173/callback")
+    
+    if not code:
+        return jsonify({"error": "code required"}), 400
+    
+    try:
+        res = requests.post(
+            f"{IAM_BASE_URL}/v1/callback",
+            json={"code": code, "redirect_uri": redirect_uri},
+            headers={"Content-Type": "application/json"},
+            timeout=5
+        )
+        try:
+            body = res.json()
+        except Exception:
+            body = {"detail": res.text}
+        return jsonify(body), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": "iam_unreachable", "detail": str(e)}), 502
+
+
 @app.route("/v1/composer/login", methods=["POST"])
 def composer_login():
 
@@ -145,51 +186,6 @@ def composer_create_payment():
             body = {"detail": res.text}
 
         return jsonify(body), res.status_code
-    except requests.RequestException as e:
-        return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502
-
-
-# Webhook Stripe — deve ficar ANTES da rota /<payment_id> para Flask não tratar "webhook" como payment_id
-@app.route("/v1/composer/payments/webhook", methods=["POST"])
-def composer_payment_webhook():
-    """
-    Stripe faz POST aqui quando o estado de um PaymentIntent muda.
-    Eventos tratados: payment_intent.succeeded, payment_intent.payment_failed
-    """
-    payload = request.get_data()
-    sig_header = request.headers.get("Stripe-Signature", "")
-
-    try:
-        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-    except ValueError:
-        return jsonify({"error": "invalid payload"}), 400
-    except stripe.error.SignatureVerificationError:
-        return jsonify({"error": "invalid signature"}), 400
-
-    STATUS_MAP = {
-        "payment_intent.succeeded": "concluded",
-        "payment_intent.payment_failed": "cancelled",
-    }
-    internal_status = STATUS_MAP.get(event["type"])
-    if not internal_status:
-        return jsonify({"received": True}), 200
-
-    payment_intent = event["data"]["object"]
-    payment_id = (payment_intent.get("metadata") or {}).get("payment_id")
-    if not payment_id:
-        return jsonify({"error": "missing payment_id in metadata"}), 400
-
-    try:
-        headers = {"Content-Type": "application/json"}
-        res = requests.patch(
-            f"{PAYMENT_BASE_URL}/v1/payments/{payment_id}",
-            json={"status": internal_status},
-            headers=headers,
-            timeout=5,
-        )
-        if res.status_code == 200 and internal_status == "concluded":
-            _trigger_transaction_for_payment(payment_id)
-        return jsonify({"received": True}), 200
     except requests.RequestException as e:
         return jsonify({"error": "payment_service_unreachable", "detail": str(e)}), 502
 

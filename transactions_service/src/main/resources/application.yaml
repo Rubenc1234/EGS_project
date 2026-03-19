@@ -26,3 +26,10 @@ blockchain:
   contract:
     address: "0x0000000000000000000000000000000000000000"
     decimals: 18
+
+# Keycloak / OIDC settings used for Composer login flow
+keycloak:
+  url: "http://localhost:8080"
+  realm: "microservices"
+  client-id: "iam-service"
+  client-secret: "4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha"
