@@ -1,0 +1,37 @@
+%% Sequence diagram: Signup, Login and Payment flow
+%% Mermaid sequenceDiagram
+
+sequenceDiagram
+  participant User as Browser/User
+  participant Composer as Composer (BFF)
+  participant KC_C as Keycloak (Composer realm)
+  participant PaymentUI as Payment Frontend
+  participant KC_P as Keycloak (Payments realm)
+  participant PaymentSvc as Payment Service
+  participant ComposerDB as Composer DB
+  participant Notifications as Notifications Service
+
+  Note over User,KC_C: SIGNUP / LOGIN (OIDC redirect flow)
+  User->>Composer: Click "Sign up" / "Login"
+  Composer-->>User: 302 Redirect to Keycloak (KC_C)
+  User->>KC_C: Sign up / Login (credentials or social)
+  KC_C-->>User: Redirect with Auth code -> callback to Composer
+  User->>Composer: Callback (code)
+  Composer->>KC_C: Exchange code for tokens (token endpoint)
+  KC_C-->>Composer: ID token + access token
+  Composer->>ComposerDB: Create wallet/profile (if new)
+  Composer-->>User: Session established (cookie or token)
+
+  Note over User,PaymentUI: PAYMENT FLOW (separate Payment UI + Keycloak_P)
+  User->>PaymentUI: Open payment page
+  PaymentUI-->>User: 302 Redirect to Keycloak (KC_P) for login if needed
+  User->>KC_P: Login for Payment realm
+  KC_P-->>PaymentUI: Auth code -> PaymentUI callback
+  PaymentUI->>KC_P: Exchange code -> tokens
+  PaymentUI->>PaymentSvc: Create Payment (auth: payment-user token)
+  PaymentSvc->>Composer: POST /v1/composer/transactions (auth: composer-service-token from env)
+  Composer->>ComposerDB: Persist transaction in ledger
+  Composer->>Notifications: Notify user (auth via token from Composer .env)
+  Notifications->>User: Send SSE / push
+  PaymentSvc-->>PaymentUI: Payment result
+  PaymentUI-->>User: Show success/failure

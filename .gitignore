@@ -9,3 +9,6 @@ __pycache__/
 
 # tests
 tests/
+
+# node modules
+frontend/node_modules/
