@@ -14,11 +14,38 @@ export default function Callback() {
 
   useEffect(() => {
     const exchangeCode = async () => {
+      // First try: the server-side flow redirects back to the frontend with the token in the fragment
+      // e.g. http://localhost:5175/callback#access_token=...&expires_in=...
+      const hash = window.location.hash || ''
+      if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.replace('#', ''))
+        const token = params.get('access_token')
+        const expires = params.get('expires_in')
+        if (token) {
+          // Store token and set Authorization header
+          localStorage.setItem('egs_token', token)
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+
+          // Clean URL (remove fragment) so token isn't in history
+          try {
+            const newUrl = window.location.pathname + window.location.search
+            window.history.replaceState({}, document.title, newUrl)
+          } catch (e) {
+            // ignore
+          }
+
+          // Navigate to dashboard
+          navigate('/dashboard')
+          return
+        }
+      }
+
+      // Fallback: old flow where Keycloak returned a code as query param and frontend posts it to the server
       const code = searchParams.get('code')
       const state = searchParams.get('state')
 
       if (!code) {
-        setError('No authorization code received from Keycloak')
+        setError('No authorization code or access token received from Keycloak')
         return
       }
 
@@ -52,7 +79,7 @@ export default function Callback() {
           localStorage.setItem('egs_token', token)
           // Set authorization header
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-          
+
           // Redirect to dashboard
           navigate('/dashboard')
         } else {
