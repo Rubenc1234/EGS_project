@@ -1,7 +1,8 @@
-from flask import jsonify, request
+from flask import jsonify, request, session
 from iam_service.services.keycloak_service import introspect_token, get_user_token
 from iam_service.config import KEYCLOAK_URL, REALM, CLIENT_ID
 import urllib.parse
+import uuid
 
 # Base de dados fake para teste
 USERS = {
@@ -46,22 +47,60 @@ def register_routes(app):
         """
         Retorna a URL de redirecionamento para o Keycloak.
         O frontend deve redirecionar o utilizador para esta URL.
+        Usa session para armazenar o state de forma segura (como em Java).
         """
         # callback_url deve ser onde o frontend espera ser redirecionado após login
-        callback_url = request.args.get("redirect_uri", "http://localhost:5173/callback")
+        # Use transactions_service server callback by default (same as signup)
+        callback_url = request.args.get("redirect_uri", "http://localhost:8081/v1/callback")
         
-        state = request.args.get("state", "state123")  # em produção, gerar aleatoriamente
+        # Generate a unique state per login request and store in session
+        generated_state = str(uuid.uuid4())
+        session['oidc_state'] = generated_state
+        session['post_login_redirect'] = callback_url
         
         login_url = (
             f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/auth?"
             f"client_id={urllib.parse.quote(CLIENT_ID)}&"
             f"response_type=code&"
             f"redirect_uri={urllib.parse.quote(callback_url)}&"
-            f"state={urllib.parse.quote(state)}&"
-            f"scope=openid%20profile%20email"
+            f"state={urllib.parse.quote(generated_state)}&"
+            f"scope=openid%20profile%20email&"
+            f"prompt=login&max_age=0"
         )
         
         return jsonify({"login_url": login_url}), 200
+    
+
+        # ----------------------
+    # SIGNUP URL (self-service registration)
+    # ----------------------
+    @app.route("/v1/signup", methods=["GET"])
+    def get_signup_url():
+        """
+        Retorna a URL de redirecionamento para a página de registo do Keycloak.
+        O frontend deve redirecionar o utilizador para esta URL.
+        Usa /registrations endpoint (mais confiável que kc_action=register).
+        Armazena state na sessão de forma segura (como em Java).
+        """
+        callback_url = request.args.get("redirect_uri", "http://localhost:8081/v1/callback")
+        
+        # Generate a unique state per signup request and store in session
+        generated_state = str(uuid.uuid4())
+        session['oidc_state'] = generated_state
+        session['post_login_redirect'] = callback_url
+        
+        # Use Keycloak's dedicated /registrations endpoint for user self-service signup
+        # This is more reliable than /auth?kc_action=register
+        signup_url = (
+            f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/registrations?"
+            f"client_id={urllib.parse.quote(CLIENT_ID)}&"
+            f"response_type=code&"
+            f"redirect_uri={urllib.parse.quote(callback_url)}&"
+            f"state={urllib.parse.quote(generated_state)}&"
+            f"scope=openid+profile+email"
+        )
+        
+        return jsonify({"signup_url": signup_url}), 200
 
     # ----------------------
     # CALLBACK (trocar código por token)

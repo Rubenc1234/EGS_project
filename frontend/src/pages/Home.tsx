@@ -9,7 +9,18 @@ import Paper from '@mui/material/Paper'
 const COMPOSER_BASE = import.meta.env.VITE_COMPOSER_BASE || 'http://localhost:5001'
 // When using the Python Composer (app.py) we use a local login page that POSTs to /v1/composer/login
 const LOGIN_REDIRECT = '/login'
-const SIGNUP_REDIRECT = '/login'
+
+const handleSignup = async () => {
+  try {
+    const res = await fetch('http://localhost:5000/v1/signup')
+    const data = await res.json()
+    if (data.signup_url) {
+      window.location.href = data.signup_url
+    }
+  } catch (err) {
+    console.error('Error fetching signup URL:', err)
+  }
+}
 
 export default function Home() {
   return (
@@ -27,7 +38,7 @@ export default function Home() {
             <Button variant="contained" color="primary" size="large" href={LOGIN_REDIRECT}>
               Login
             </Button>
-            <Button variant="outlined" color="primary" size="large" href={SIGNUP_REDIRECT}>
+            <Button variant="outlined" color="primary" size="large" onClick={handleSignup}>
               Sign Up
             </Button>
           </Stack>
