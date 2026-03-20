@@ -18,6 +18,7 @@ class StripePaymentProvider(BasePaymentProvider):
                 metadata={"payment_id": payment.id},
             )
             payment.stripe_payment_intent_id = intent.id
+            payment.stripe_client_secret = intent.client_secret
             payment.status = PaymentStatus.PENDING
             return payment
         except stripe.error.StripeError as e:

@@ -18,6 +18,9 @@ class Payment(db.Model):
     status = db.Column(db.String, nullable=False, default=PaymentStatus.PENDING.value)
     phone_number = db.Column(db.String, nullable=True)
     stripe_payment_intent_id = db.Column(db.String, nullable=True)
+    stripe_client_secret = db.Column(db.String, nullable=True)
+    wallet_id = db.Column(db.String, nullable=True)
+    redirect_url = db.Column(db.String, nullable=True)
 
     def to_dict(self):
         return {
@@ -27,4 +30,7 @@ class Payment(db.Model):
             "status": self.status,
             "phone_number": self.phone_number,
             "stripe_payment_intent_id": self.stripe_payment_intent_id,
+            "stripe_client_secret": self.stripe_client_secret,
+            "wallet_id": self.wallet_id,
+            "redirect_url": self.redirect_url,
         }

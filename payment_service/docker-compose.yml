@@ -12,5 +12,34 @@ services:
     volumes:
       - payment_pgdata:/var/lib/postgresql/data
 
+  payment-keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: payment-keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8083:8080"
+    volumes:
+      - payment_keycloak_data:/opt/keycloak/data
+
 volumes:
   payment_pgdata:
+  payment_keycloak_data:
+
+# Environment variables required by the payment backend (set in .env or shell):
+#
+# DATABASE_URL=postgresql://payuser:paypassword@localhost:5433/payment_db
+# FLASK_SECRET_KEY=<random-secret>
+#
+# PAYMENT_KEYCLOAK_URL=http://localhost:8083
+# PAYMENT_REALM=payments-realm
+# PAYMENT_CLIENT_ID=payments-client
+# PAYMENT_CLIENT_SECRET=<client-secret-from-keycloak>
+#
+# NOTIFICATIONS_BASE_URL=http://localhost:8082
+# NOTIFICATIONS_API_KEY=<api-key-from-notifications-service>
+#
+# STRIPE_Secret_key=sk_test_...
+# STRIPE_Publishable_key=pk_test_...
