@@ -7,6 +7,7 @@ import egs.transactions_service.repository.TransactionRepository;
 import egs.transactions_service.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import java.math.BigInteger;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,9 @@ public class TransactionWorker {
     private final Web3j web3j;
     private final BlockchainConfig blockchainConfig;
     private final KeyManagementService keyManagementService;
+
+    @Value("${app.dev-mode:false}")
+    private boolean devMode;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -56,6 +61,13 @@ public class TransactionWorker {
 
             if (tx.getStatus() != Transaction.TransactionStatus.PENDING) {
                 log.warn("Worker: Transação {} não está em estado PENDING. Status atual: {}", txId, tx.getStatus());
+                return;
+            }
+
+            // DEV MODE: Simular blockchain sem conectar realmente
+            if (devMode) {
+                log.warn("=== DEV MODE ATIVADO === Simulando envio para blockchain...");
+                sendToBlockchainDev(txId, tx);
                 return;
             }
 
@@ -120,6 +132,48 @@ public class TransactionWorker {
 
         } catch (Exception e) {
             log.error("Erro critico ao enviar transação {} para a rede: {}", txId, e.getMessage());
+            updateTransactionStatus(txId, null, Transaction.TransactionStatus.FAILED);
+        }
+    }
+
+    /**
+     * DEV MODE: Simula envio para blockchain sem realmente conectar.
+     * Em produção, use o código real com Web3j.
+     */
+    private void sendToBlockchainDev(String txId, Transaction tx) {
+        try {
+            // Em dev mode, gerar um hash fake mas realista (0x + 64 hex chars)
+            String uuidHex = UUID.randomUUID().toString().replace("-", "");
+            String fakeHash = "0x" + uuidHex + uuidHex.substring(0, 64 - uuidHex.length());
+            log.warn("DEV MODE: Simulando envio para blockchain. Tx {} com hash fake: {}", txId, fakeHash);
+            
+            // Simular sucesso na blockchain
+            updateTransactionStatus(txId, fakeHash, Transaction.TransactionStatus.BROADCASTED);
+            
+            // Após 2s, simular confirmação
+            new Thread(() -> {
+                try {
+                    Thread.sleep(2000);
+                    updateTransactionStatus(txId, fakeHash, Transaction.TransactionStatus.CONFIRMED);
+                    log.info("DEV MODE: Transação {} confirmada com sucesso!", txId);
+                    
+                    // Atualizar saldo do receiver
+                    walletRepository.findById(tx.getToWallet()).ifPresent(wallet -> {
+                        log.info("DEV MODE: Creditando {} {} para receiver {}", tx.getAmount(), tx.getAsset(), tx.getToWallet());
+                        if ("EUR".equals(tx.getAsset())) {
+                            wallet.setLastTokenBalance(wallet.getLastTokenBalance().add(tx.getAmount()));
+                        } else {
+                            wallet.setLastNativeBalance(wallet.getLastNativeBalance().add(tx.getAmount()));
+                        }
+                        walletRepository.save(wallet);
+                    });
+                } catch (InterruptedException ie) {
+                    log.error("DEV MODE: Thread interrompida", ie);
+                }
+            }).start();
+            
+        } catch (Exception e) {
+            log.error("DEV MODE: Erro ao simular blockchain: {}", e.getMessage());
             updateTransactionStatus(txId, null, Transaction.TransactionStatus.FAILED);
         }
     }

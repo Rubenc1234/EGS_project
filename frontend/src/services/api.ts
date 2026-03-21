@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/', withCredentials: true })
+const api = axios.create({ baseURL: 'http://localhost:8081', withCredentials: true })
 
 // set Authorization header from stored token if present
 const token = typeof window !== 'undefined' ? localStorage.getItem('egs_token') : null
@@ -9,13 +9,59 @@ if (token) {
 }
 
 export async function getWallet() {
-  // composer endpoints were previously /v1/composer/...; transactions_service will act as composer
-  const res = await api.get('/v1/users/me/wallet')
-  return res.data
+  // Try to create or get wallet via POST /v1/users/me/wallet (auto-generates if needed)
+  try {
+    const res = await api.post('/v1/users/me/wallet')
+    // Cache the wallet id for manual fallback
+    const dto = res.data || {}
+    const walletId = dto.walletId || dto.wallet_id || dto.wallet || dto.address
+    if (walletId) {
+      localStorage.setItem('egs_wallet_id', walletId)
+    }
+    // Normalize to frontend shape: { id, balance: number, nativeBalance }
+    const normalized = {
+      id: walletId,
+      balance: dto.balance ? parseFloat(String(dto.balance)) : (dto.balanceInFiat ? Number(dto.balanceInFiat) : 0),
+      nativeBalance: dto.nativeBalance ? parseFloat(String(dto.nativeBalance)) : (dto.native_balance ? parseFloat(String(dto.native_balance)) : 0),
+      raw: dto,
+    }
+    return normalized
+  } catch (err: any) {
+    console.error('Failed to get wallet via POST /v1/users/me/wallet:', err.message)
+    // Fallback: try to use a manually saved wallet id
+    const savedWalletId = typeof window !== 'undefined' ? localStorage.getItem('egs_wallet_id') : null
+    if (savedWalletId) {
+      console.log('Trying fallback: using saved wallet id from localStorage:', savedWalletId)
+      const res = await api.get(`/v1/wallets/${savedWalletId}/balance`)
+      const dto = res.data || {}
+      const walletId = dto.walletId || dto.wallet_id || dto.wallet || dto.address || savedWalletId
+      const normalized = {
+        id: walletId,
+        balance: dto.balance ? parseFloat(String(dto.balance)) : (dto.balanceInFiat ? Number(dto.balanceInFiat) : 0),
+        nativeBalance: dto.nativeBalance ? parseFloat(String(dto.nativeBalance)) : (dto.native_balance ? parseFloat(String(dto.native_balance)) : 0),
+        raw: dto,
+      }
+      return normalized
+    }
+    // No saved wallet and POST failed
+    throw err
+  }
 }
 
 export async function listTransactions(params: any = {}) {
   const res = await api.get('/v1/transactions', { params })
+  console.log('listTransactions response:', res.data)
+  return res.data
+}
+
+export async function sendTransaction(payload: {
+  from_wallet: string
+  to_wallet: string
+  amount: string
+  asset: string
+  idempotency_key: string
+}) {
+  const res = await api.post('/v1/transactions', payload)
   return res.data
 }
 

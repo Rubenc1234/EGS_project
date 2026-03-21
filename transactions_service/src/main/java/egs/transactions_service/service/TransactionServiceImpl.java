@@ -53,41 +53,71 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public BalanceDTO getBalance(String walletId) {
+        log.info("=== getBalance ENTRY === walletId={}", walletId);
         validateWalletFormat(walletId);
+        log.info("=== Wallet format validated ===");
 
         String normalizedWalletId = walletId.toLowerCase();
+        log.info("=== Normalized walletId={} ===", normalizedWalletId);
+        
         // Check if wallet exists in database
         Wallet wallet = walletRepository.findById(normalizedWalletId)
             .orElseGet(() -> {
-                log.info("Carteira nova detetada. A registar na base de dados: {}", normalizedWalletId);
+                log.info("=== Wallet not in DB, creating new entry: {} ===", normalizedWalletId);
                 Wallet newWallet = new Wallet();
                 newWallet.setAddress(normalizedWalletId);
                 newWallet.setLastNativeBalance(BigDecimal.ZERO);
                 newWallet.setLastTokenBalance(BigDecimal.ZERO);
-                // Regista na BD e devolve para continuar o processo
-                return walletRepository.save(newWallet); 
+                Wallet saved = walletRepository.save(newWallet);
+                log.info("=== New wallet created and saved in DB ===");
+                return saved;
             });
+        
+        log.info("=== Wallet found in DB, querying blockchain ===");
         try {
             // Native Balance (Wei)
+            log.info("=== Querying native balance (MATIC) ===");
             EthGetBalance ethGetBalance = web3j.ethGetBalance(walletId, DefaultBlockParameterName.LATEST).send();
             BigInteger nativeBalanceWei = ethGetBalance.getBalance();
             BigDecimal nativeBalance = Convert.fromWei(new BigDecimal(nativeBalanceWei), Convert.Unit.ETHER);
+            log.info("=== Native balance retrieved: {} MATIC ===", nativeBalance);
 
             // Token Balance (Euro)
+            log.info("=== Querying token balance (EUR) ===");
             String contractAddress = blockchainConfig.getContract().getAddress();
             BigInteger tokenBalanceRaw = queryTokenBalance(walletId, contractAddress);
             int decimals = blockchainConfig.getContract().getDecimals();
             BigDecimal tokenBalance = new BigDecimal(tokenBalanceRaw).divide(BigDecimal.valueOf(10).pow(decimals), decimals, RoundingMode.HALF_UP);
+            log.info("=== Token balance retrieved: {} EUR ===", tokenBalance);
 
             OffsetDateTime now = OffsetDateTime.now();
 
             // Caching: Update wallet with last known balances
+            // IMPORTANT: Only update cache if blockchain has HIGHER balance (to preserve dev-added funds)
+            log.info("=== Updating cache in DB ===");
+            log.info("=== Current cache: native={}, token={} ===", wallet.getLastNativeBalance(), wallet.getLastTokenBalance());
+            log.info("=== Blockchain: native={}, token={} ===", nativeBalance, tokenBalance);
+            
+            // For native balance: always update (MATIC comes from blockchain)
             wallet.setLastNativeBalance(nativeBalance);
-            wallet.setLastTokenBalance(tokenBalance);
+            
+            // For token balance: only update if blockchain shows MORE than cache
+            // (prevents clearing dev-added funds that haven't hit blockchain yet)
+            BigDecimal cachedTokenBalance = wallet.getLastTokenBalance() != null ? wallet.getLastTokenBalance() : BigDecimal.ZERO;
+            if (tokenBalance.compareTo(cachedTokenBalance) > 0) {
+                log.info("=== Blockchain balance higher than cache, updating: {} > {} ===", tokenBalance, cachedTokenBalance);
+                wallet.setLastTokenBalance(tokenBalance);
+            } else {
+                log.info("=== Keeping cached balance (dev funds?), not downgrading: {} >= {} ===", cachedTokenBalance, tokenBalance);
+                // Use cached balance, don't overwrite
+            }
+            
             wallet.setLastUpdatedAt(now);
             walletRepository.save(wallet);
+            log.info("=== Cache updated successfully ===");
 
             // Auditing: Record this balance check
+            log.info("=== Recording balance audit ===");
             BalanceAudit audit = BalanceAudit.builder()
                     .walletAddress(walletId)
                     .nativeBalance(nativeBalance)
@@ -95,20 +125,24 @@ public class TransactionServiceImpl implements TransactionService {
                     .checkedAt(now)
                     .build();
             balanceAuditRepository.save(audit);
+            log.info("=== Audit recorded ===");
 
-            return BalanceDTO.builder()
+            BalanceDTO result = BalanceDTO.builder()
                     .walletId(walletId)
                     .symbol("EUR")
-                    .balance(tokenBalance.toPlainString())
+                    .balance(wallet.getLastTokenBalance().toPlainString())  // Use CACHED balance
                     .nativeBalance(nativeBalance.toPlainString())
                     .nativeSymbol("MATIC")
-                    .balanceInFiat(tokenBalance)
+                    .balanceInFiat(wallet.getLastTokenBalance())  // Use CACHED balance
                     .currency("EUR")
                     .updatedAt(now)
                     .build();
+            
+            log.info("=== getBalance EXIT === result={}", result);
+            return result;
 
         } catch (Exception e) {
-            log.error("Error querying blockchain for wallet {}: {}", walletId, e.getMessage());
+            log.error("=== getBalance ERROR === walletId={} error={}", walletId, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Blockchain query failed", e);
         }
     }
@@ -161,6 +195,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionResponseDTO createTransaction(TransactionRequestDTO request) {
+        log.info("createTransaction called: from={} to={} amount={} asset={} idempotencyKey={}", request.getFromWallet(), request.getToWallet(), request.getAmount(), request.getAsset(), request.getIdempotencyKey());
         // Validate format
         validateWalletFormat(request.getFromWallet());
         validateWalletFormat(request.getToWallet());
@@ -205,8 +240,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         
         tx = transactionRepository.save(tx);
+    log.info("Transaction {} saved with status {}", tx.getId(), tx.getStatus());
 
         eventPublisher.publishEvent(new TransactionCreatedEvent(tx.getId()));
+    log.info("TransactionCreatedEvent published for tx {}", tx.getId());
 
         // Caching (Optimistic Update / Fund Locking)
         if ("EUR".equals(request.getAsset())) {

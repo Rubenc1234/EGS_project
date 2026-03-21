@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getWallet, listTransactions } from '../services/api'
 import useSSE from '../hooks/useSSE'
-import { Box, Button, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid } from '@mui/material'
+import { Box, Button, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar, Alert } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
+import api from '../services/api'
 
 export default function Dashboard() {
-  const { data: wallet, isLoading: walletLoading } = useQuery(['wallet'], getWallet)
-  const { data: txs, isLoading: txsLoading } = useQuery(['transactions'], () => listTransactions({ limit: 20 }))
+  const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery(['wallet'], getWallet)
+  const queryClient = useQueryClient()
+  const { data: txs, isLoading: txsLoading } = useQuery(['transactions', wallet?.id], () => 
+    listTransactions({ wallet_id: wallet?.id, limit: 20 }), 
+    { enabled: !!wallet?.id }  // Only fetch transactions when wallet is loaded
+  )
   const [userInfo, setUserInfo] = useState<any>(null)
+  const [openWalletPrompt, setOpenWalletPrompt] = useState(false)
+  const [walletIdInput, setWalletIdInput] = useState('')
+  const [savingWallet, setSavingWallet] = useState(false)
 
-  useSSE('/v1/events/me')
+  // TODO: Implement SSE endpoint POST /v1/events/subscribe or similar in backend for live updates
+  // useSSE('/v1/events/me')
 
   // Extract user info from token (JWT decode)
   useEffect(() => {
@@ -28,19 +37,90 @@ export default function Dashboard() {
     }
   }, [])
 
+  // If wallet not loaded and no saved wallet, show error state (should not happen now)
+  useEffect(() => {
+    if (!walletLoading && !wallet) {
+      console.warn('Wallet failed to load - this should not happen if POST /v1/users/me/wallet is working.')
+    }
+  }, [wallet, walletLoading])
+
   const handleSendMoney = () => {
-    // Redirect to Payment Service with wallet_id and return URL
+    // Open modal to send internally (composer wallets)
     if (!wallet?.id) {
       alert('Wallet not loaded yet. Please try again.')
       return
     }
-    
-    // Build redirect URL back to this dashboard
-    const redirectUrl = `${window.location.origin}/dashboard`
-    
-    // Redirect to Payment Service
-    const paymentUrl = `http://localhost:5174/?wallet_id=${encodeURIComponent(wallet.id)}&redirect_url=${encodeURIComponent(redirectUrl)}`
-    window.location.href = paymentUrl
+    setOpenSend(true)
+  }
+
+  // Modal state and form
+  const [openSend, setOpenSend] = useState(false)
+  const [toWallet, setToWallet] = useState('')
+  const [amount, setAmount] = useState('')
+  const [asset, setAsset] = useState('EUR')
+  const [loadingSend, setLoadingSend] = useState(false)
+  const [snack, setSnack] = useState<{ open: boolean; message: string; severity?: 'success'|'error' }>({ open: false, message: '', severity: 'success' })
+
+  const handleCloseSend = () => {
+    setOpenSend(false)
+  }
+
+  const handleSubmitSend = async () => {
+    if (!toWallet || !amount) {
+      setSnack({ open: true, message: 'Please fill recipient and amount', severity: 'error' })
+      return
+    }
+
+    try {
+      setLoadingSend(true)
+      const payload = {
+        from_wallet: wallet?.id,
+        to_wallet: toWallet,
+        amount: parseFloat(amount).toString(),
+        asset: asset,
+        idempotency_key: `${wallet?.id}-${toWallet}-${Date.now()}-${Math.random()}`,
+      }
+      console.log('Sending transaction:', payload)
+      const response = await api.post('/v1/transactions', payload)
+      console.log('Transaction response:', response.data)
+      setSnack({ open: true, message: `Transaction submitted (ID: ${response.data?.tx_id || 'pending'})`, severity: 'success' })
+      // reset
+      setToWallet('')
+      setAmount('')
+      setAsset('EUR')
+      setOpenSend(false)
+    } catch (e: any) {
+      console.error('Send failed:', e?.response?.data || e.message, e)
+      setSnack({ open: true, message: e?.response?.data?.error || e?.response?.data?.message || 'Send failed', severity: 'error' })
+    } finally {
+      setLoadingSend(false)
+    }
+  }
+
+  const handleSaveWalletId = async () => {
+    if (!walletIdInput || !walletIdInput.startsWith('0x') || walletIdInput.length !== 42) {
+      setSnack({ open: true, message: 'Invalid wallet address. Must start with 0x and be 42 chars long.', severity: 'error' })
+      return
+    }
+    try {
+      setSavingWallet(true)
+      // Save to localStorage
+      localStorage.setItem('egs_wallet_id', walletIdInput)
+      console.log('Saved wallet id to localStorage:', walletIdInput)
+      
+      // Try to load its balance
+      const res = await api.get(`/v1/wallets/${walletIdInput}/balance`)
+      queryClient.setQueryData(['wallet'], res.data)
+      
+      setSnack({ open: true, message: 'Wallet loaded successfully!', severity: 'success' })
+      setOpenWalletPrompt(false)
+      setWalletIdInput('')
+    } catch (e: any) {
+      console.error('Failed to load wallet:', e)
+      setSnack({ open: true, message: e?.response?.data?.error || 'Failed to load wallet. Check the address and try again.', severity: 'error' })
+    } finally {
+      setSavingWallet(false)
+    }
   }
 
   return (
@@ -98,9 +178,96 @@ export default function Dashboard() {
                 Send Money to User
               </Button>
             </Grid>
+              <Grid item xs={12}>
+                <Button fullWidth variant="outlined" color="success" onClick={async () => {
+                  // DEV: Add funds via backend (persisted)
+                  if (!wallet?.id) {
+                    setSnack({ open: true, message: 'No wallet loaded — load your wallet first', severity: 'error' })
+                    return
+                  }
+                  try {
+                    const res = await api.post(`/v1/dev/wallet/${wallet.id}/fund?amount=100&asset=EUR`)
+                    console.log('Backend fund response:', res.data)
+                    // Refetch wallet to get new balance
+                    await refetchWallet()
+                    setSnack({ open: true, message: 'Credited +€100 (backend persisted)', severity: 'success' })
+                  } catch (e: any) {
+                    console.error('DEV fund failed:', e)
+                    setSnack({ open: true, message: 'Failed to add funds: ' + (e?.response?.data?.error || e.message), severity: 'error' })
+                  }
+                }}>DEV +€100 (Backend)</Button>
+              </Grid>
+              <Grid item xs={12}>
+                <Button fullWidth variant="outlined" onClick={() => {
+                  // DEV: credit local wallet cache with 100 EUR for testing
+                  const current = queryClient.getQueryData<any>(['wallet'])
+                  if (current && current.id) {
+                    const newBalance = (Number(current.balance) || 0) + 100
+                    queryClient.setQueryData(['wallet'], { ...current, balance: newBalance })
+                    setSnack({ open: true, message: 'Credited +€100 (local cache only)', severity: 'success' })
+                  } else {
+                    setSnack({ open: true, message: 'No wallet loaded — open your wallet first to credit it', severity: 'error' })
+                  }
+                }}>DEV +€100 (Cache)</Button>
+              </Grid>
           </Grid>
         </Grid>
       </Grid>
+
+      {/* Send Modal */}
+      <Dialog open={openSend} onClose={handleCloseSend} fullWidth maxWidth="sm">
+        <DialogTitle>Send funds to another wallet</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField label="From wallet" value={wallet?.id ?? ''} disabled fullWidth />
+            <TextField label="To wallet (0x...) or user id" value={toWallet} onChange={(e) => setToWallet(e.target.value)} fullWidth />
+            <TextField label="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
+            <FormControl fullWidth>
+              <InputLabel id="asset-label">Asset</InputLabel>
+              <Select labelId="asset-label" value={asset} label="Asset" onChange={(e) => setAsset(e.target.value)}>
+                <MenuItem value="EUR">EUR (token)</MenuItem>
+                <MenuItem value="MATIC">MATIC (native)</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseSend} disabled={loadingSend}>Cancel</Button>
+          <Button onClick={handleSubmitSend} variant="contained" disabled={loadingSend}>Send</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Wallet ID Prompt Modal (no longer needed - wallet auto-created on login) 
+      <Dialog open={openWalletPrompt} onClose={() => {}} fullWidth maxWidth="sm">
+        <DialogTitle>Wallet Not Found</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Typography>
+              Your Keycloak token doesn't include a wallet address. Please paste your wallet address (0x...) to proceed.
+            </Typography>
+            <TextField 
+              label="Wallet Address (0x...)" 
+              value={walletIdInput} 
+              onChange={(e) => setWalletIdInput(e.target.value)} 
+              fullWidth 
+              placeholder="0x1234567890abcdef..."
+            />
+            <Typography variant="caption" color="textSecondary">
+              Tip: Check your wallet in Keycloak or use a known address for testing.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSaveWalletId} variant="contained" disabled={savingWallet}>
+            Load Wallet
+          </Button>
+        </DialogActions>
+      </Dialog>
+      */}
+
+      <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
+        <Alert severity={snack.severity} onClose={() => setSnack({ ...snack, open: false })}>{snack.message}</Alert>
+      </Snackbar>
 
       {/* Transaction History */}
       <Box sx={{ marginTop: 4 }}>
@@ -119,12 +286,30 @@ export default function Dashboard() {
             </TableHead>
             <TableBody>
               {txs?.items?.length ? (
-                txs.items.map((t: any) => (
-                  <TableRow key={t.id} hover>
-                    <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>
+                txs.items.map((t: any) => {
+                  // Parse confirmed_at safely - backend sends ISO format like "2026-03-21T19:11:20Z"
+                  let dateStr = 'N/A'
+                  try {
+                    const dateField = t.confirmed_at || t.createdAt // Try both field names
+                    if (dateField) {
+                      const date = new Date(dateField)
+                      if (!isNaN(date.getTime())) {
+                        dateStr = date.toLocaleDateString()
+                      }
+                    }
+                  } catch (e) {
+                    console.warn('Failed to parse date:', t.confirmed_at, t.createdAt)
+                  }
+                  
+                  // Use tx_id from JSON response (not txId from Java)
+                  const key = t.tx_id || t.txId || t.id || Math.random()
+                  
+                  return (
+                  <TableRow key={key} hover>
+                    <TableCell>{dateStr}</TableCell>
                     <TableCell>{t.description || t.type || 'Transaction'}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                      €{t.amount?.toFixed(2) ?? '0.00'}
+                      €{parseFloat(t.amount || '0').toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <Box
@@ -142,7 +327,8 @@ export default function Dashboard() {
                       </Box>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} align="center" sx={{ padding: '24px' }}>

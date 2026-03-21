@@ -33,3 +33,7 @@ keycloak:
   realm: "microservices"
   client-id: "iam-service"
   client-secret: "4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha"
+
+# Application settings
+app:
+  dev-mode: true  # DEV MODE: Simula blockchain sem conectar realmente. DESATIVAR em produção!

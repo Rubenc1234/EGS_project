@@ -15,9 +15,11 @@ import java.util.Map;
 import java.util.UUID;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/v1")
+@Slf4j
 // Allow frontend dev servers (5173 and 5175). In production, lock this down to your real origin(s).
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5175"})
 public class AuthController {
@@ -67,6 +69,7 @@ public class AuthController {
         URLEncoder.encode(serverCallback, StandardCharsets.UTF_8),
         URLEncoder.encode(generatedState, StandardCharsets.UTF_8)
     );
+        log.info("Redirecting user to Keycloak for login. callback={}", serverCallback);
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(java.net.URI.create(loginUrl));
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
@@ -84,6 +87,7 @@ public class AuthController {
         HttpSession session = request.getSession(false);
         String expectedState = session != null ? (String) session.getAttribute("oidc_state") : null;
         if (expectedState == null || returnedState == null || !expectedState.equals(returnedState)) {
+            log.warn("OIDC state mismatch: expected={} returned={}", expectedState, returnedState);
             String frontendErr = "http://localhost:5175/?error=invalid_state";
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(java.net.URI.create(frontendErr));
@@ -113,7 +117,7 @@ public class AuthController {
         HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(form, headers);
 
         try {
-            ResponseEntity<Map> res = rest.postForEntity(tokenUrl, tokenRequest, Map.class);
+            ResponseEntity<Map<String, Object>> res = rest.postForEntity(tokenUrl, tokenRequest, (Class) Map.class);
             @SuppressWarnings("unchecked")
             Map<String, Object> body = (Map<String, Object>) res.getBody();
             String accessToken = null;
@@ -123,6 +127,7 @@ public class AuthController {
                 expires = body.get("expires_in");
             }
 
+            log.info("Successfully exchanged code for token (GET callback)." );
             String postLogin = session != null ? (String) session.getAttribute("post_login_redirect") : null;
             if (postLogin == null || postLogin.isEmpty()) {
                 postLogin = "http://localhost:5175/";
@@ -141,6 +146,7 @@ public class AuthController {
             out.setLocation(java.net.URI.create(sb.toString()));
             return new ResponseEntity<>(out, HttpStatus.FOUND);
         } catch (Exception ex) {
+            log.error("Failed to exchange code for token (GET callback): {}", ex.getMessage());
             String frontendErr = "http://localhost:5175/?error=failed_to_exchange_code";
             HttpHeaders headersOut = new HttpHeaders();
             headersOut.setLocation(java.net.URI.create(frontendErr));
@@ -159,6 +165,7 @@ public class AuthController {
         HttpSession session = request.getSession(false);
         String expectedState = session != null ? (String) session.getAttribute("oidc_state") : null;
         if (expectedState == null || returnedState == null || !expectedState.equals(returnedState)) {
+            log.warn("OIDC POST callback state mismatch: expected={} returned={}", expectedState, returnedState);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "invalid_state", "detail", "state mismatch or missing"));
         }
 
@@ -182,15 +189,19 @@ public class AuthController {
         HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(form, headers);
 
         try {
-            ResponseEntity<Map> res = rest.postForEntity(tokenUrl, tokenRequest, Map.class);
-            Map body = res.getBody();
+            log.info("Exchanging code for token (POST callback)");
+            ResponseEntity<Map<String, Object>> res = rest.postForEntity(tokenUrl, tokenRequest, (Class) Map.class);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = res.getBody();
             Map<String, Object> out = new HashMap<>();
             if (body != null) {
                 out.put("access_token", body.get("access_token"));
                 out.put("expires_in", body.get("expires_in"));
             }
+            log.info("Token exchange (POST) successful");
             return ResponseEntity.ok(out);
         } catch (Exception ex) {
+            log.error("Token exchange (POST) failed: {}", ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", "failed_to_exchange_code", "detail", ex.getMessage()));
         }
     }
