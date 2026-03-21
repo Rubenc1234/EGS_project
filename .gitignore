@@ -9,6 +9,7 @@ __pycache__/
 
 # tests
 tests/
+docs/
 
 # node modules
 frontend/node_modules/

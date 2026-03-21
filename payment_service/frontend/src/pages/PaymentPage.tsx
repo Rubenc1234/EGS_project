@@ -140,7 +140,7 @@ function CheckoutForm({
 function TestParamsForm({ onSubmit }: { onSubmit: (w: string, a: number, r: string) => void }) {
   const [walletId, setWalletId] = useState('test-wallet-123')
   const [amount, setAmount] = useState('10')
-  const [redirectUrl, setRedirectUrl] = useState('http://localhost:5001/')
+  const [redirectUrl, setRedirectUrl] = useState('http://localhost:5173/dashboard')
 
   return (
     <Box

@@ -29,8 +29,18 @@ export default function Dashboard() {
   }, [])
 
   const handleSendMoney = () => {
-    // Future: Send money to another user
-    alert('Send money feature coming soon!')
+    // Redirect to Payment Service with wallet_id and return URL
+    if (!wallet?.id) {
+      alert('Wallet not loaded yet. Please try again.')
+      return
+    }
+    
+    // Build redirect URL back to this dashboard
+    const redirectUrl = `${window.location.origin}/dashboard`
+    
+    // Redirect to Payment Service
+    const paymentUrl = `http://localhost:5174/?wallet_id=${encodeURIComponent(wallet.id)}&redirect_url=${encodeURIComponent(redirectUrl)}`
+    window.location.href = paymentUrl
   }
 
   return (
