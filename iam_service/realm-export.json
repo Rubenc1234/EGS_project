@@ -1,0 +1,56 @@
+{
+  "realm": "microservices",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "User role"
+      },
+      {
+        "name": "admin",
+        "description": "Admin role"
+      }
+    ]
+  },
+  "groups": [],
+  "users": [
+    {
+      "username": "john.doe",
+      "enabled": true,
+      "email": "john.doe@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password1234",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "iam-service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha",
+      "redirectUris": [
+        "http://localhost:8081/v1/callback",
+        "http://localhost:5173/callback",
+        "http://localhost:5001/v1/composer/callback"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true
+    }
+  ]
+}
