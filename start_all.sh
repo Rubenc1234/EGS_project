@@ -47,10 +47,15 @@ TRANSACTIONS_PID=$!
 #python3 app.py > app.log 2>&1 &
 #COMPOSER_PID=$!
 
-# 7. Start Frontend (Vite)
-echo "Starting Frontend on port 5175..."
+# 7. Start Main Frontend (Vite)
+echo "Starting Main Frontend on port 5175..."
 (cd frontend && npm run dev -- --port 5175) > frontend.log 2>&1 &
 FRONTEND_PID=$!
+
+# 8. Start Payments Frontend (Vite)
+echo "Starting Payments Frontend on port 5174..."
+(cd payment_service/frontend && npm run dev -- --port 5174) > payment_frontend.log 2>&1 &
+PAYMENT_FRONTEND_PID=$!
 
 echo "--------------------------------------------------"
 echo "All services started in background!"
@@ -58,10 +63,11 @@ echo "IAM: http://localhost:5000"
 echo "Payment: http://localhost:5002"
 echo "Notifications: http://localhost:5003"
 echo "Transactions: http://localhost:8081"
-echo "Frontend: http://localhost:5175"
+echo "Main Frontend: http://localhost:5175"
+echo "Payments Frontend: http://localhost:5174"
 echo "--------------------------------------------------"
 echo "Logs are available in *.log files."
 echo "Use ./stop_all.sh to stop everything."
 
 # Save PIDs to a file for stop_all.sh
-echo "$IAM_PID $PAYMENT_PID $NOTIFICATIONS_PID $TRANSACTIONS_PID $COMPOSER_PID $FRONTEND_PID" > .service_pids
+echo "$IAM_PID $PAYMENT_PID $NOTIFICATIONS_PID $TRANSACTIONS_PID $COMPOSER_PID $FRONTEND_PID $PAYMENT_FRONTEND_PID" > .service_pids
