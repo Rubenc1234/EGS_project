@@ -20,12 +20,12 @@ sleep 10
 # 2. Start IAM Service (Python)
 echo "Starting IAM Service on port 5000..."
 source venv/bin/activate
-python3 -m iam_service.app_iam > iam_service.log 2>&1 &
+setsid python3 -m iam_service.app_iam > iam_service.log 2>&1 &
 IAM_PID=$!
 
 # 3. Start Payment Service (Python)
 echo "Starting Payment Service on port 5002..."
-python3 -m payment_service.app_payment > payment_service.log 2>&1 &
+setsid python3 -m payment_service.app_payment > payment_service.log 2>&1 &
 PAYMENT_PID=$!
 
 # 4. Start Notifications Service (Go)
@@ -49,8 +49,12 @@ TRANSACTIONS_PID=$!
 
 # 7. Start Frontend (Vite)
 echo "Starting Frontend on port 5175..."
-(cd frontend && npm run dev -- --port 5175) > frontend.log 2>&1 &
+(cd frontend && setsid npm run dev -- --port 5175) > frontend.log 2>&1 &
 FRONTEND_PID=$!
+
+echo "Starting Frontend on port 5174..."
+(cd payment_service/frontend && setsid npm run dev -- --port 5174) > frontend_pay.log 2>&1 &
+FRONTEND_PAY_PID=$!
 
 echo "--------------------------------------------------"
 echo "All services started in background!"
@@ -59,9 +63,10 @@ echo "Payment: http://localhost:5002"
 echo "Notifications: http://localhost:5003"
 echo "Transactions: http://localhost:8081"
 echo "Frontend: http://localhost:5175"
+echo "Frontend_PAY: http://localhost:5174"
 echo "--------------------------------------------------"
 echo "Logs are available in *.log files."
 echo "Use ./stop_all.sh to stop everything."
 
 # Save PIDs to a file for stop_all.sh
-echo "$IAM_PID $PAYMENT_PID $NOTIFICATIONS_PID $TRANSACTIONS_PID $COMPOSER_PID $FRONTEND_PID" > .service_pids
+echo "$IAM_PID $PAYMENT_PID $NOTIFICATIONS_PID $TRANSACTIONS_PID $FRONTEND_PID $FRONTEND_PAY_PID" > .service_pids

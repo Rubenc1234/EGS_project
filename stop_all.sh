@@ -8,7 +8,7 @@ if [ -f .service_pids ]; then
     PIDS=$(cat .service_pids)
     for PID in $PIDS; do
         if kill -0 $PID 2>/dev/null; then
-            kill $PID
+            kill -TERM -$PID
             echo "Killed process $PID"
         fi
     done
