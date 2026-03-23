@@ -44,6 +44,7 @@ public class TransactionWorker {
     private final Web3j web3j;
     private final BlockchainConfig blockchainConfig;
     private final KeyManagementService keyManagementService;
+    private final NotificationService notificationService;
 
     @Value("${app.dev-mode:false}")
     private boolean devMode;
@@ -186,8 +187,48 @@ public class TransactionWorker {
             tx.setUpdatedAt(OffsetDateTime.now());
             transactionRepository.save(tx);
 
-            // If the transaction failed at this stage (e.g., node error), refund the cache
-            if (status == Transaction.TransactionStatus.FAILED) {
+            // Send notifications based on transaction status
+            if (status == Transaction.TransactionStatus.BROADCASTED) {
+                log.info("🔔 Sending BROADCASTED notifications for transaction {}", txId);
+                // Notify sender that transaction was sent
+                notificationService.notifyTransaction(
+                    tx.getFromWallet(), 
+                    "Transaction Sent", 
+                    String.format("Your transaction of %s %s to %s has been sent to the blockchain.", tx.getAmount(), tx.getAsset(), tx.getToWallet()),
+                    java.util.Map.of(
+                        "transaction_id", txId,
+                        "amount", tx.getAmount().toPlainString(),
+                        "currency", tx.getAsset(),
+                        "status", "broadcasted"
+                    )
+                );
+            } else if (status == Transaction.TransactionStatus.CONFIRMED) {
+                log.info("🔔 Sending CONFIRMED notifications for transaction {}", txId);
+                // Notify sender
+                notificationService.notifyTransactionCompleted(
+                    tx.getFromWallet(), 
+                    txId, 
+                    tx.getAmount().toPlainString(), 
+                    tx.getAsset()
+                );
+                // Notify receiver
+                notificationService.notifyTransactionCreated(
+                    tx.getToWallet(), 
+                    txId, 
+                    tx.getAmount().toPlainString(), 
+                    tx.getAsset()
+                );
+            } else if (status == Transaction.TransactionStatus.FAILED) {
+                log.info("🔔 Sending FAILED notifications for transaction {}", txId);
+                // Notify sender about failure
+                notificationService.notifyRefund(
+                    tx.getFromWallet(), 
+                    txId, 
+                    tx.getAmount().toPlainString(), 
+                    tx.getAsset(),
+                    "Transaction failed"
+                );
+                // Refund the cache
                 refundCache(tx);
             }
         });

@@ -46,16 +46,19 @@ PAYMENT_PID=$!
 
 # 4. Start Notifications Service (Go)
 echo "Starting Notifications Service on port 5003..."
-export PORT=5003
-export DATABASE_URL="host=localhost user=postgres password=postgres dbname=notifications port=5432 sslmode=disable"
-export MASTER_ADMIN_SECRET="super_secret_master_key"
-export JWT_SECRET="another_super_secret_jwt_key"
-(cd notifications_service && go run cmd/api/main.go) > notifications_service.log 2>&1 &
+(cd notifications_service && \
+  setsid env \
+    PORT=5003 \
+    DATABASE_URL="host=localhost user=postgres password=postgres dbname=notifications port=5434 sslmode=disable" \
+    MASTER_ADMIN_SECRET="${MASTER_ADMIN_SECRET:?Erro: MASTER_ADMIN_SECRET não definido}" \
+    JWT_SECRET="${JWT_SECRET:?Erro: JWT_SECRET não definido}" \
+    go run cmd/api/main.go \
+) > notifications_service.log 2>&1 &
 NOTIFICATIONS_PID=$!
 
 # 5. Start Transactions Service (Java/Spring Boot)
 echo "Starting Transactions Service on port 8081..."
-(cd transactions_service && ./mvnw spring-boot:run) > transactions_service.log 2>&1 &
+(cd transactions_service && ./mvnw clean compile spring-boot:run) > transactions_service.log 2>&1 &
 TRANSACTIONS_PID=$!
 
 # 6. Start Composer Service (Python)

@@ -22,7 +22,7 @@ public class NotificationService {
     @Value("${notifications.base-url:http://localhost:5003}")
     private String notificationsBaseUrl;
 
-    @Value("${NOTIFICATIONS_API_KEY}")
+    @Value("${NOTIFICATIONS_API_KEY:}")
     private String notificationsApiKey;
 
     /**
@@ -38,6 +38,12 @@ public class NotificationService {
         log.info("║ Notifications URL:   {}", String.format("%-47s║", notificationsBaseUrl));
         log.info("╚════════════════════════════════════════════════════════════════╝");
         
+        // Check if API key is configured
+        if (notificationsApiKey == null || notificationsApiKey.trim().isEmpty()) {
+            log.warn("⚠️  NOTIFICATIONS_API_KEY not configured - skipping notification to user: {}", userId);
+            return;
+        }
+        
         try {
             String url = notificationsBaseUrl + "/v1/events";
             log.info("📡 Target URL: {}", url);
@@ -45,7 +51,7 @@ public class NotificationService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(notificationsApiKey);
-            log.info("🔐 Auth header set with API Key (first 10 chars): {}", notificationsApiKey.substring(0, 10) + "...");
+            log.info("🔐 Auth header set with API Key (configured)");
 
             Map<String, Object> body = new HashMap<>();
             // The Notifications Service expects user_ids as an array
