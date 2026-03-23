@@ -179,36 +179,16 @@ export default function Dashboard() {
               </Button>
             </Grid>
               <Grid item xs={12}>
-                <Button fullWidth variant="outlined" color="success" onClick={async () => {
-                  // DEV: Add funds via backend (persisted)
-                  if (!wallet?.id) {
-                    setSnack({ open: true, message: 'No wallet loaded — load your wallet first', severity: 'error' })
-                    return
-                  }
-                  try {
-                    const res = await api.post(`/v1/dev/wallet/${wallet.id}/fund?amount=100&asset=EUR`)
-                    console.log('Backend fund response:', res.data)
-                    // Refetch wallet to get new balance
-                    await refetchWallet()
-                    setSnack({ open: true, message: 'Credited +€100 (backend persisted)', severity: 'success' })
-                  } catch (e: any) {
-                    console.error('DEV fund failed:', e)
-                    setSnack({ open: true, message: 'Failed to add funds: ' + (e?.response?.data?.error || e.message), severity: 'error' })
-                  }
-                }}>DEV +€100 (Backend)</Button>
-              </Grid>
-              <Grid item xs={12}>
-                <Button fullWidth variant="outlined" onClick={() => {
-                  // DEV: credit local wallet cache with 100 EUR for testing
-                  const current = queryClient.getQueryData<any>(['wallet'])
-                  if (current && current.id) {
-                    const newBalance = (Number(current.balance) || 0) + 100
-                    queryClient.setQueryData(['wallet'], { ...current, balance: newBalance })
-                    setSnack({ open: true, message: 'Credited +€100 (local cache only)', severity: 'success' })
-                  } else {
-                    setSnack({ open: true, message: 'No wallet loaded — open your wallet first to credit it', severity: 'error' })
-                  }
-                }}>DEV +€100 (Cache)</Button>
+                <Button 
+                  fullWidth 
+                  variant="outlined" 
+                  color="primary" 
+                  onClick={() => {
+                    window.location.href = 'http://localhost:5174/';
+                  }}
+                >
+                  Add funds to wallet
+                </Button>
               </Grid>
           </Grid>
         </Grid>
