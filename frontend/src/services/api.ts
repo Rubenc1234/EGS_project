@@ -2,11 +2,16 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: 'http://localhost:8081', withCredentials: true })
 
-// set Authorization header from stored token if present
-const token = typeof window !== 'undefined' ? localStorage.getItem('egs_token') : null
-if (token) {
-  api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-}
+// set Authorization header from stored token if present using interceptor
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('egs_token')
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+}, (error) => {
+  return Promise.reject(error)
+})
 
 export async function getWallet() {
   // Try to create or get wallet via POST /v1/users/me/wallet (auto-generates if needed)
