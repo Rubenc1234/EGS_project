@@ -4,6 +4,7 @@ import { getWallet, listTransactions } from '../services/api'
 import useSSE from '../hooks/useSSE'
 import { Box, Button, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar, Alert } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import api from '../services/api'
 
 export default function Dashboard() {
@@ -178,18 +179,23 @@ export default function Dashboard() {
                 Send Money to User
               </Button>
             </Grid>
-              <Grid item xs={12}>
-                <Button 
-                  fullWidth 
-                  variant="outlined" 
-                  color="primary" 
-                  onClick={() => {
-                    window.location.href = 'http://localhost:5174/';
-                  }}
-                >
-                  Add funds to wallet
-                </Button>
-              </Grid>
+            <Grid item xs={12}>
+              <Button 
+                fullWidth 
+                variant="contained" 
+                startIcon={<AccountBalanceWalletIcon />}
+                size="large"
+                onClick={() => {
+                  window.location.href = 'http://localhost:5174/';
+                }}
+                sx={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  padding: '12px 24px'
+                }}
+              >
+                Add funds to wallet
+              </Button>
+            </Grid>
           </Grid>
         </Grid>
       </Grid>
