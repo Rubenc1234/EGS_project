@@ -19,6 +19,7 @@ sleep 10
 
 # 2. Start IAM Service (Python)
 echo "Starting IAM Service on port 5000..."
+source venv/bin/activate
 python3 -m iam_service.app_iam > iam_service.log 2>&1 &
 IAM_PID=$!
 
@@ -42,23 +43,22 @@ echo "Starting Transactions Service on port 8081..."
 TRANSACTIONS_PID=$!
 
 # 6. Start Composer Service (Python)
-echo "Starting Composer Service (root app.py) on port 5001..."
-python3 app.py > app.log 2>&1 &
-COMPOSER_PID=$!
+#echo "Starting Composer Service (root app.py) on port 5001..."
+#python3 app.py > app.log 2>&1 &
+#COMPOSER_PID=$!
 
 # 7. Start Frontend (Vite)
-echo "Starting Frontend on port 5173..."
-(cd frontend && npm run dev) > frontend.log 2>&1 &
+echo "Starting Frontend on port 5175..."
+(cd frontend && npm run dev -- --port 5175) > frontend.log 2>&1 &
 FRONTEND_PID=$!
 
 echo "--------------------------------------------------"
 echo "All services started in background!"
 echo "IAM: http://localhost:5000"
-echo "Composer: http://localhost:5001"
 echo "Payment: http://localhost:5002"
 echo "Notifications: http://localhost:5003"
 echo "Transactions: http://localhost:8081"
-echo "Frontend: http://localhost:5173"
+echo "Frontend: http://localhost:5175"
 echo "--------------------------------------------------"
 echo "Logs are available in *.log files."
 echo "Use ./stop_all.sh to stop everything."

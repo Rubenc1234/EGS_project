@@ -10,6 +10,9 @@ __pycache__/
 # tests
 tests/
 docs/
+*.log
+.service_pids
+notes.txt
 
 # node modules
 frontend/node_modules/
