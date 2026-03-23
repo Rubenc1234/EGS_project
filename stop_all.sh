@@ -8,8 +8,10 @@ if [ -f .service_pids ]; then
     PIDS=$(cat .service_pids)
     for PID in $PIDS; do
         if kill -0 $PID 2>/dev/null; then
-            kill $PID
-            echo "Killed process $PID"
+            # Kill the process and its children by killing the process group if possible
+            # But since we didn't start them in a PGID, we'll just kill the PID
+            kill $PID 2>/dev/null
+            echo "Sent SIGTERM to process $PID"
         fi
     done
     rm .service_pids
@@ -23,10 +25,21 @@ else
     pkill -f "npm run dev"
 fi
 
-# 2. Stop Docker containers
+# 2. Forcefully free the specific ports if still in use
+echo "Cleaning up ports (5000, 5001, 5002, 5003, 8081, 5173, 5174)..."
+for PORT in 5000 5001 5002 5003 8081 5173 5174; do
+    # Try to find and kill processes using these ports
+    PID=$(lsof -t -i:$PORT)
+    if [ ! -z "$PID" ]; then
+        echo "Port $PORT is still in use by $PID. Killing..."
+        kill -9 $PID 2>/dev/null
+    fi
+done
+
+# 3. Stop Docker containers
 echo "Stopping Docker containers..."
-(cd iam_service && sudo docker-compose down)
-(cd payment_service && sudo docker-compose down)
-(cd transactions_service && sudo docker-compose down)
+(cd iam_service && sudo docker-compose down -v)
+(cd payment_service && sudo docker-compose down -v)
+(cd transactions_service && sudo docker-compose down -v)
 
 echo "All services stopped."
