@@ -31,8 +31,8 @@ pkill -f "npm run dev" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 
 # 2. Forcefully free the specific ports if still in use
-echo "Cleaning up ports (5000, 5001, 5002, 5003, 8081, 5174, 5175)..."
-for PORT in 5000 5001 5002 5003 8081 5174 5175; do
+echo "Cleaning up ports (5000, 5001, 5002, 5003, 8081, 5174, 5175, 5433, 6379, 8082)..."
+for PORT in 5000 5001 5002 5003 8081 5174 5175 5433 6379 8082; do
     # Try to find and kill processes using these ports
     PID=$(lsof -t -i:$PORT)
     if [ ! -z "$PID" ]; then
@@ -46,5 +46,6 @@ echo "Stopping Docker containers..."
 (cd iam_service && sudo docker-compose down)
 (cd payment_service && sudo docker-compose down)
 (cd transactions_service && sudo docker-compose down)
+(cd notifications_service && sudo docker-compose down)
 
 echo "All services stopped."

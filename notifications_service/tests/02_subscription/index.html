@@ -78,7 +78,7 @@
 
                 statusMsg.innerText = "Syncing with backend...";
 
-                const response = await fetch('http://localhost:8080/v1/events/subscribe', {
+                const response = await fetch('http://localhost:8082/v1/events/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
                     body: JSON.stringify(subscription.toJSON())

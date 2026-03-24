@@ -51,7 +51,7 @@ notifications_service/
 
 | Variable | Description | Default |
 | ----- | ----- | ----- |
-| `PORT` | API Port | `8080` |
+| `PORT` | API Port | `8082` |
 | `DATABASE_URL` | PostgreSQL Connection DSN | Required |
 | `REDIS_URL` | Redis Address | `localhost:6379` |
 | `MASTER_ADMIN_SECRET` | Secret for platform /admin routes | Required |
@@ -199,7 +199,7 @@ docker-compose up --build -d
 ```
 
 **Interactive Documentation:**
-Navigate to `http://localhost:8080/docs` to test endpoints directly via Swagger.
+Navigate to `http://localhost:8082/docs` to test endpoints directly via Swagger.
 
 **Automated Testing:**
 Use the provided `.http` files in the `tests/` directory within an IDE HTTP client for a sequential walkthrough of the API lifecycle.

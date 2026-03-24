@@ -29,6 +29,8 @@ echo "Starting Databases and Keycloak..."
 (cd iam_service && sudo docker-compose up -d)
 (cd payment_service && sudo docker-compose up -d)
 (cd transactions_service && sudo docker-compose up -d)
+echo "Necessário fazer 1o --build antes de subir pela primeira vez."
+(cd notifications_service && sudo docker-compose up -d)
 
 echo "Waiting for databases to be ready..."
 sleep 10

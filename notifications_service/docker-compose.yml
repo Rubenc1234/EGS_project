@@ -13,7 +13,7 @@ services:
     networks:
       - egs_notifications_network
     ports:
-      - "5432:5432"
+      - "5435:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -42,7 +42,7 @@ services:
       - DATABASE_URL=host=egs_notifications_postgres user=postgres password=postgres dbname=notifications port=5432 sslmode=disable TimeZone=UTC
       - REDIS_URL=egs_notifications_redis:6379
     ports:
-      - "8080:8080"
+      - "8082:8080"
     networks:
       - egs_notifications_network
     depends_on:
