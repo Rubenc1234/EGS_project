@@ -16,8 +16,32 @@ import (
 )
 
 type NotificationPayload struct {
-	UserIDs []string `json:"user_ids" binding:"required"`
-	Message string   `json:"message" binding:"required"`
+	UserIDs            []string `json:"user_ids" binding:"required,min=1"`
+	Message            string   `json:"message" binding:"required"`
+	Title              string   `json:"title,omitempty"`
+	Icon               string   `json:"icon,omitempty"`
+	URL                string   `json:"url,omitempty"`
+	Image              string   `json:"image,omitempty"`
+	Badge              string   `json:"badge,omitempty"`
+
+	Dir                string   `json:"dir,omitempty" binding:"omitempty,oneof=auto ltr rtl"`
+	Lang               string   `json:"lang,omitempty"`
+	Tag                string   `json:"tag,omitempty"`
+	Renotify           bool     `json:"renotify,omitempty"`
+	RequireInteraction bool     `json:"requireInteraction,omitempty"`
+	Silent             bool     `json:"silent,omitempty"`
+	Vibrate            []int    `json:"vibrate,omitempty"`
+
+	Timestamp          int64    `json:"timestamp,omitempty"`
+
+	Actions            []Action `json:"actions,omitempty" binding:"omitempty,dive"`
+}
+
+type Action struct {
+	Action    string `json:"action"`
+	Title     string `json:"title"`
+	Icon      string `json:"icon,omitempty"`
+	ActionURL string `json:"action_url,omitempty"`
 }
 
 type PushSubscriptionRequest struct {
@@ -73,14 +97,14 @@ func Subscribe(db *gorm.DB, rdb *redis.Client) gin.HandlerFunc {
 
 		// Upsert: update if endpoint exists, otherwise create
 		if err := db.Where("endpoint = ?", req.Endpoint).Assign(sub).FirstOrCreate(&sub).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save subscription"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save subscription"})
 			return
 		}
 
 		cacheKey := fmt.Sprintf("user:%d:%s:subs", clientID, userID)
 		rdb.Del(context.Background(), cacheKey)
 
-		c.JSON(http.StatusOK, gin.H{"status": "subscribed successfully"})
+		c.JSON(http.StatusOK, gin.H{"status": "Subscribed successfully"})
 	}
 }
 
@@ -108,9 +132,13 @@ func Notify(db *gorm.DB, rdb *redis.Client) gin.HandlerFunc {
 		// Fetch Client for VAPID keys
 		var client models.Client
 		if err := db.First(&client, clientID).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
 			return
 		}
+
+		workerPayload := payload
+		workerPayload.UserIDs = nil
+		wpPayloadBytes, _ := json.Marshal(workerPayload)
 
 		pushedCount := 0
 		ctx := context.Background()
@@ -143,8 +171,8 @@ func Notify(db *gorm.DB, rdb *redis.Client) gin.HandlerFunc {
 					},
 				}
 
-				res, err := webpush.SendNotification(fmt.Appendf(nil, `{"message":"%s"}`, payload.Message), wpSub, &webpush.Options{
-					Subscriber:      "mailto:admin@your-saas.com",
+				res, err := webpush.SendNotification(wpPayloadBytes, wpSub, &webpush.Options{
+					Subscriber:      "mailto:" + client.AdminEmail,
 					VAPIDPublicKey:  client.VapidPublicKey,
 					VAPIDPrivateKey: client.VapidPrivateKey,
 					TTL:             30,
@@ -154,7 +182,7 @@ func Notify(db *gorm.DB, rdb *redis.Client) gin.HandlerFunc {
 					pushedCount++
 					res.Body.Close()
 				} else {
-					fmt.Printf("❌ WEBPUSH ERROR for %s: %v\n", uid, err)
+					fmt.Printf("WEBPUSH ERROR for %s: %v\n", uid, err)
 				}
 			}
 		}

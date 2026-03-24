@@ -26,7 +26,7 @@ func GetClientInfo(db *gorm.DB) gin.HandlerFunc {
 		var client models.Client
 		// Only select safe fields. NEVER return the private VAPID key or API key hash.
 		if err := db.Select("name, vapid_public_key").First(&client, clientID).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
 			return
 		}
 

@@ -12,7 +12,8 @@ import (
 )
 
 type CreateClientRequest struct {
-	Name string `json:"name" binding:"required"`
+	Name       string `json:"name" binding:"required"`
+	AdminEmail string `json:"admin_email" binding:"required,email"`
 }
 
 // CreateClient generates a new API key and VAPID keys for a new customer/app.
@@ -22,7 +23,7 @@ type CreateClientRequest struct {
 // @Security MasterAuth
 // @Accept json
 // @Produce json
-// @Param payload body CreateClientRequest true "Client Name"
+// @Param payload body CreateClientRequest true "Client Name and Admin Email"
 // @Success 201 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -47,6 +48,7 @@ func CreateClient(db *gorm.DB) gin.HandlerFunc {
 
 		client := models.Client{
 			Name:            req.Name,
+			AdminEmail:      req.AdminEmail,
 			APIKeyHash:      hash,
 			VapidPublicKey:  publicKey,
 			VapidPrivateKey: privateKey,

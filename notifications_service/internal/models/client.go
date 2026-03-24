@@ -8,6 +8,7 @@ import (
 type Client struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
 	Name            string    `gorm:"not null" json:"name"`
+	AdminEmail      string    `gorm:"not null" json:"admin_email"`
 	APIKeyHash      string    `gorm:"uniqueIndex;not null" json:"-"`
 	VapidPublicKey  string    `gorm:"not null" json:"vapid_public_key"`
 	VapidPrivateKey string    `gorm:"not null" json:"-"` // Never expose private key

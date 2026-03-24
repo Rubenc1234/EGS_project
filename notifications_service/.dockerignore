@@ -1,0 +1,36 @@
+# Git
+.git/
+.gitignore
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+
+# Environment Variables & Secrets
+.env
+.env.*
+
+# Tests & Documentation
+tests/
+*.http
+*.rest
+README.md
+
+# Go Test Files
+*_test.go
+
+# Local Build/Temp Artifacts
+/bin/
+/tmp/
+/build/
+
+# Docker Files
+docker-compose.yml
+Dockerfile
+.dockerignore

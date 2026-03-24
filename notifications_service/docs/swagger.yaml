@@ -2,27 +2,26 @@ basePath: /v1
 definitions:
   egs-notifications_internal_models.Client:
     properties:
+      admin_email:
+        type: string
       created_at:
         type: string
       id:
         type: integer
       name:
         type: string
+      vapid_public_key:
+        type: string
     type: object
-  egs-notifications_internal_models.Notification:
+  internal_handlers.Action:
     properties:
-      client_id:
-        description: Tenant isolation
-        type: integer
-      created_at:
+      action:
         type: string
-      id:
-        type: integer
-      is_read:
-        type: boolean
-      message:
+      action_url:
         type: string
-      user_id:
+      icon:
+        type: string
+      title:
         type: string
     type: object
   internal_handlers.ClientTokenRequest:
@@ -34,35 +33,80 @@ definitions:
     type: object
   internal_handlers.CreateClientRequest:
     properties:
+      admin_email:
+        type: string
       name:
         type: string
     required:
+    - admin_email
     - name
     type: object
   internal_handlers.NotificationPayload:
     properties:
+      actions:
+        items:
+          $ref: '#/definitions/internal_handlers.Action'
+        type: array
+      badge:
+        type: string
+      dir:
+        enum:
+        - auto
+        - ltr
+        - rtl
+        type: string
+      icon:
+        type: string
+      image:
+        type: string
+      lang:
+        type: string
       message:
+        type: string
+      renotify:
+        type: boolean
+      requireInteraction:
+        type: boolean
+      silent:
+        type: boolean
+      tag:
+        type: string
+      timestamp:
+        type: integer
+      title:
+        type: string
+      url:
         type: string
       user_ids:
         items:
           type: string
+        minItems: 1
+        type: array
+      vibrate:
+        items:
+          type: integer
         type: array
     required:
     - message
     - user_ids
     type: object
-  internal_handlers.NotifyResponse:
+  internal_handlers.PushSubscriptionRequest:
     properties:
-      notifications:
-        items:
-          $ref: '#/definitions/egs-notifications_internal_models.Notification'
-        type: array
-      status:
+      endpoint:
         type: string
-      targets:
-        items:
-          type: string
-        type: array
+      keys:
+        properties:
+          auth:
+            type: string
+          p256dh:
+            type: string
+        required:
+        - auth
+        - p256dh
+        type: object
+    required:
+    - endpoint
+    - keys
     type: object
   internal_handlers.SetUserEmailRequest:
     properties:
@@ -73,13 +117,12 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Multi-Tenant SSE Notifications Service
+  description: Multi-Tenant Web Push Notifications Service
   title: Notifications API
   version: "1.0"
 paths:
   /admin/clients:
     get:
-      description: Returns all registered tenant applications.
       produces:
       - application/json
       responses:
@@ -89,16 +132,6 @@ paths:
             items:
               $ref: '#/definitions/egs-notifications_internal_models.Client'
             type: array
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - MasterAuth: []
       summary: List all clients
@@ -110,7 +143,7 @@ paths:
       description: Registers a new client app and generates their forever API Key.
         This raw key is returned ONLY ONCE.
       parameters:
-      - description: Client Name
+      - description: Client Name and Admin Email
         in: body
         name: payload
         required: true
@@ -120,7 +153,7 @@ paths:
       - application/json
       responses:
         "201":
-          description: client_id, api_key, message
+          description: Created
           schema:
             additionalProperties: true
             type: object
@@ -146,8 +179,6 @@ paths:
       - admin
   /admin/clients/{id}:
     delete:
-      description: Permanently deletes a client and all associated notifications from
-        the database.
       parameters:
       - description: Client ID
         in: path
@@ -159,16 +190,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
           schema:
             additionalProperties: true
             type: object
@@ -191,7 +212,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: client_id, new_api_key
+          description: OK
           schema:
             additionalProperties: true
             type: object
@@ -205,11 +226,6 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - MasterAuth: []
       summary: Regenerate client API Key
@@ -219,8 +235,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Generates a 4-hour JWT for the frontend browser to connect to the
-        SSE stream.
+      description: Generates a JWT for the frontend browser and returns the VAPID
+        Public Key required to prompt Web Push.
       parameters:
       - description: User ID Payload
         in: body
@@ -232,7 +248,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: token, expires_in
+          description: token, expires_in, vapid_public_key
           schema:
             additionalProperties: true
             type: object
@@ -257,35 +273,11 @@ paths:
       tags:
       - auth
   /events:
-    get:
-      description: Establishes a Server-Sent Events connection and sends unread notifications.
-      parameters:
-      - description: JWT Token (Alternative to Bearer header for web browsers)
-        in: query
-        name: token
-        type: string
-      produces:
-      - text/event-stream
-      responses:
-        "200":
-          description: SSE Stream connected
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Connect to SSE stream
-      tags:
-      - events
     post:
       consumes:
       - application/json
-      description: Saves and broadcasts a notification to specific users of the authenticated
-        client.
+      description: Broadcasts a notification via the browser Push API to specified
+        users.
       parameters:
       - description: Notification payload
         in: body
@@ -299,53 +291,67 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_handlers.NotifyResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Send a notification
+      summary: Send a Web Push notification
       tags:
       - events
-  /events/{id}:
-    patch:
-      description: Updates the notification status to read. Strict IDOR protection
-        ensures users only update their own notifications.
+  /events/agent.js:
+    get:
+      description: 'IMPORTANT: Composers MUST proxy this file so it is served from
+        their own domain, or browsers will block registration.'
+      produces:
+      - application/javascript
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Get Web Agent Script
+      tags:
+      - events
+  /events/subscribe:
+    post:
+      consumes:
+      - application/json
+      description: Saves a Web Push Subscription object from the browser.
       parameters:
-      - description: Notification ID
-        in: path
-        name: id
+      - description: Push Subscription object
+        in: body
+        name: payload
         required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/internal_handlers.PushSubscriptionRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
-        "401":
-          description: Unauthorized
+      security:
+      - BearerAuth: []
+      summary: Subscribe to Web Push
+      tags:
+      - events
+  /info:
+    get:
+      description: Returns the client's name and VAPID public key. Useful if the composer
+        wants to cache or hardcode their VAPID key instead of fetching it on every
+        token request.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: name, vapid_public_key
           schema:
             additionalProperties: true
             type: object
-        "403":
-          description: Forbidden
+        "401":
+          description: Unauthorized
           schema:
             additionalProperties: true
             type: object
@@ -354,16 +360,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
-      summary: Mark notification as read
+      summary: Get client information
       tags:
-      - events
+      - client
   /users/{user_id}/email:
     delete:
       description: Placeholder endpoint to delete a user's notification email for

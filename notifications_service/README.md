@@ -84,7 +84,87 @@ notifications_service/
 
 ### 4. Broadcasting (Composer Backend)
 
-* To notify users, call `POST /v1/events` with your `api_key`, a `message`, and an array of `user_ids`.
+* To notify users, call `POST /v1/events` with your `api_key` and the notification payload (expandable below).
+
+<details><summary>Full example notification payload</summary>
+
+<!-- payload:start -->
+
+```json
+{
+  // REQUIRED: Array of strings matching the user_id stored in the push_subscriptions table
+  "user_ids": [
+    "user123",
+    "user456"
+  ],
+
+  // REQUIRED: The main text body of the notification
+  "message": "Your package is out for delivery and will arrive between 2:00 PM and 4:00 PM.",
+
+  // OPTIONAL: The bold heading. Defaults to "New Notification" in worker.js if omitted
+  "title": "Delivery Update: Out for Delivery",
+
+  // OPTIONAL: The main logo/avatar next to the text. Falls back to /favicon.ico if omitted
+  "icon": "https://example.com/assets/delivery-truck-icon.png",
+
+  // OPTIONAL: Where the user goes if they click the main body of the notification. Falls back to /
+  "url": "https://example.com/orders/track/12345",
+
+  // OPTIONAL: A large banner image displayed below the text (Supported heavily on Android/Windows)
+  "image": "https://example.com/assets/map-hero-image.png",
+
+  // OPTIONAL: A tiny monochrome icon used specifically for the Android top status bar
+  "badge": "https://example.com/assets/monochrome-badge.png",
+
+  // OPTIONAL: Text direction. Valid values: "auto", "ltr" (left-to-right), "rtl" (right-to-left)
+  "dir": "ltr",
+
+  // OPTIONAL: BCP 47 language tag to help the OS with accessibility/screen readers
+  "lang": "en-US",
+
+  // OPTIONAL: Grouping ID. If a new push has the same tag, it silently overwrites the old one on the screen
+  "tag": "order-update-12345",
+
+  // OPTIONAL: Used with 'tag'. If true, overwriting the old notification will trigger a new chime/vibration
+  "renotify": true,
+
+  // OPTIONAL: If true, the notification stays on screen indefinitely until the user clicks or dismisses it
+  "requireInteraction": true,
+
+  // OPTIONAL: If true, forces the device not to vibrate or play a sound
+  "silent": false,
+
+  // OPTIONAL: Custom vibration pattern in milliseconds [vibrate, pause, vibrate]
+  "vibrate": [300, 100, 400],
+
+  // OPTIONAL: Epoch timestamp in milliseconds. Overrides the time displayed on the notification
+  "timestamp": 1711248456000,
+
+  // OPTIONAL: Array of up to 2 (sometimes 3 depending on OS) clickable buttons
+  "actions": [
+    {
+      // REQUIRED if action block exists: Internal ID for the button
+      "action": "track",
+      // REQUIRED if action block exists: Text displayed on the button
+      "title": "Live Map",
+      // OPTIONAL: Small icon placed next to the button text
+      "icon": "https://example.com/icons/map-pin.png",
+      // OPTIONAL: Custom routing URL intercepted by our worker.js when this specific button is clicked
+      "action_url": "https://example.com/orders/track/12345?view=live"
+    },
+    {
+      "action": "contact",
+      "title": "Contact Driver",
+      "icon": "https://example.com/icons/phone.png",
+      "action_url": "https://example.com/orders/12345/contact"
+    }
+  ]
+}
+```
+
+<!-- payload:end -->
+
+</details>
 
 * The service retrieves all active browser endpoints, encrypts the payload, and delivers it to Google (FCM), Apple (APNs), or Mozilla.
 

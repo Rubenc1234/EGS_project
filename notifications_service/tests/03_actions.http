@@ -11,7 +11,10 @@ Content-Type: application/json
   "user_ids": [
     "{{userId}}"
   ],
-  "message": "Welcome to the Web Push era!"
+  "message": "Welcome to the Web Push era!",
+  "title": "My SaaS Brand",
+  "icon": "https://cdn-icons-png.flaticon.com/512/1006/1006771.png",
+  "url": "https://git.tiagorg.pt"
 }
 
 ### ============================================================================
