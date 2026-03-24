@@ -2,16 +2,61 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/' })
 
+export function isTokenExpired(token: string) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+
+    const payload = JSON.parse(jsonPayload)
+    const now = Math.floor(Date.now() / 1000)
+    
+    if (payload.exp && payload.exp < now) {
+      return true
+    }
+    return false
+  } catch (e) {
+    return true
+  }
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('payment_token')
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    if (isTokenExpired(token)) {
+      localStorage.removeItem('payment_token')
+    } else {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
   return config
 })
 
+// Handle 401 Unauthorized globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('payment_token')
+      // Only redirect if we are not already on the login page
+      if (window.location.pathname !== '/') {
+        window.location.href = '/'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export function getToken(): string | null {
-  return localStorage.getItem('payment_token')
+  const token = localStorage.getItem('payment_token')
+  if (!token) return null
+  if (isTokenExpired(token)) {
+    localStorage.removeItem('payment_token')
+    return null
+  }
+  return token
 }
 
 export function setToken(token: string): void {
