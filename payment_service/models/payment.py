@@ -32,5 +32,6 @@ class Payment(db.Model):
             "stripe_payment_intent_id": self.stripe_payment_intent_id,
             "stripe_client_secret": self.stripe_client_secret,
             "wallet_id": self.wallet_id,
+            "to_wallet": self.wallet_id,
             "redirect_url": self.redirect_url,
         }

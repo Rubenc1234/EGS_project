@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequestMapping("/v1")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5175"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"}, allowCredentials = "true")
 public class TransactionController {
 
     private final TransactionService transactionService;

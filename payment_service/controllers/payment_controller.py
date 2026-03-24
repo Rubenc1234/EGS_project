@@ -12,7 +12,7 @@ def register_routes(app):
         user_id = data.get("user_id")
         amount = data.get("amount")
         phone_number = data.get("phone_number")
-        wallet_id = data.get("wallet_id")
+        wallet_id = data.get("wallet_id") or data.get("to_wallet")
         redirect_url = data.get("redirect_url")
 
         if not user_id or amount is None:

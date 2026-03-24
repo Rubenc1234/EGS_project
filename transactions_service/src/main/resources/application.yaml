@@ -37,3 +37,5 @@ keycloak:
 # Application settings
 app:
   dev-mode: true  # DEV MODE: Simula blockchain sem conectar realmente. DESATIVAR em produção!
+  bank-wallet: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+  payment-service-url: "http://localhost:5002"
