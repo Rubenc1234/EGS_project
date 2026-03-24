@@ -153,7 +153,7 @@ def _trigger_transaction_for_payment(payment_id: str) -> None:
             "asset": "EUR",
         }
         requests.post(
-            f"{TRANSACTIONS_BASE_URL}/v1/transactions/",
+            f"{TRANSACTIONS_BASE_URL}/v1/transactions",
             json=tx_payload,
             headers={"Content-Type": "application/json"},
             timeout=5,

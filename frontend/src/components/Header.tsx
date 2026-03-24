@@ -15,24 +15,34 @@ import Brightness7Icon from '@mui/icons-material/Brightness7'
 import Avatar from '@mui/material/Avatar'
 import { useColorMode } from '../colorMode'
 import { useNavigate } from 'react-router-dom'
+import { isTokenExpired } from '../App'
 import Tooltip from '@mui/material/Tooltip'
 
 export default function Header() {
   const [unread, setUnread] = useState(0)
   const { toggleColorMode, mode } = useColorMode()
   const navigate = useNavigate()
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('egs_token'))
+  
+  const checkIsLoggedIn = () => {
+    const token = localStorage.getItem('egs_token')
+    if (!token) return false
+    if (isTokenExpired(token)) {
+      localStorage.removeItem('egs_token')
+      return false
+    }
+    return true
+  }
+
+  const [isLoggedIn, setIsLoggedIn] = useState(checkIsLoggedIn())
+  //const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('egs_token'))
   const [notificationEnabled, setNotificationEnabled] = useState(false)
 
   useEffect(() => {
-    // Listen for storage changes (for multiple tabs) or just re-check
     const checkAuth = () => {
-      setIsLoggedIn(!!localStorage.getItem('egs_token'))
+      setIsLoggedIn(checkIsLoggedIn())
     }
     window.addEventListener('storage', checkAuth)
     
-    // Interval check for local changes within the same tab if needed, 
-    // but usually navigation/re-renders handle it
     const interval = setInterval(checkAuth, 1000)
     
     // Check notification permission status
