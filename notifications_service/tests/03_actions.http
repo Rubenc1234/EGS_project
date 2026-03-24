@@ -1,0 +1,41 @@
+### ============================================================================
+### Step 4: Composer Backend Pushes Notification
+### This will trigger the webpush-go library. Since the subscription above
+### is fake, devices_triggered might be 0, but status should be 200 OK.
+### ============================================================================
+POST {{baseUrl}}/events
+Authorization: Bearer {{api_key}}
+Content-Type: application/json
+
+{
+  "user_ids": [
+    "{{userId}}"
+  ],
+  "message": "Welcome to the Web Push era!",
+  "title": "My SaaS Brand",
+  "icon": "https://cdn-icons-png.flaticon.com/512/1006/1006771.png",
+  "url": "https://git.tiagorg.pt"
+}
+
+### ============================================================================
+### Step 5: Check Client's information
+### ============================================================================
+GET {{baseUrl}}/client/info
+Authorization: Bearer {{api_key}}
+
+### ============================================================================
+### Step 6: Admin Regenerates API Key
+### Tests key rotation.
+### ============================================================================
+PATCH {{baseUrl}}/admin/clients/{{client_id}}/key
+Authorization: Bearer {{masterKey}}
+Content-Type: application/json
+
+### ============================================================================
+### Step 7: Admin Deletes Client
+### Tests data isolation and cascading cleanup.
+### ============================================================================
+DELETE {{baseUrl}}/admin/clients/{{client_id}}
+Authorization: Bearer {{masterKey}}
+Content-Type: application/json
+

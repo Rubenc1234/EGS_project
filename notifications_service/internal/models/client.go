@@ -6,9 +6,12 @@ import (
 
 // Client represents an external company/app that bought an API key.
 type Client struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	Name       string    `gorm:"not null" json:"name"`
-	APIKeyHash string    `gorm:"uniqueIndex;not null" json:"-"` // Never return the hash in JSON
-	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt  time.Time `gorm:"autoUpdateTime" json:"-"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	Name            string    `gorm:"not null" json:"name"`
+	AdminEmail      string    `gorm:"not null" json:"admin_email"`
+	APIKeyHash      string    `gorm:"uniqueIndex;not null" json:"-"`
+	VapidPublicKey  string    `gorm:"not null" json:"vapid_public_key"`
+	VapidPrivateKey string    `gorm:"not null" json:"-"` // Never expose private key
+	CreatedAt       time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"-"`
 }

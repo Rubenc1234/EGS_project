@@ -22,7 +22,6 @@ const docTemplate = `{
                         "MasterAuth": []
                     }
                 ],
-                "description": "Returns all registered tenant applications.",
                 "produces": [
                     "application/json"
                 ],
@@ -38,20 +37,6 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/egs-notifications_internal_models.Client"
                             }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
                         }
                     }
                 }
@@ -75,7 +60,7 @@ const docTemplate = `{
                 "summary": "Create a new client tenant",
                 "parameters": [
                     {
-                        "description": "Client Name",
+                        "description": "Client Name and Admin Email",
                         "name": "payload",
                         "in": "body",
                         "required": true,
@@ -86,7 +71,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "client_id, api_key, message",
+                        "description": "Created",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -123,7 +108,6 @@ const docTemplate = `{
                         "MasterAuth": []
                     }
                 ],
-                "description": "Permanently deletes a client and all associated notifications from the database.",
                 "produces": [
                     "application/json"
                 ],
@@ -143,20 +127,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -191,7 +161,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "client_id, new_api_key",
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -210,13 +180,6 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 }
             }
@@ -228,7 +191,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Generates a 4-hour JWT for the frontend browser to connect to the SSE stream.",
+                "description": "Generates a JWT for the frontend browser and returns the VAPID Public Key required to prompt Web Push.",
                 "consumes": [
                     "application/json"
                 ],
@@ -252,7 +215,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "token, expires_in",
+                        "description": "token, expires_in, vapid_public_key",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -283,51 +246,13 @@ const docTemplate = `{
             }
         },
         "/events": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Establishes a Server-Sent Events connection and sends unread notifications.",
-                "produces": [
-                    "text/event-stream"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Connect to SSE stream",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "JWT Token (Alternative to Bearer header for web browsers)",
-                        "name": "token",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SSE Stream connected",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Saves and broadcasts a notification to specific users of the authenticated client.",
+                "description": "Broadcasts a notification via the browser Push API to specified users.",
                 "consumes": [
                     "application/json"
                 ],
@@ -337,7 +262,7 @@ const docTemplate = `{
                 "tags": [
                     "events"
                 ],
-                "summary": "Send a notification",
+                "summary": "Send a Web Push notification",
                 "parameters": [
                     {
                         "description": "Notification payload",
@@ -353,25 +278,65 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_handlers.NotifyResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                    }
+                }
+            }
+        },
+        "/events/agent.js": {
+            "get": {
+                "description": "IMPORTANT: Composers MUST proxy this file so it is served from their own domain, or browsers will block registration.",
+                "produces": [
+                    "application/javascript"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get Web Agent Script",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "string"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                    }
+                }
+            }
+        },
+        "/events/subscribe": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Saves a Web Push Subscription object from the browser.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Subscribe to Web Push",
+                "parameters": [
+                    {
+                        "description": "Push Subscription object",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.PushSubscriptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -380,38 +345,27 @@ const docTemplate = `{
                 }
             }
         },
-        "/events/{id}": {
-            "patch": {
+        "/info": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the notification status to read. Strict IDOR protection ensures users only update their own notifications.",
+                "description": "Returns the client's name and VAPID public key. Useful if the composer wants to cache or hardcode their VAPID key instead of fetching it on every token request.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "events"
+                    "client"
                 ],
-                "summary": "Mark notification as read",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Notification ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Get client information",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "name, vapid_public_key",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "additionalProperties": true
                         }
                     },
                     "401": {
@@ -421,22 +375,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -591,6 +531,9 @@ const docTemplate = `{
         "egs-notifications_internal_models.Client": {
             "type": "object",
             "properties": {
+                "admin_email": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -599,29 +542,25 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "vapid_public_key": {
+                    "type": "string"
                 }
             }
         },
-        "egs-notifications_internal_models.Notification": {
+        "internal_handlers.Action": {
             "type": "object",
             "properties": {
-                "client_id": {
-                    "description": "Tenant isolation",
-                    "type": "integer"
-                },
-                "created_at": {
+                "action": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "integer"
-                },
-                "is_read": {
-                    "type": "boolean"
-                },
-                "message": {
+                "action_url": {
                     "type": "string"
                 },
-                "user_id": {
+                "icon": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }
@@ -640,9 +579,13 @@ const docTemplate = `{
         "internal_handlers.CreateClientRequest": {
             "type": "object",
             "required": [
+                "admin_email",
                 "name"
             ],
             "properties": {
+                "admin_email": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -655,33 +598,94 @@ const docTemplate = `{
                 "user_ids"
             ],
             "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handlers.Action"
+                    }
+                },
+                "badge": {
+                    "type": "string"
+                },
+                "dir": {
+                    "type": "string",
+                    "enum": [
+                        "auto",
+                        "ltr",
+                        "rtl"
+                    ]
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "lang": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "renotify": {
+                    "type": "boolean"
+                },
+                "requireInteraction": {
+                    "type": "boolean"
+                },
+                "silent": {
+                    "type": "boolean"
+                },
+                "tag": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 },
                 "user_ids": {
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "type": "string"
+                    }
+                },
+                "vibrate": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
                     }
                 }
             }
         },
-        "internal_handlers.NotifyResponse": {
+        "internal_handlers.PushSubscriptionRequest": {
             "type": "object",
+            "required": [
+                "endpoint",
+                "keys"
+            ],
             "properties": {
-                "notifications": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/egs-notifications_internal_models.Notification"
-                    }
-                },
-                "status": {
+                "endpoint": {
                     "type": "string"
                 },
-                "targets": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
+                "keys": {
+                    "type": "object",
+                    "required": [
+                        "auth",
+                        "p256dh"
+                    ],
+                    "properties": {
+                        "auth": {
+                            "type": "string"
+                        },
+                        "p256dh": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -721,7 +725,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/v1",
 	Schemes:          []string{},
 	Title:            "Notifications API",
-	Description:      "Multi-Tenant SSE Notifications Service",
+	Description:      "Multi-Tenant Web Push Notifications Service",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

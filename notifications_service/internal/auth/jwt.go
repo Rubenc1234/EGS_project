@@ -9,12 +9,12 @@ import (
 
 // GenerateSubscriberToken creates a short-lived token for frontend browsers.
 // It embeds the ClientID to guarantee strict tenant isolation.
-func GenerateSubscriberToken(secret string, clientID uint, userID string) (string, error) {
+func GenerateSubscriberToken(secret string, clientID uint, userID string, expMinutes int) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"role":     "subscriber",
 		"clientID": clientID,
 		"userID":   userID,
-		"exp":      time.Now().Add(time.Hour * 4).Unix(), // 4 hours expiration
+		"exp":      time.Now().Add(time.Duration(expMinutes) * time.Minute).Unix(),
 		"iat":      time.Now().Unix(),
 	})
 

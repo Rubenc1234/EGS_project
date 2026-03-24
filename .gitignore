@@ -13,6 +13,7 @@ docs/
 *.log
 .service_pids
 notes.txt
+set_env.sh
 
 # node modules
 frontend/node_modules/

@@ -1,7 +1,0 @@
-### ============================================================================
-### Step 3: End User Connects
-### Run this AFTER running 01_setup.http.
-### The {{token}} is pulled automatically from IDE memory.
-### ============================================================================
-GET {{baseUrl}}/events?token={{token}}
-

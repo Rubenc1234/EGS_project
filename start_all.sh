@@ -8,11 +8,29 @@ cleanup() {
     exit
 }
 
+ENV_SCRIPT="./set_env.sh"
+
+if [[ -f "$ENV_SCRIPT" ]]; then
+    echo "✅ Environment script '$ENV_SCRIPT' encontrado."
+    echo "Carregando variáveis de ambiente..."
+    # shellcheck disable=SC1090
+    source "$ENV_SCRIPT"
+else
+    echo "⚠️  Environment script '$ENV_SCRIPT' não encontrado!"
+    echo "Por favor, crie o arquivo e defina as variáveis necessárias com export."
+    echo "Exemplo:"
+    echo "  export NOTIFICATIONS_API_KEY=sk_live_XXXX"
+    echo "Abortando script..."
+    exit 1
+fi
+
 # 1. Start Databases and Keycloak via Docker Compose
 echo "Starting Databases and Keycloak..."
 (cd iam_service && sudo docker-compose up -d)
 (cd payment_service && sudo docker-compose up -d)
 (cd transactions_service && sudo docker-compose up -d)
+echo "Necessário fazer 1o --build antes de subir pela primeira vez."
+(cd notifications_service && sudo docker-compose up -d)
 
 echo "Waiting for databases to be ready..."
 sleep 10
@@ -30,16 +48,19 @@ PAYMENT_PID=$!
 
 # 4. Start Notifications Service (Go)
 echo "Starting Notifications Service on port 5003..."
-export PORT=5003
-export DATABASE_URL="host=localhost user=postgres password=postgres dbname=notifications port=5432 sslmode=disable"
-export MASTER_ADMIN_SECRET="super_secret_master_key"
-export JWT_SECRET="another_super_secret_jwt_key"
-(cd notifications_service && go run cmd/api/main.go) > notifications_service.log 2>&1 &
+(cd notifications_service && \
+  setsid env \
+    PORT=5003 \
+    DATABASE_URL="host=localhost user=postgres password=postgres dbname=notifications port=5434 sslmode=disable" \
+    MASTER_ADMIN_SECRET="${MASTER_ADMIN_SECRET:?Erro: MASTER_ADMIN_SECRET não definido}" \
+    JWT_SECRET="${JWT_SECRET:?Erro: JWT_SECRET não definido}" \
+    go run cmd/api/main.go \
+) > notifications_service.log 2>&1 &
 NOTIFICATIONS_PID=$!
 
 # 5. Start Transactions Service (Java/Spring Boot)
 echo "Starting Transactions Service on port 8081..."
-(cd transactions_service && ./mvnw spring-boot:run) > transactions_service.log 2>&1 &
+(cd transactions_service && ./mvnw clean compile spring-boot:run) > transactions_service.log 2>&1 &
 TRANSACTIONS_PID=$!
 
 # 6. Start Composer Service (Python)
