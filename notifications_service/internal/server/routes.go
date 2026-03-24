@@ -53,7 +53,7 @@ func SetupRoutes(db *gorm.DB, rdb *redis.Client) *gin.Engine {
 	{
 		composerOnly.GET("/client/info", handlers.GetClientInfo(db))
 		composerOnly.POST("/auth/token", handlers.GenerateClientToken(db))
-		composerOnly.POST("/events", handlers.Notify(db, rdb))
+		composerOnly.POST("/events", middleware.RateLimitEvents(rdb, 10), handlers.Notify(db, rdb))
 		composerOnly.PUT("/users/:user_id/email", handlers.SetUserEmail())
 		composerOnly.GET("/users/:user_id/email", handlers.GetUserEmail())
 		composerOnly.DELETE("/users/:user_id/email", handlers.DeleteUserEmail())
@@ -67,6 +67,7 @@ func SetupRoutes(db *gorm.DB, rdb *redis.Client) *gin.Engine {
 	subscriberOnly.Use(middleware.RequireSubscriber())
 	{
 		subscriberOnly.POST("/subscribe", handlers.Subscribe(db, rdb))
+		subscriberOnly.DELETE("/subscribe", handlers.Unsubscribe(db, rdb))
 	}
 
 	return router

@@ -115,6 +115,13 @@ definitions:
     required:
     - email
     type: object
+  internal_handlers.UnsubscribeRequest:
+    properties:
+      endpoint:
+        type: string
+    required:
+    - endpoint
+    type: object
 info:
   contact: {}
   description: Multi-Tenant Web Push Notifications Service
@@ -288,8 +295,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "202":
+          description: Accepted
           schema:
             additionalProperties: true
             type: object
@@ -313,6 +320,31 @@ paths:
       tags:
       - events
   /events/subscribe:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a Web Push Subscription object, usually called on user
+        logout.
+      parameters:
+      - description: Unsubscribe payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.UnsubscribeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Unsubscribe from Web Push
+      tags:
+      - events
     post:
       consumes:
       - application/json

@@ -203,3 +203,7 @@ Navigate to `http://localhost:8082/docs` to test endpoints directly via Swagger.
 
 **Automated Testing:**
 Use the provided `.http` files in the `tests/` directory within an IDE HTTP client for a sequential walkthrough of the API lifecycle.
+
+## Future Work
+
+In the future, a Redis task queue will be implemented to handle large-scale broadcasts asynchronously, ensuring the API remains responsive under heavy load and no information is lost if the service restarts during a broadcast. This will be added in a future update.

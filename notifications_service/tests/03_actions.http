@@ -1,7 +1,7 @@
 ### ============================================================================
 ### Step 4: Composer Backend Pushes Notification
-### This will trigger the webpush-go library. Since the subscription above
-### is fake, devices_triggered might be 0, but status should be 200 OK.
+### This will trigger the background worker. It will immediately return
+### a 202 Accepted, and process the webpush-go library asynchronously.
 ### ============================================================================
 POST {{baseUrl}}/events
 Authorization: Bearer {{api_key}}
@@ -38,4 +38,3 @@ Content-Type: application/json
 DELETE {{baseUrl}}/admin/clients/{{client_id}}
 Authorization: Bearer {{masterKey}}
 Content-Type: application/json
-

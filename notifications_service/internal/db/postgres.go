@@ -1,7 +1,7 @@
 package db
 
 import (
-	"log"
+	"log/slog"
 	"os"
 
 	"egs-notifications/internal/models"
@@ -16,19 +16,20 @@ func InitDB(dsn string) *gorm.DB {
 	if os.Getenv("GIN_MODE") == "release" {
 		logLevel = logger.Error
 	}
-	logLevel = logger.Error
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Running database migrations...")
-	err = db.AutoMigrate(&models.Client{}, &models.Notification{}, &models.PushSubscription{})
+	slog.Info("Running database migrations...")
+	err = db.AutoMigrate(&models.Client{}, &models.PushSubscription{})
 	if err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+		slog.Error("Failed to migrate database", "error", err)
+		os.Exit(1)
 	}
 
 	return db

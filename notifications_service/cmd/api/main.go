@@ -1,9 +1,13 @@
 package main
 
 import (
-	"log"
+	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"egs-notifications/internal/cache"
@@ -28,8 +32,12 @@ import (
 // @name Authorization
 // @description Composer API Key OR 4-hour Subscriber JWT (Format: Bearer <token>)
 func main() {
+	// Configure the default structured logger to output JSON
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, reading system environment variables")
+		slog.Warn("No .env file found, reading system environment variables")
 	}
 
 	port := os.Getenv("PORT")
@@ -39,7 +47,8 @@ func main() {
 
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
+		slog.Error("DATABASE_URL environment variable is required")
+		os.Exit(1)
 	}
 
 	redisURL := os.Getenv("REDIS_URL")
@@ -48,7 +57,8 @@ func main() {
 	}
 
 	if os.Getenv("MASTER_ADMIN_SECRET") == "" || os.Getenv("JWT_SECRET") == "" {
-		log.Fatal("MASTER_ADMIN_SECRET and JWT_SECRET are required in environment")
+		slog.Error("MASTER_ADMIN_SECRET and JWT_SECRET are required in environment")
+		os.Exit(1)
 	}
 
 	database := db.InitDB(dsn)
@@ -63,8 +73,27 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	log.Printf("Service running on http://localhost:%s\n", port)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Server failed: %v", err)
+	go func() {
+		slog.Info("Service running", "port", port, "url", "http://localhost:"+port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("Server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	<-quit
+	slog.Info("Interrupt signal received. Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
+
+	slog.Info("Server gracefully exited")
 }
