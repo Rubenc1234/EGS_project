@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Callback from './pages/Callback'
 import Header from './components/Header'
 import Container from '@mui/material/Container'
+import { useNotificationSubscription } from './hooks/useNotificationSubscription';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('egs_token')
@@ -16,6 +17,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 }
 
 export default function App() {
+  const { subscriptionStatus, error } = useNotificationSubscription();
+
   return (
     <div>
       <Header />
@@ -30,6 +33,24 @@ export default function App() {
             </ProtectedRoute>
           } />
         </Routes>
+        {/* Notification subscription status indicator */}
+          {subscriptionStatus === 'subscribed' && (
+            <div style={{ background: '#d4edda', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
+              ✅ Push notifications enabled
+            </div>
+          )}
+          
+          {subscriptionStatus === 'error' && error && (
+            <div style={{ background: '#f8d7da', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
+              ⚠️ Notification setup failed: {error}
+            </div>
+          )}
+          
+          {subscriptionStatus === 'loading' && (
+            <div style={{ background: '#fff3cd', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
+              ⏳ Setting up notifications...
+            </div>
+          )}
       </Container>
     </div>
   )
