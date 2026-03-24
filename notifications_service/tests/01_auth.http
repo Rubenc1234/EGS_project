@@ -1,6 +1,6 @@
 ### ============================================================================
 ### Step 1: Admin creates a Client App
-### Stores: client_id and api_key into global variables
+### Stores: client_id, api_key, and vapid_public_key
 ### ============================================================================
 POST {{baseUrl}}/admin/clients
 Authorization: Bearer {{masterKey}}
@@ -13,10 +13,11 @@ Content-Type: application/json
 > {%
     client.global.set("client_id", response.body.client_id);
     client.global.set("api_key", response.body.api_key);
+    client.global.set("vapid_public_key", response.body.vapid_public_key);
 %}
 
 ### ============================================================================
-### Step 2: Customer Backend asks for a Frontend Token
+### Step 2: Composer Backend asks for a Frontend Token
 ### Stores: token into a global variable
 ### ============================================================================
 POST {{baseUrl}}/auth/token
@@ -30,4 +31,9 @@ Content-Type: application/json
 > {%
     client.global.set("token", response.body.token);
 %}
+
+### ============================================================================
+### Step 3: Fetch the Web Agent (Service Worker)
+### Run the push_test with a http server to test the subscription
+### ============================================================================
 

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Push Pro Tester</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; padding: 2rem; max-width: 600px; margin: 0 auto; background: #f4f7f6; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 0.8rem; margin: 0.5rem 0 1.5rem 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: monospace; }
+        button { width: 100%; padding: 1rem; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error-box { display: none; background: #ffe3e3; color: #d32f2f; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid #d32f2f; }
+        .status { font-size: 0.9rem; margin-top: 1rem; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Push Setup</h1>
+
+    <div id="errorBox" class="error-box"></div>
+
+    <label>VAPID Public Key</label>
+    <input type="text" id="vapidKey" placeholder="Paste VAPID Public Key">
+
+    <label>Subscriber Token (JWT)</label>
+    <input type="text" id="jwtToken" placeholder="Paste Subscriber JWT">
+
+    <button id="subBtn" onclick="subscribeToPush()">Enable Notifications</button>
+
+    <div class="status" id="statusMsg">Ready to subscribe...</div>
+</div>
+
+<script>
+    const statusMsg = document.getElementById('statusMsg');
+    const errorBox = document.getElementById('errorBox');
+
+    function showError(msg) {
+        errorBox.innerText = msg;
+        errorBox.style.display = 'block';
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const cleaned = base64String.replace(/["']/g, "").trim();
+        const padding = '='.repeat((4 - cleaned.length % 4) % 4);
+        const base64 = (cleaned + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+        return outputArray;
+    }
+
+    async function subscribeToPush() {
+        errorBox.style.display = 'none';
+        const vapidKey = document.getElementById('vapidKey').value.trim();
+        const jwt = document.getElementById('jwtToken').value.trim();
+
+        if (!vapidKey || !jwt) return showError("Please provide both keys.");
+
+        try {
+            // 1. Permission Check
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') throw new Error("Permission denied. Enable notifications in browser settings.");
+
+            statusMsg.innerText = "Registering worker...";
+            const registration = await navigator.serviceWorker.register('./worker.js');
+            await navigator.serviceWorker.ready;
+
+            statusMsg.innerText = "Connecting to Push Service...";
+
+            // 2. The Subscription Attempt
+            try {
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                });
+
+                statusMsg.innerText = "Syncing with backend...";
+
+                const response = await fetch('http://localhost:8080/v1/events/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+                    body: JSON.stringify(subscription.toJSON())
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error("Backend Error: " + (errData.error || "Unknown"));
+                }
+
+                statusMsg.innerText = "✅ Successfully Subscribed!";
+                alert("Subscription Active!");
+
+            } catch (pushErr) {
+                // BRAVE DETECTION
+                const isBrave = (navigator.brave && await navigator.brave.isBrave()) || false;
+
+                if (pushErr.message.includes("push service error")) {
+                    if (isBrave) {
+                        showError("Brave is blocking Google Push Services. Go to brave://settings/privacy, enable 'Use Google services for push messaging', and RELAUNCH your browser.");
+                    } else {
+                        showError("Push Service Error: The browser cannot connect to the push relay (FCM/APNs). Check your network or firewall.");
+                    }
+                } else {
+                    throw pushErr;
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            showError(error.message);
+            statusMsg.innerText = "Failed.";
+        }
+    }
+
+    // Ping the worker on load to see if it's there
+    window.addEventListener('load', async () => {
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg && reg.active) {
+                reg.active.postMessage({ type: 'PING' });
+            }
+        }
+    });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.type === 'PONG') {
+            console.log("Worker Health: Active");
+        }
+    });
+</script>
+</body>
+</html>

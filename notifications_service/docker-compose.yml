@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  egs_notifications_postgres:
+    image: postgres:15-alpine
+    container_name: egs_notifications_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notifications
+    volumes:
+      - egs_notifications_postgres_data:/var/lib/postgresql/data
+    networks:
+      - egs_notifications_network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  egs_notifications_redis:
+    image: redis:7-alpine
+    container_name: egs_notifications_redis
+    volumes:
+      - egs_notifications_redis_data:/data
+    networks:
+      - egs_notifications_network
+    ports:
+      - "6379:6379"
+
+  egs_notifications_api:
+    build: .
+    image: egs_notifications_service
+    container_name: egs_notifications_api
+    environment:
+      - PORT=8080
+      - MASTER_ADMIN_SECRET=master_key
+      - JWT_SECRET=jwt_key
+      - JWT_EXPIRATION_MINUTES=15
+      - DATABASE_URL=host=egs_notifications_postgres user=postgres password=postgres dbname=notifications port=5432 sslmode=disable TimeZone=UTC
+      - REDIS_URL=egs_notifications_redis:6379
+    ports:
+      - "8080:8080"
+    networks:
+      - egs_notifications_network
+    depends_on:
+      egs_notifications_postgres:
+        condition: service_healthy
+      egs_notifications_redis:
+        condition: service_started
+
+volumes:
+  egs_notifications_postgres_data:
+    name: egs_notifications_postgres_data
+  egs_notifications_redis_data:
+    name: egs_notifications_redis_data
+
+networks:
+  egs_notifications_network:
+    name: egs_notifications_network
+    driver: bridge

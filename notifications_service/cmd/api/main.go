@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
+	"egs-notifications/internal/cache"
 	"egs-notifications/internal/db"
 	"egs-notifications/internal/server"
-	"egs-notifications/internal/sse"
 
 	"github.com/joho/godotenv"
 
@@ -17,7 +17,7 @@ import (
 
 // @title Notifications API
 // @version 1.0
-// @description Multi-Tenant SSE Notifications Service
+// @description Multi-Tenant Web Push Notifications Service
 // @BasePath /v1
 // @securityDefinitions.apikey MasterAuth
 // @in header
@@ -42,21 +42,25 @@ func main() {
 		log.Fatal("DATABASE_URL environment variable is required")
 	}
 
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "localhost:6379"
+	}
+
 	if os.Getenv("MASTER_ADMIN_SECRET") == "" || os.Getenv("JWT_SECRET") == "" {
 		log.Fatal("MASTER_ADMIN_SECRET and JWT_SECRET are required in environment")
 	}
 
 	database := db.InitDB(dsn)
-	broker := sse.NewBroker()
-	go broker.Start()
+	redisCache := cache.InitRedis(redisURL)
 
-	router := server.SetupRoutes(database, broker)
+	router := server.SetupRoutes(database, redisCache)
 
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      router,
 		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 0,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	log.Printf("Service running on http://localhost:%s\n", port)

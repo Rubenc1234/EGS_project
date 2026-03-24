@@ -6,6 +6,7 @@ import (
 	"egs-notifications/internal/auth"
 	"egs-notifications/internal/models"
 
+	"github.com/SherClockHolmes/webpush-go"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -14,7 +15,7 @@ type CreateClientRequest struct {
 	Name string `json:"name" binding:"required"`
 }
 
-// CreateClient generates a new API key for a new customer/app.
+// CreateClient generates a new API key and VAPID keys for a new customer/app.
 // @Summary Create a new client tenant
 // @Description Registers a new client app and generates their forever API Key. This raw key is returned ONLY ONCE.
 // @Tags admin
@@ -22,7 +23,7 @@ type CreateClientRequest struct {
 // @Accept json
 // @Produce json
 // @Param payload body CreateClientRequest true "Client Name"
-// @Success 201 {object} map[string]interface{} "client_id, api_key, message"
+// @Success 201 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
@@ -37,9 +38,18 @@ func CreateClient(db *gorm.DB) gin.HandlerFunc {
 
 		rawKey, hash := auth.GenerateAPIKey()
 
+		// Generate Web Push VAPID keys for multi-tenant isolation
+		privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate VAPID keys"})
+			return
+		}
+
 		client := models.Client{
-			Name:       req.Name,
-			APIKeyHash: hash,
+			Name:            req.Name,
+			APIKeyHash:      hash,
+			VapidPublicKey:  publicKey,
+			VapidPrivateKey: privateKey,
 		}
 
 		if err := db.Create(&client).Error; err != nil {
@@ -48,24 +58,24 @@ func CreateClient(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, gin.H{
-			"message":   "Client created successfully. SAVE THIS API KEY NOW. It will never be shown again.",
-			"client_id": client.ID,
-			"api_key":   rawKey,
+			"message":          "Client created successfully. SAVE THIS API KEY NOW.",
+			"client_id":        client.ID,
+			"api_key":          rawKey,
+			"vapid_public_key": publicKey,
 		})
 	}
 }
 
-// RegenerateClientKey overwrites the old API key with a newly generated one.
+// RegenerateClientKey overwrites the old API key.
 // @Summary Regenerate client API Key
 // @Description Revokes the old API key and generates a new one. The old key will immediately stop working.
 // @Tags admin
 // @Security MasterAuth
 // @Produce json
 // @Param id path int true "Client ID"
-// @Success 200 {object} map[string]interface{} "client_id, new_api_key"
+// @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /admin/clients/{id}/key [patch]
 func RegenerateClientKey(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -86,22 +96,19 @@ func RegenerateClientKey(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"message":     "Key regenerated successfully. The old key is now void. SAVE THIS NEW KEY.",
+			"message":     "Key regenerated successfully.",
 			"client_id":   client.ID,
 			"new_api_key": rawKey,
 		})
 	}
 }
 
-// ListClients returns a list of all registered clients (without their API key hashes).
+// ListClients returns a list of all registered clients.
 // @Summary List all clients
-// @Description Returns all registered tenant applications.
 // @Tags admin
 // @Security MasterAuth
 // @Produce json
 // @Success 200 {array} models.Client
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /admin/clients [get]
 func ListClients(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -114,16 +121,13 @@ func ListClients(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-// DeleteClient removes a client and cascades to delete all their notifications.
+// DeleteClient removes a client.
 // @Summary Revoke and delete client
-// @Description Permanently deletes a client and all associated notifications from the database.
 // @Tags admin
 // @Security MasterAuth
 // @Produce json
 // @Param id path int true "Client ID"
 // @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
 // @Router /admin/clients/{id} [delete]
 func DeleteClient(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
