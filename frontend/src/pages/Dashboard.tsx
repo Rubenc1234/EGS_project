@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getWallet, listTransactions } from '../services/api'
+import { getWallet, listTransactions, getRealBlockchainBalance } from '../services/api'
 import useSSE from '../hooks/useSSE'
 import { Box, Button, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar, Alert } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
@@ -12,7 +12,20 @@ export default function Dashboard() {
   const queryClient = useQueryClient()
   const { data: txs, isLoading: txsLoading } = useQuery(['transactions', wallet?.id], () => 
     listTransactions({ wallet_id: wallet?.id, limit: 20 }), 
-    { enabled: !!wallet?.id }  // Only fetch transactions when wallet is loaded
+    { 
+      enabled: !!wallet?.id,
+      staleTime: 1000,
+      refetchInterval: 3000  // Auto-refetch transactions every 3 seconds
+    }
+  )
+  const { data: realBalance, isLoading: loadingRealBalance, refetch: refetchRealBalance } = useQuery(
+    ['realBalance', wallet?.id],
+    () => getRealBlockchainBalance(wallet?.id!),
+    { 
+      enabled: !!wallet?.id, 
+      staleTime: 1000,  // Consider stale after 1 second
+      refetchInterval: 3000  // Auto-refetch every 3 seconds for live updates
+    }
   )
   const [userInfo, setUserInfo] = useState<any>(null)
   const [openWalletPrompt, setOpenWalletPrompt] = useState(false)
@@ -90,6 +103,14 @@ export default function Dashboard() {
       setAmount('')
       setAsset('EUR')
       setOpenSend(false)
+      
+      // 🔄 Refetch REAL blockchain balance to show updated saldo
+      refetchRealBalance()
+      
+      // Wait a bit then refetch transactions to show new transaction
+      setTimeout(() => {
+        queryClient.invalidateQueries(['transactions', wallet?.id])
+      }, 2000)
     } catch (e: any) {
       console.error('Send failed:', e?.response?.data || e.message, e)
       setSnack({ open: true, message: e?.response?.data?.error || e?.response?.data?.message || 'Send failed', severity: 'error' })
@@ -149,14 +170,25 @@ export default function Dashboard() {
           }}>
             <CardContent>
               <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                Current Balance
+                Current Balance (REAL)
               </Typography>
               <Typography variant="h3" sx={{ fontWeight: 'bold', marginTop: 2, marginBottom: 3 }}>
-                €{wallet?.balance?.toFixed(2) ?? '0.00'}
+                {loadingRealBalance ? (
+                  <span style={{ fontSize: '1.5rem', opacity: 0.7 }}>Loading...</span>
+                ) : realBalance !== null ? (
+                  <span>€{realBalance.toFixed(2)}</span>
+                ) : (
+                  <span style={{ fontSize: '1.5rem', opacity: 0.7 }}>Error loading</span>
+                )}
               </Typography>
               <Typography variant="caption" sx={{ opacity: 0.8 }}>
                 Wallet ID: {wallet?.id ?? '—'}
               </Typography>
+              {realBalance !== null && wallet?.balance !== undefined && realBalance !== wallet.balance && (
+                <Typography variant="caption" sx={{ display: 'block', marginTop: 1, opacity: 0.7, color: '#ffab40' }}>
+                  💡 Calculated balance from history: €{wallet.balance.toFixed(2)}
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>

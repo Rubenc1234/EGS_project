@@ -60,7 +60,7 @@ NOTIFICATIONS_PID=$!
 
 # 5. Start Transactions Service (Java/Spring Boot)
 echo "Starting Transactions Service on port 8081..."
-(cd transactions_service && ./mvnw clean compile spring-boot:run) > transactions_service.log 2>&1 &
+(cd transactions_service && source /home/rubencc/4ano/EGS/project_egs/set_env.sh && ./mvnw spring-boot:run) > transactions_service.log 2>&1 &
 TRANSACTIONS_PID=$!
 
 # 6. Start Composer Service (Python)

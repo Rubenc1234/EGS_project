@@ -1,39 +1,31 @@
 package egs.transactions_service.service;
 
-import egs.transactions_service.config.BlockchainConfig;
+import egs.transactions_service.blockchain.BlockchainProvider;
 import egs.transactions_service.entity.Transaction;
 import egs.transactions_service.event.TransactionCreatedEvent;
 import egs.transactions_service.repository.TransactionRepository;
 import egs.transactions_service.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.web3j.abi.FunctionEncoder;
-import org.web3j.abi.datatypes.Address;
-import org.web3j.abi.datatypes.Function;
-import org.web3j.abi.datatypes.generated.Uint256;
-import org.web3j.crypto.Credentials;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.TransactionEncoder;
-import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.DefaultBlockParameterName;
-import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
-import org.web3j.protocol.core.methods.response.EthSendTransaction;
-import org.web3j.utils.Convert;
-import org.web3j.utils.Numeric;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.UUID;
+import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * Transaction Worker — Processamento Assincronamente
+ * 
+ * Agora usa BlockchainProvider (Strategy Pattern).
+ * Supports: MockBlockchain (dev), RealBlockchain (prod)
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,151 +33,104 @@ public class TransactionWorker {
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
-    private final Web3j web3j;
-    private final BlockchainConfig blockchainConfig;
+    private final BlockchainProvider blockchainProvider;
     private final KeyManagementService keyManagementService;
     private final NotificationService notificationService;
-
-    @Value("${app.dev-mode:false}")
-    private boolean devMode;
+    
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void processNewTransaction(TransactionCreatedEvent event) {
         String txId = event.getTransactionId();
-        log.info("Worker acordou! A processar transação em background: {}", txId);
+        log.info("🔄 Worker acordou! A processar transação: {} com BlockchainProvider: {}", 
+                txId, blockchainProvider.getProviderName());
 
         try {
-            // 1. Gets transaction details from DB
+            // 1. Busca detalhes da transação
             Transaction tx = transactionRepository.findById(txId)
                     .orElseThrow(() -> new RuntimeException("Transação não encontrada: " + txId));
 
             if (tx.getStatus() != Transaction.TransactionStatus.PENDING) {
-                log.warn("Worker: Transação {} não está em estado PENDING. Status atual: {}", txId, tx.getStatus());
+                log.warn("   Transação {} não está PENDING. Status: {}", txId, tx.getStatus());
                 return;
             }
 
-            // DEV MODE: Simular blockchain sem conectar realmente
-            if (devMode) {
-                log.warn("=== DEV MODE ATIVADO === Simulando envio para blockchain...");
-                sendToBlockchainDev(txId, tx);
-                return;
-            }
-
-            // Blockchain Logic
-            log.info("A preparar envio de {} {} de {} para {}", 
+            // 2. Envia para blockchain (Mock ou Real)
+            log.info("   📤 Enviando {} {} de {} para {}", 
                     tx.getAmount(), tx.getAsset(), tx.getFromWallet(), tx.getToWallet());
             
-            // Credentials
             String privateKey = keyManagementService.getPrivateKeyForWallet(tx.getFromWallet());
-            Credentials credentials = Credentials.create(privateKey);
-
-            // Nonce
-            EthGetTransactionCount ethGetTransactionCount = web3j.ethGetTransactionCount(
-                    tx.getFromWallet(), DefaultBlockParameterName.PENDING).send();
-            BigInteger nonce = ethGetTransactionCount.getTransactionCount();
-
-            // Gas Price
-            BigInteger gasPrice = web3j.ethGasPrice().send().getGasPrice();
-
-            // Create RawTransaction
-            RawTransaction rawTransaction;
-            if ("EUR".equals(tx.getAsset())) {
-                // ERC20 transfer - typically needs more gas than native
-                BigInteger gasLimit = BigInteger.valueOf(100000); 
-                
-                String contractAddress = blockchainConfig.getContract().getAddress();
-                int decimals = blockchainConfig.getContract().getDecimals();
-                BigInteger amountInUnits = tx.getAmount().multiply(BigDecimal.valueOf(10).pow(decimals)).toBigInteger();
-                
-                Function function = new Function(
-                        "transfer",
-                        Arrays.asList(new Address(tx.getToWallet()), new Uint256(amountInUnits)),
-                        Collections.emptyList()
-                );
-                String data = FunctionEncoder.encode(function);
-                rawTransaction = RawTransaction.createTransaction(nonce, gasPrice, gasLimit, contractAddress, data);
-            } else {
-                // Native transfer (MATIC/ETH) - always 21000 gas
-                BigInteger gasLimit = BigInteger.valueOf(21000);
-                
-                BigInteger valueInWei = Convert.toWei(tx.getAmount(), Convert.Unit.ETHER).toBigInteger();
-                rawTransaction = RawTransaction.createEtherTransaction(nonce, gasPrice, gasLimit, tx.getToWallet(), valueInWei);
-            }
-
-            // Sign the transaction
-            byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, blockchainConfig.getNode().getChainId(), credentials);
-            String hexValue = Numeric.toHexString(signedMessage);
-
-            // Send the transaction
-            EthSendTransaction response = web3j.ethSendRawTransaction(hexValue).send();
-
-            if (response.hasError()) {
-                throw new RuntimeException("Erro ao enviar para a Blockchain: " + response.getError().getMessage());
-            }
-
-            String txHash = response.getTransactionHash();
-
-            // Atualizar a base de dados com a Hash da Blockchain
+            String txHash = blockchainProvider.sendTransaction(
+                tx.getFromWallet(),
+                tx.getToWallet(),
+                tx.getAmount(),
+                privateKey
+            );
+            
+            log.info("   ✅ Transação enviada! Hash: {}", txHash);
             updateTransactionStatus(txId, txHash, Transaction.TransactionStatus.BROADCASTED);
             
-            log.info("Transação enviada para a rede com sucesso! Hash: {}", txHash);
+            // 3. Poll confirmação (com retry)
+            pollTransactionConfirmation(txId, txHash);
 
         } catch (Exception e) {
-            log.error("Erro critico ao enviar transação {} para a rede: {}", txId, e.getMessage());
+            log.error("   ❌ Erro ao processar transação {}: {}", txId, e.getMessage(), e);
             updateTransactionStatus(txId, null, Transaction.TransactionStatus.FAILED);
         }
     }
 
     /**
-     * DEV MODE: Simula envio para blockchain sem realmente conectar.
-     * Em produção, use o código real com Web3j.
+     * Poll para confirmação de transação.
+     * Tenta a cada 5 segundos durante 5 minutos.
      */
-    private void sendToBlockchainDev(String txId, Transaction tx) {
-        try {
-            // Em dev mode, gerar um hash fake mas realista (0x + 64 hex chars)
-            String uuidHex = UUID.randomUUID().toString().replace("-", "");
-            String fakeHash = "0x" + uuidHex + uuidHex.substring(0, 64 - uuidHex.length());
-            log.warn("DEV MODE: Simulando envio para blockchain. Tx {} com hash fake: {}", txId, fakeHash);
+    private void pollTransactionConfirmation(String txId, String txHash) {
+        final int MAX_ATTEMPTS = 60; // 60 * 5s = 5 minutos
+        final int POLL_INTERVAL_SECONDS = 5;
+        
+        executor.scheduleAtFixedRate(() -> {
+            Optional<BlockchainProvider.TransactionReceipt> receipt = blockchainProvider.getTransactionReceipt(txHash);
             
-            // Simular sucesso na blockchain
-            updateTransactionStatus(txId, fakeHash, Transaction.TransactionStatus.BROADCASTED);
-            
-            // Após 2s, simular confirmação
-            new Thread(() -> {
-                try {
-                    Thread.sleep(2000);
-                    updateTransactionStatus(txId, fakeHash, Transaction.TransactionStatus.CONFIRMED);
-                    log.info("DEV MODE: Transação {} confirmada com sucesso!", txId);
-                    
-                    // Atualizar saldo do receiver
+            if (receipt.isPresent()) {
+                log.info("   ✅ Transação CONFIRMADA: {}", txHash);
+                updateTransactionStatus(txId, txHash, Transaction.TransactionStatus.CONFIRMED);
+                
+                // Creditação ao receiver
+                transactionRepository.findById(txId).ifPresent(tx -> {
                     walletRepository.findById(tx.getToWallet()).ifPresent(wallet -> {
-                        log.info("DEV MODE: Creditando {} {} para receiver {}", tx.getAmount(), tx.getAsset(), tx.getToWallet());
                         if ("EUR".equals(tx.getAsset())) {
                             wallet.setLastTokenBalance(wallet.getLastTokenBalance().add(tx.getAmount()));
                         } else {
                             wallet.setLastNativeBalance(wallet.getLastNativeBalance().add(tx.getAmount()));
                         }
                         walletRepository.save(wallet);
+                        log.info("   💰 Creditados {} {} ao receiver", tx.getAmount(), tx.getAsset());
                     });
-                } catch (InterruptedException ie) {
-                    log.error("DEV MODE: Thread interrompida", ie);
-                }
-            }).start();
-            
-        } catch (Exception e) {
-            log.error("DEV MODE: Erro ao simular blockchain: {}", e.getMessage());
-            updateTransactionStatus(txId, null, Transaction.TransactionStatus.FAILED);
-        }
+                });
+                
+                // Stop polling
+                throw new RuntimeException("Stop polling");
+            } else {
+                log.debug("   ⏳ Aguardando confirmação de {}", txHash);
+            }
+        }, POLL_INTERVAL_SECONDS, POLL_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     @Transactional
     protected void updateTransactionStatus(String txId, String hash, Transaction.TransactionStatus status) {
         transactionRepository.findById(txId).ifPresent(tx -> {
-            if (hash != null) tx.setHash(hash);
+            log.info("   💾 Atualizando TX {} - Status: {} | Hash: {} → {}", txId, tx.getStatus(), tx.getHash(), hash);
+            
+            if (hash != null) {
+                tx.setHash(hash);
+                log.info("   ✏️ Hash definido para: {}", tx.getHash());
+            }
+            
             tx.setStatus(status);
             tx.setUpdatedAt(OffsetDateTime.now());
-            transactionRepository.save(tx);
+            
+            Transaction saved = transactionRepository.save(tx);
+            log.info("   ✅ TX salva no repo. Hash na BD agora: {}", saved.getHash());
 
             // Send notifications based on transaction status
             if (status == Transaction.TransactionStatus.BROADCASTED) {

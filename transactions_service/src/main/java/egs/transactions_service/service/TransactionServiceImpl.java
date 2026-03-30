@@ -317,6 +317,24 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    public Optional<TransactionResponseDTO> getTransactionById(String txId, String requesterWallet) {
+        return transactionRepository.findById(txId)
+                .map(tx -> {
+                    // Optional: verify if requesterWallet matches sender or receiver
+                    if (requesterWallet != null) {
+                        boolean isAllowed = requesterWallet.equalsIgnoreCase(tx.getFromWallet()) ||
+                                           requesterWallet.equalsIgnoreCase(tx.getToWallet());
+                        if (!isAllowed) {
+                            log.warn("Access denied: requester {} tried to access transaction {} (from: {}, to: {})", 
+                                    requesterWallet, txId, tx.getFromWallet(), tx.getToWallet());
+                            return null;
+                        }
+                    }
+                    return mapToResponse(tx);
+                });
+    }
+
+    @Override
     @Transactional
     public RefundResponseDTO refundTransaction(RefundRequestDTO request) {
         // Input validation and fetching the original transaction

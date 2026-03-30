@@ -70,4 +70,18 @@ export async function sendTransaction(payload: {
   return res.data
 }
 
+/**
+ * Get the REAL balance from MockBlockchain (not calculated from transaction history)
+ * This shows the actual funds available for transactions.
+ */
+export async function getRealBlockchainBalance(walletAddress: string) {
+  try {
+    const res = await api.get(`/v1/dev/blockchain/balance/${walletAddress}`)
+    return res.data?.balance_eur || 0
+  } catch (err: any) {
+    console.warn('Failed to get real blockchain balance:', err.message)
+    return null
+  }
+}
+
 export default api
