@@ -76,8 +76,8 @@ export async function sendTransaction(payload: {
  */
 export async function getRealBlockchainBalance(walletAddress: string) {
   try {
-    const res = await api.get(`/v1/dev/blockchain/balance/${walletAddress}`)
-    return res.data?.balance_eur || 0
+    const res = await api.get(`/v1/blockchain/${walletAddress}/balance`)
+    return res.data?.balance || 0
   } catch (err: any) {
     console.warn('Failed to get real blockchain balance:', err.message)
     return null

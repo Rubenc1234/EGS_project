@@ -28,6 +28,9 @@ public class UserWallet {
     @Column(nullable = false, length = 42)
     private String walletAddress; // 0x...
     
+    @Column(name = "private_key_encrypted", length = 1000)
+    private String privateKeyEncrypted; // AES-256 encrypted (null se importado)
+    
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
     

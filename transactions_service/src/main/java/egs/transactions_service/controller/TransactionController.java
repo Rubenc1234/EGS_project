@@ -11,6 +11,7 @@ import egs.transactions_service.repository.WalletRepository;
 import egs.transactions_service.repository.TransactionRepository;
 import egs.transactions_service.service.TransactionService;
 import egs.transactions_service.service.TransactionWorker;
+import egs.transactions_service.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,7 @@ public class TransactionController {
     private final TransactionRepository transactionRepository;
     private final TransactionWorker transactionWorker;
     private final BlockchainProvider blockchainProvider;
+    private final WalletService walletService;
 
     /**
      * Create or retrieve the wallet for the currently authenticated user.
@@ -79,18 +81,11 @@ public class TransactionController {
                 return ResponseEntity.ok(balance);
             }
 
-            // Generate a new wallet address (simple: derive from sub + random suffix)
-            String newWalletAddress = generateWalletAddress(sub);
-            log.info("=== Generated new wallet address: {} for user: {} ===", newWalletAddress, sub);
-
-            // Save mapping
-            UserWallet userWallet = UserWallet.builder()
-                    .keycloakSub(sub)
-                    .walletAddress(newWalletAddress)
-                    .createdAt(java.time.OffsetDateTime.now())
-                    .build();
-            userWalletRepository.save(userWallet);
-            log.info("=== Saved user->wallet mapping in DB ===");
+            // Create new wallet using WalletService (generates and encrypts private key)
+            log.info("=== Creating new wallet with encrypted private key ===");
+            UserWallet newWallet = walletService.createWalletForUser(sub);
+            String newWalletAddress = newWallet.getWalletAddress();
+            log.info("=== Wallet created: {} with encrypted private key ===", newWalletAddress);
 
             // Get balance for the new wallet (will create Wallet entry if needed)
             BalanceDTO balance = transactionService.getBalance(newWalletAddress);
@@ -405,6 +400,30 @@ public class TransactionController {
         } catch (Exception e) {
             log.error("=== DEV: Error retrying transaction === tx_id={} error={}", txId, e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of("error", "Retry failed", "detail", e.getMessage()));
+        }
+    }
+
+    /**
+     * Get the balance from the configured Blockchain Provider (Mock or Real).
+     * Works with both MockBlockchainProvider and RealBlockchainProvider.
+     * Usage: GET /v1/blockchain/{address}/balance
+     */
+    @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"}, allowCredentials = "true")
+    @GetMapping("/blockchain/{address}/balance")
+    public ResponseEntity<?> getWalletBalance(@PathVariable("address") String address) {
+        log.info("=== GET /v1/blockchain/{}/balance ===", address);
+        try {
+            BigDecimal balance = blockchainProvider.getBalance(address);
+            
+            log.info("=== Wallet balance for {} = {} ===", address, balance);
+            return ResponseEntity.ok(Map.of(
+                "address", address,
+                "balance", balance,
+                "provider", blockchainProvider.getProviderName()
+            ));
+        } catch (Exception e) {
+            log.error("=== Error getting wallet balance === error={}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "internal_error", "detail", e.getMessage()));
         }
     }
 

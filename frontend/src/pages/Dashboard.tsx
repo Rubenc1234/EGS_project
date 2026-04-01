@@ -71,7 +71,7 @@ export default function Dashboard() {
   const [openSend, setOpenSend] = useState(false)
   const [toWallet, setToWallet] = useState('')
   const [amount, setAmount] = useState('')
-  const [asset, setAsset] = useState('EUR')
+  const [asset, setAsset] = useState('MATIC')
   const [loadingSend, setLoadingSend] = useState(false)
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity?: 'success'|'error' }>({ open: false, message: '', severity: 'success' })
 
@@ -101,7 +101,7 @@ export default function Dashboard() {
       // reset
       setToWallet('')
       setAmount('')
-      setAsset('EUR')
+      setAsset('MATIC')
       setOpenSend(false)
       
       // 🔄 Refetch REAL blockchain balance to show updated saldo
@@ -184,11 +184,6 @@ export default function Dashboard() {
               <Typography variant="caption" sx={{ opacity: 0.8 }}>
                 Wallet ID: {wallet?.id ?? '—'}
               </Typography>
-              {realBalance !== null && wallet?.balance !== undefined && realBalance !== wallet.balance && (
-                <Typography variant="caption" sx={{ display: 'block', marginTop: 1, opacity: 0.7, color: '#ffab40' }}>
-                  💡 Calculated balance from history: €{wallet.balance.toFixed(2)}
-                </Typography>
-              )}
             </CardContent>
           </Card>
         </Grid>
@@ -239,14 +234,7 @@ export default function Dashboard() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField label="From wallet" value={wallet?.id ?? ''} disabled fullWidth />
             <TextField label="To wallet (0x...) or user id" value={toWallet} onChange={(e) => setToWallet(e.target.value)} fullWidth />
-            <TextField label="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
-            <FormControl fullWidth>
-              <InputLabel id="asset-label">Asset</InputLabel>
-              <Select labelId="asset-label" value={asset} label="Asset" onChange={(e) => setAsset(e.target.value)}>
-                <MenuItem value="EUR">EUR (token)</MenuItem>
-                <MenuItem value="MATIC">MATIC (native)</MenuItem>
-              </Select>
-            </FormControl>
+            <TextField label="Amount (MATIC)" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
           </Box>
         </DialogContent>
         <DialogActions>

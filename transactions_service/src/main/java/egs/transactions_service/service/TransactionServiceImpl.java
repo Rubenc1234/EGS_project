@@ -1,5 +1,6 @@
 package egs.transactions_service.service;
 
+import egs.transactions_service.blockchain.BlockchainProvider;
 import egs.transactions_service.config.BlockchainConfig;
 import egs.transactions_service.dto.*;
 import egs.transactions_service.event.TransactionCreatedEvent;
@@ -45,6 +46,7 @@ import java.util.UUID;
 public class TransactionServiceImpl implements TransactionService {
 
     private final Web3j web3j;
+    private final BlockchainProvider blockchainProvider;
     private final BlockchainConfig blockchainConfig;
     private final WalletRepository walletRepository;
     private final BalanceAuditRepository balanceAuditRepository;
@@ -77,18 +79,13 @@ public class TransactionServiceImpl implements TransactionService {
         try {
             // Native Balance (Wei)
             log.info("=== Querying native balance (MATIC) ===");
-            EthGetBalance ethGetBalance = web3j.ethGetBalance(walletId, DefaultBlockParameterName.LATEST).send();
-            BigInteger nativeBalanceWei = ethGetBalance.getBalance();
-            BigDecimal nativeBalance = Convert.fromWei(new BigDecimal(nativeBalanceWei), Convert.Unit.ETHER);
+            BigDecimal nativeBalance = blockchainProvider.getBalance(walletId);
             log.info("=== Native balance retrieved: {} MATIC ===", nativeBalance);
 
             // Token Balance (Euro)
             log.info("=== Querying token balance (EUR) ===");
-            String contractAddress = blockchainConfig.getContract().getAddress();
-            BigInteger tokenBalanceRaw = queryTokenBalance(walletId, contractAddress);
-            int decimals = blockchainConfig.getContract().getDecimals();
-            BigDecimal tokenBalance = new BigDecimal(tokenBalanceRaw).divide(BigDecimal.valueOf(10).pow(decimals), decimals, RoundingMode.HALF_UP);
-            log.info("=== Token balance retrieved: {} EUR ===", tokenBalance);
+            BigDecimal tokenBalance = BigDecimal.ZERO;  // Mock blockchain doesn't support token queries
+            log.info("=== Token balance: {} EUR (mock) ===", tokenBalance);
 
             OffsetDateTime now = OffsetDateTime.now();
 

@@ -31,7 +31,3 @@ register_routes(app)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
-
-
-#curl -X POST "http://localhost:8080/realms/microservices/protocol/openid-connect/token"      -H "Content-Type: application/x-www-form-urlencoded"      -d "grant_type=password"      -d "client_id=iam-service"      -d "client_secret=4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha"      -d "username=john.doe"      -d "password=password1234"      -d "scope=openid"

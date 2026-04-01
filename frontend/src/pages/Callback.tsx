@@ -14,6 +14,34 @@ export default function Callback() {
 
   useEffect(() => {
     const exchangeCode = async () => {
+      // Helper function to create/generate wallet after token is set
+      const initializeWallet = async (token: string) => {
+        try {
+          console.log('🔐 Initializing wallet for user...')
+          const res = await fetch('http://localhost:8081/v1/users/me/wallet', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (res.ok) {
+            const walletData = await res.json()
+            const walletId = walletData.walletId || walletData.wallet || walletData.address || walletData.id
+            if (walletId) {
+              console.log('✅ Wallet initialized:', walletId)
+              localStorage.setItem('egs_wallet_id', walletId)
+            }
+          } else {
+            console.warn('⚠️ Failed to initialize wallet:', res.status, res.statusText)
+          }
+        } catch (err) {
+          console.error('❌ Wallet initialization error:', err)
+          // Don't block navigation if wallet init fails
+        }
+      }
+
       // First try: the server-side flow redirects back to the frontend with the token in the fragment
       // e.g. http://localhost:5175/callback#access_token=...&expires_in=...
       const hash = window.location.hash || ''
@@ -33,6 +61,9 @@ export default function Callback() {
           } catch (e) {
             // ignore
           }
+
+          // Initialize wallet to generate private key
+          await initializeWallet(token)
 
           // Navigate to dashboard
           navigate('/dashboard')
@@ -79,6 +110,32 @@ export default function Callback() {
           localStorage.setItem('egs_token', token)
           // Set authorization header
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+
+          // Initialize wallet to generate private key
+          try {
+            console.log('🔐 Initializing wallet for user...')
+            const walletRes = await fetch(`${txBase}/v1/users/me/wallet`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            })
+            
+            if (walletRes.ok) {
+              const walletData = await walletRes.json()
+              const walletId = walletData.walletId || walletData.wallet || walletData.address || walletData.id
+              if (walletId) {
+                console.log('✅ Wallet initialized:', walletId)
+                localStorage.setItem('egs_wallet_id', walletId)
+              }
+            } else {
+              console.warn('⚠️ Failed to initialize wallet:', walletRes.status, walletRes.statusText)
+            }
+          } catch (err) {
+            console.error('❌ Wallet initialization error:', err)
+            // Don't block navigation if wallet init fails
+          }
 
           // Redirect to dashboard
           navigate('/dashboard')

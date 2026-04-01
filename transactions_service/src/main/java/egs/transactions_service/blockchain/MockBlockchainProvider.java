@@ -2,8 +2,6 @@ package egs.transactions_service.blockchain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -25,10 +23,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * ✅ Realismo: 5% transações falham, 2% reorgs, confirmações variáveis (3-10s)
  * ✅ Thread-safe com ConcurrentHashMap
  * ✅ Perfeito para testes e desenvolvimento
+ * 
+ * Criada pelo BlockchainConfig (não é @Component)
  */
-@Component
 @Slf4j
-@ConditionalOnProperty(name = "blockchain.provider", havingValue = "mock", matchIfMissing = false)
 public class MockBlockchainProvider implements BlockchainProvider {
     
     private static final String STATE_FILE = "/tmp/mock-blockchain-state.json";
@@ -370,6 +368,22 @@ public class MockBlockchainProvider implements BlockchainProvider {
         );
         
         log.info("╚════════════════════════════════════════════╝\n");
+    }
+
+    /**
+     * Dev Helper: Reseta estado para testes (limpa balances, nonces, transações, JSON).
+     */
+    public synchronized void resetForTesting() {
+        balances.clear();
+        nonces.clear();
+        transactions.clear();
+        
+        try {
+            Files.deleteIfExists(Paths.get(STATE_FILE));
+            log.info("   [TEST RESET] ✅ Estado reseta para testes");
+        } catch (Exception e) {
+            log.warn("   [TEST RESET] ⚠️ Erro ao limpar JSON: {}", e.getMessage());
+        }
     }
 
     /**
