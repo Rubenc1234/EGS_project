@@ -23,3 +23,6 @@ class StripePaymentProvider(BasePaymentProvider):
             return payment
         except stripe.error.StripeError as e:
             raise RuntimeError(str(e)) from e
+
+    def construct_webhook_event(self, payload: bytes, sig_header: str, secret: str):
+        return stripe.Webhook.construct_event(payload, sig_header, secret)

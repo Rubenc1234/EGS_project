@@ -118,3 +118,61 @@ paths:
       responses:
         '200':
           description: Estado atualizado
+
+  /v1/payments/{payment_id}/receipt:
+    get:
+      summary: Descarrega recibo do pagamento em PDF
+      security:
+        - ServiceToken: []
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ficheiro PDF com o recibo
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Pagamento não encontrado
+
+  /v1/payments/webhook:
+    post:
+      summary: Webhook Stripe (payment_intent.succeeded / payment_intent.payment_failed)
+      description: |
+        Recebe eventos do Stripe. Autenticação feita via assinatura HMAC no header
+        `Stripe-Signature` — não usa Bearer token.
+        Ao receber `payment_intent.succeeded`, marca o pagamento como `concluded`
+        e envia notificação. Ao receber `payment_intent.payment_failed`, marca como `cancelled`.
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Assinatura HMAC gerada pelo Stripe para verificação do payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload do evento Stripe (estrutura variável por tipo de evento)
+      responses:
+        '200':
+          description: Evento processado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          description: Payload inválido ou assinatura incorreta

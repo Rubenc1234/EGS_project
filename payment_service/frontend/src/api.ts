@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: 'http://localhost:8081' })
+// Use Vite dev proxy in local development to avoid browser CORS issues.
+const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '' })
 
 export function isTokenExpired(token: string) {
   try {
@@ -86,6 +87,38 @@ export interface PaymentResponse {
   redirect_url: string | null
   stripe_client_secret: string | null
   stripe_payment_intent_id: string | null
+  created_at: string | null
+}
+
+export function getUserIdFromToken(): string | null {
+  const token = getToken()
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.sub ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function getUserPayments(userId: string): Promise<PaymentResponse[]> {
+  const res = await api.get('/v1/payments', { params: { user_id: userId } })
+  return res.data
+}
+
+export async function cancelPayment(paymentId: string): Promise<PaymentResponse> {
+  const res = await api.patch(`/v1/payments/${paymentId}`, { status: 'cancelled' })
+  return res.data
+}
+
+export async function downloadReceipt(paymentId: string): Promise<void> {
+  const res = await api.get(`/v1/payments/${paymentId}/receipt`, { responseType: 'blob' })
+  const url = URL.createObjectURL(res.data)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `receipt_${paymentId}.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export async function createPayment(params: {
@@ -98,6 +131,3 @@ export async function createPayment(params: {
   return res.data
 }
 
-export async function concludePayment(paymentId: string): Promise<void> {
-  await api.patch(`/v1/payments/${paymentId}`, { status: 'concluded' })
-}

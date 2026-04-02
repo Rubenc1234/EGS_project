@@ -1,3 +1,9 @@
+import os
+from io import BytesIO
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+
 from payment_service.models.payment import Payment, PaymentStatus
 from payment_service.repository import payment_repository
 from payment_service.services.providers.stripe_provider import StripePaymentProvider
@@ -38,6 +44,45 @@ def get_payment(payment_id: str) -> Payment | None:
     return payment_repository.find_by_id(payment_id)
 
 
+def generate_receipt(payment_id: str) -> bytes | None:
+    payment = payment_repository.find_by_id(payment_id)
+    if payment is None:
+        return None
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    _, height = A4
+
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(50, height - 60, "Payment Receipt")
+
+    c.setFont("Helvetica-Bold", 11)
+    c.setFillColorRGB(0.4, 0.4, 0.4)
+    c.drawString(50, height - 82, f"ID: {payment.id}")
+    c.setFillColorRGB(0, 0, 0)
+
+    c.setFont("Helvetica", 12)
+    fields = [
+        ("Date", payment.created_at.strftime("%Y-%m-%d %H:%M UTC") if payment.created_at else "N/A"),
+        ("Amount", f"EUR {payment.amount:.2f}"),
+        ("Status", payment.status),
+        ("To Wallet", payment.wallet_id or "N/A"),
+        ("User ID", payment.user_id),
+    ]
+    y = height - 115
+    for label, value in fields:
+        c.drawString(50, y, f"{label}:")
+        c.drawString(200, y, str(value))
+        y -= 24
+
+    c.save()
+    return buf.getvalue()
+
+
+def get_user_payments(user_id: str) -> list[Payment]:
+    return payment_repository.find_by_user_id(user_id)
+
+
 def update_status(payment_id: str, status: str) -> Payment | None:
     payment = payment_repository.find_by_id(payment_id)
     if not payment:
@@ -57,3 +102,20 @@ def update_status(payment_id: str, status: str) -> Payment | None:
         )
 
     return payment
+
+
+def handle_webhook(payload: bytes, sig_header: str) -> None:
+    secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+    event = _provider.construct_webhook_event(payload, sig_header, secret)
+
+    if event["type"] == "payment_intent.succeeded":
+        intent_id = event["data"]["object"]["id"]
+        payment = payment_repository.find_by_stripe_intent_id(intent_id)
+        if payment and payment.status == PaymentStatus.PENDING.value:
+            update_status(payment.id, PaymentStatus.CONCLUDED.value)
+
+    elif event["type"] == "payment_intent.payment_failed":
+        intent_id = event["data"]["object"]["id"]
+        payment = payment_repository.find_by_stripe_intent_id(intent_id)
+        if payment and payment.status == PaymentStatus.PENDING.value:
+            update_status(payment.id, PaymentStatus.CANCELLED.value)

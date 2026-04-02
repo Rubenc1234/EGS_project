@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from enum import Enum
 from payment_service.database import db
 
@@ -21,6 +22,7 @@ class Payment(db.Model):
     stripe_client_secret = db.Column(db.String, nullable=True)
     wallet_id = db.Column(db.String, nullable=True)
     redirect_url = db.Column(db.String, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def to_dict(self):
         return {
@@ -34,4 +36,5 @@ class Payment(db.Model):
             "wallet_id": self.wallet_id,
             "to_wallet": self.wallet_id,
             "redirect_url": self.redirect_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -20,7 +20,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js'
-import { createPayment, concludePayment, getToken } from '../api'
+import { createPayment, getToken, getUserIdFromToken } from '../api'
 
 const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string
 const stripePromise = loadStripe(STRIPE_PK)
@@ -48,7 +48,7 @@ function CheckoutForm({
 
     try {
       const payment = await createPayment({
-        user_id: 'me',
+        user_id: getUserIdFromToken() ?? 'anonymous',
         amount,
         wallet_id: walletId,
         redirect_url: redirectUrl,
@@ -71,7 +71,6 @@ function CheckoutForm({
         return
       }
 
-      await concludePayment(payment.id)
       navigate(`/success?redirect_url=${encodeURIComponent(redirectUrl)}&amount=${amount}`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unexpected error occurred.'
@@ -140,7 +139,7 @@ function CheckoutForm({
 function TestParamsForm({ onSubmit }: { onSubmit: (w: string, a: number, r: string) => void }) {
   const [walletId, setWalletId] = useState('test-wallet-123')
   const [amount, setAmount] = useState('10')
-  const [redirectUrl, setRedirectUrl] = useState('http://localhost:5175/dashboard')
+  const [redirectUrl, setRedirectUrl] = useState('http://localhost:5174/payments')
 
   return (
     <Box

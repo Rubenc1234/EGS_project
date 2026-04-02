@@ -12,7 +12,7 @@ export default defineConfig({
         secure: false,
       },
       '/v1/payments': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:5002',
         changeOrigin: true,
         secure: false,
       },
