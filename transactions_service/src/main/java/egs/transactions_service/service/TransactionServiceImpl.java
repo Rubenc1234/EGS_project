@@ -6,9 +6,11 @@ import egs.transactions_service.dto.*;
 import egs.transactions_service.event.TransactionCreatedEvent;
 import egs.transactions_service.entity.BalanceAudit;
 import egs.transactions_service.entity.Wallet;
+import egs.transactions_service.entity.TransactionFee;
 import egs.transactions_service.repository.BalanceAuditRepository;
 import egs.transactions_service.repository.TransactionRepository;
 import egs.transactions_service.repository.WalletRepository;
+import egs.transactions_service.repository.TransactionFeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,6 +53,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final WalletRepository walletRepository;
     private final BalanceAuditRepository balanceAuditRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final TransactionRepository transactionRepository;
+    private final FeeCalculationService feeCalculationService;
+    private final TransactionFeeRepository transactionFeeRepository;
 
     @Override
     @Transactional
@@ -187,12 +192,11 @@ public class TransactionServiceImpl implements TransactionService {
         return (BigInteger) values.get(0).getValue();
     }
 
-    private final TransactionRepository transactionRepository;
-
     @Override
     @Transactional
     public TransactionResponseDTO createTransaction(TransactionRequestDTO request) {
         log.info("createTransaction called: from={} to={} amount={} asset={} idempotencyKey={}", request.getFromWallet(), request.getToWallet(), request.getAmount(), request.getAsset(), request.getIdempotencyKey());
+        
         // Validate format
         validateWalletFormat(request.getFromWallet());
         validateWalletFormat(request.getToWallet());
@@ -213,45 +217,70 @@ public class TransactionServiceImpl implements TransactionService {
             }
         }
 
+        // === NOVO: Calcular taxa ===
+        BigDecimal grossAmount = new BigDecimal(request.getAmount());
+        log.info("=== Calculating fee for transaction ===");
+        FeeDetail feeDetail = feeCalculationService.calculateFee(grossAmount);
+        log.info("=== Fee calculated: {} ===", feeDetail.getSummary());
+
         // Validation (balance via cache)
         Wallet fromWallet = walletRepository.findById(request.getFromWallet().toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source wallet not registered"));
 
-        BigDecimal requiredAmount = new BigDecimal(request.getAmount());
-        
+        // === NOVO: Validar se há fundos para cobrir TAXA + VALOR ===
         if ("EUR".equals(request.getAsset())) {
-            if (fromWallet.getLastTokenBalance() == null || fromWallet.getLastTokenBalance().compareTo(requiredAmount) < 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds in Euro cache");
+            if (fromWallet.getLastTokenBalance() == null || fromWallet.getLastTokenBalance().compareTo(grossAmount) < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds in Euro cache (required: " + grossAmount + ")");
+            }
+        } else if ("ETH".equals(request.getAsset())) {
+            if (fromWallet.getLastNativeBalance() == null || fromWallet.getLastNativeBalance().compareTo(grossAmount) < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds in ETH cache (required: " + grossAmount + ")");
             }
         }
 
-        // Logging
+        // Criar transação com VALOR LÍQUIDO (após taxa)
         egs.transactions_service.entity.Transaction tx = egs.transactions_service.entity.Transaction.builder()
                 .idempotencyKey(request.getIdempotencyKey() != null ? request.getIdempotencyKey() : UUID.randomUUID().toString())
                 .fromWallet(request.getFromWallet())
                 .toWallet(request.getToWallet())
-                .amount(new BigDecimal(request.getAmount()))
+                .amount(feeDetail.getNetAmount())  // ← Guardar VALOR LÍQUIDO (depois taxa)
                 .asset(request.getAsset())
                 .status(egs.transactions_service.entity.Transaction.TransactionStatus.PENDING)
                 .createdAt(OffsetDateTime.now())
                 .build();
         
         tx = transactionRepository.save(tx);
-    log.info("Transaction {} saved with status {}", tx.getId(), tx.getStatus());
+        log.info("Transaction {} saved with status {}", tx.getId(), tx.getStatus());
+
+        // === NOVO: Guardar detalhes da taxa (auditoria) ===
+        TransactionFee txFee = TransactionFee.builder()
+                .transactionId(tx.getId())
+                .feeAmount(feeDetail.getFeeAmount())
+                .feePercentage(feeDetail.getFeePercentage())
+                .grossAmount(feeDetail.getGrossAmount())
+                .netAmount(feeDetail.getNetAmount())
+                .recipientAddress(feeDetail.getRecipientAddress())
+                .asset(request.getAsset())
+                .build();
+        
+        transactionFeeRepository.save(txFee);
+        log.info("Transaction fee {} recorded for tx {}", txFee.getId(), tx.getId());
 
         eventPublisher.publishEvent(new TransactionCreatedEvent(tx.getId()));
-    log.info("TransactionCreatedEvent published for tx {}", tx.getId());
+        log.info("TransactionCreatedEvent published for tx {}", tx.getId());
 
         // Caching (Optimistic Update / Fund Locking)
+        // === IMPORTANTE: Subtrair VALOR BRUTO (não líquido) porque inclui a taxa ===
         if ("EUR".equals(request.getAsset())) {
-            fromWallet.setLastTokenBalance(fromWallet.getLastTokenBalance().subtract(new BigDecimal(request.getAmount())));
+            fromWallet.setLastTokenBalance(fromWallet.getLastTokenBalance().subtract(grossAmount));
         } else if ("ETH".equals(request.getAsset())) {
-            fromWallet.setLastNativeBalance(fromWallet.getLastNativeBalance().subtract(new BigDecimal(request.getAmount())));
+            fromWallet.setLastNativeBalance(fromWallet.getLastNativeBalance().subtract(grossAmount));
         }
         walletRepository.save(fromWallet);
+        log.info("Wallet {} cache updated after transaction", request.getFromWallet());
 
         // Response
-        return mapToResponse(tx);
+        return mapToResponse(tx, feeDetail);
     }
 
     private TransactionResponseDTO mapToResponse(egs.transactions_service.entity.Transaction tx) {
@@ -260,6 +289,16 @@ public class TransactionServiceImpl implements TransactionService {
                 .hash(tx.getHash())
                 .status(tx.getStatus().name())
                 .estimatedFee("0.001")
+                .createdAt(tx.getCreatedAt())
+                .build();
+    }
+
+    private TransactionResponseDTO mapToResponse(egs.transactions_service.entity.Transaction tx, FeeDetail feeDetail) {
+        return TransactionResponseDTO.builder()
+                .txId(tx.getId())
+                .hash(tx.getHash())
+                .status(tx.getStatus().name())
+                .estimatedFee(feeDetail.getFeeAmount().toPlainString())
                 .createdAt(tx.getCreatedAt())
                 .build();
     }

@@ -48,5 +48,10 @@ keycloak:
 # Application settings
 app:
   dev-mode: false  # ← DESATIVADO: MockBlockchainProvider faz o que dev-mode fazia
-  bank-wallet: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+  bank-wallet: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"  # Bank's wallet
   payment-service-url: "http://localhost:5002"
+  
+  # Transaction/Fee Settings
+  transaction:
+    fee-percentage: 2.0  # Taxa: 2% em cada transação
+    fee-recipient: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"  # Bank's wallet (where fees go)
