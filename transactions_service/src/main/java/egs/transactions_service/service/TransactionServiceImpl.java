@@ -78,9 +78,9 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("=== Wallet found in DB, querying blockchain ===");
         try {
             // Native Balance (Wei)
-            log.info("=== Querying native balance (MATIC) ===");
+            log.info("=== Querying native balance (SepoliaETH) ===");
             BigDecimal nativeBalance = blockchainProvider.getBalance(walletId);
-            log.info("=== Native balance retrieved: {} MATIC ===", nativeBalance);
+            log.info("=== Native balance retrieved: {} SepoliaETH ===", nativeBalance);
 
             // Token Balance (Euro)
             log.info("=== Querying token balance (EUR) ===");
@@ -95,7 +95,7 @@ public class TransactionServiceImpl implements TransactionService {
             log.info("=== Current cache: native={}, token={} ===", wallet.getLastNativeBalance(), wallet.getLastTokenBalance());
             log.info("=== Blockchain: native={}, token={} ===", nativeBalance, tokenBalance);
             
-            // For native balance: always update (MATIC comes from blockchain)
+            // For native balance: always update (SepoliaETH comes from blockchain)
             wallet.setLastNativeBalance(nativeBalance);
             
             // For token balance: only update if blockchain shows MORE than cache
@@ -129,7 +129,7 @@ public class TransactionServiceImpl implements TransactionService {
                     .symbol("EUR")
                     .balance(wallet.getLastTokenBalance().toPlainString())  // Use CACHED balance
                     .nativeBalance(nativeBalance.toPlainString())
-                    .nativeSymbol("MATIC")
+                    .nativeSymbol("ETH")
                     .balanceInFiat(wallet.getLastTokenBalance())  // Use CACHED balance
                     .currency("EUR")
                     .updatedAt(now)
@@ -245,7 +245,7 @@ public class TransactionServiceImpl implements TransactionService {
         // Caching (Optimistic Update / Fund Locking)
         if ("EUR".equals(request.getAsset())) {
             fromWallet.setLastTokenBalance(fromWallet.getLastTokenBalance().subtract(new BigDecimal(request.getAmount())));
-        } else if ("MATIC".equals(request.getAsset())) {
+        } else if ("ETH".equals(request.getAsset())) {
             fromWallet.setLastNativeBalance(fromWallet.getLastNativeBalance().subtract(new BigDecimal(request.getAmount())));
         }
         walletRepository.save(fromWallet);
@@ -365,10 +365,10 @@ public class TransactionServiceImpl implements TransactionService {
                 log.info("Insufficient Funds");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds for refund in Euro cache");
             }
-        } else if ("MATIC".equals(originalTx.getAsset())) {
+        } else if ("ETH".equals(originalTx.getAsset())) {
             if (originalReceiver.getLastNativeBalance() == null || originalReceiver.getLastNativeBalance().compareTo(originalTx.getAmount().add(buffer)) < 0) {
                 log.info("Insufficient Funds: {} available, {} required (including buffer)", originalReceiver.getLastNativeBalance(), originalTx.getAmount().add(buffer));
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds for refund in MATIC cache");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds for refund in ETH cache");
             }
         }
 
@@ -398,7 +398,7 @@ public class TransactionServiceImpl implements TransactionService {
         // Update cache
         if ("EUR".equals(originalTx.getAsset())) {
             originalReceiver.setLastTokenBalance(originalReceiver.getLastTokenBalance().subtract(originalTx.getAmount()));
-        } else if ("MATIC".equals(originalTx.getAsset())) {
+        } else if ("ETH".equals(originalTx.getAsset())) {
             originalReceiver.setLastNativeBalance(originalReceiver.getLastNativeBalance().subtract(originalTx.getAmount()));
         }
         walletRepository.save(originalReceiver);
