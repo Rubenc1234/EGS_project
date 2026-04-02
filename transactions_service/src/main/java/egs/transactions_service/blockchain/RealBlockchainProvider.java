@@ -123,9 +123,37 @@ public class RealBlockchainProvider implements BlockchainProvider {
     @Override
     public Optional<TransactionReceipt> getTransactionReceipt(String txHash) {
         try {
-            // TODO: Implementar com web3j.ethGetTransactionReceipt()
             log.debug("   [REAL] getTransactionReceipt({})", txHash);
-            return Optional.empty();
+            
+            // Query para transaction receipt usando web3j
+            org.web3j.protocol.core.methods.response.EthGetTransactionReceipt response = 
+                web3j.ethGetTransactionReceipt(txHash).send();
+            
+            if (response.getTransactionReceipt().isPresent()) {
+                org.web3j.protocol.core.methods.response.TransactionReceipt web3jReceipt = 
+                    response.getTransactionReceipt().get();
+                
+                log.info("   [REAL] ✅ Receipt FOUND!");
+                log.info("      Block Number: {}", web3jReceipt.getBlockNumber());
+                log.info("      Status: {}", web3jReceipt.isStatusOK() ? "SUCCESS" : "FAILED");
+                
+                // Convert web3j receipt to our DTO
+                TransactionReceipt receipt = new TransactionReceipt(
+                    web3jReceipt.getTransactionHash(),
+                    web3jReceipt.getBlockNumber().toString(),
+                    web3jReceipt.getBlockHash(),
+                    web3jReceipt.getFrom(),
+                    web3jReceipt.getTo(),
+                    web3jReceipt.isStatusOK(),
+                    web3jReceipt.getGasUsed().toString()
+                );
+                
+                return Optional.of(receipt);
+            } else {
+                log.debug("   [REAL] ⏳ No receipt yet for {}", txHash);
+                return Optional.empty();
+            }
+            
         } catch (Exception e) {
             log.error("   [REAL] ❌ getTransactionReceipt erro: {}", e.getMessage());
             return Optional.empty();

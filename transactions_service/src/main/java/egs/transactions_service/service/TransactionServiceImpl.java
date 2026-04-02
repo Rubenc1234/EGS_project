@@ -56,6 +56,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final FeeCalculationService feeCalculationService;
     private final TransactionFeeRepository transactionFeeRepository;
+    private final RefundService refundService;
 
     @Override
     @Transactional
