@@ -71,7 +71,7 @@ export default function Dashboard() {
   const [openSend, setOpenSend] = useState(false)
   const [toWallet, setToWallet] = useState('')
   const [amount, setAmount] = useState('')
-  const [asset, setAsset] = useState('MATIC')
+  const [asset, setAsset] = useState('ETH')
   const [loadingSend, setLoadingSend] = useState(false)
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity?: 'success'|'error' }>({ open: false, message: '', severity: 'success' })
 
@@ -101,7 +101,7 @@ export default function Dashboard() {
       // reset
       setToWallet('')
       setAmount('')
-      setAsset('MATIC')
+      setAsset('ETH')
       setOpenSend(false)
       
       // 🔄 Refetch REAL blockchain balance to show updated saldo
@@ -234,7 +234,7 @@ export default function Dashboard() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField label="From wallet" value={wallet?.id ?? ''} disabled fullWidth />
             <TextField label="To wallet (0x...) or user id" value={toWallet} onChange={(e) => setToWallet(e.target.value)} fullWidth />
-            <TextField label="Amount (MATIC)" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
+            <TextField label="Amount (SepoliaETH)" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
           </Box>
         </DialogContent>
         <DialogActions>
