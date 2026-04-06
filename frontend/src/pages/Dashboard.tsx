@@ -67,6 +67,37 @@ export default function Dashboard() {
     setOpenSend(true)
   }
 
+  // Add Funds Modal state
+  const [openAddFunds, setOpenAddFunds] = useState(false)
+  const [addFundsAmount, setAddFundsAmount] = useState('10')
+
+  const handleOpenAddFunds = () => {
+    if (!wallet?.id) {
+      alert('Wallet not loaded yet. Please try again.')
+      return
+    }
+    setOpenAddFunds(true)
+  }
+
+  const handleCloseAddFunds = () => {
+    setOpenAddFunds(false)
+  }
+
+  const handleSubmitAddFunds = () => {
+    const amount = parseFloat(addFundsAmount)
+    if (isNaN(amount) || amount <= 0) {
+      setSnack({ open: true, message: 'Please enter a valid amount', severity: 'error' })
+      return
+    }
+
+    const walletId = wallet?.id
+    const redirectUrl = window.location.origin + '/dashboard'
+    // Redirect to payment service with pre-filled parameters to skip the manual entry page
+    const paymentUrl = `http://localhost:5174/?wallet_id=${walletId}&amount=${amount}&redirect_url=${encodeURIComponent(redirectUrl)}`
+    
+    window.location.href = paymentUrl
+  }
+
   // Modal state and form
   const [openSend, setOpenSend] = useState(false)
   const [toWallet, setToWallet] = useState('')
@@ -212,9 +243,7 @@ export default function Dashboard() {
                 variant="contained" 
                 startIcon={<AccountBalanceWalletIcon />}
                 size="large"
-                onClick={() => {
-                  window.location.href = 'http://localhost:5174/';
-                }}
+                onClick={handleOpenAddFunds}
                 sx={{ 
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   padding: '12px 24px'
@@ -226,6 +255,30 @@ export default function Dashboard() {
           </Grid>
         </Grid>
       </Grid>
+
+      {/* Add Funds Modal */}
+      <Dialog open={openAddFunds} onClose={handleCloseAddFunds} fullWidth maxWidth="sm">
+        <DialogTitle>Add funds to your wallet</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Typography variant="body2" color="textSecondary">
+              Enter the amount you wish to add to your wallet. You will be redirected to our secure payment provider.
+            </Typography>
+            <TextField 
+              label="Amount (€)" 
+              type="number"
+              value={addFundsAmount} 
+              onChange={(e) => setAddFundsAmount(e.target.value)} 
+              fullWidth 
+              slotProps={{ htmlInput: { min: 0.5, step: 0.01 } }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAddFunds}>Cancel</Button>
+          <Button onClick={handleSubmitAddFunds} variant="contained">Continue to Payment</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Send Modal */}
       <Dialog open={openSend} onClose={handleCloseSend} fullWidth maxWidth="sm">

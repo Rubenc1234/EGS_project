@@ -27,8 +27,17 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setLoading(true)
     try {
-      const qs = searchParams.toString()
-      const callbackUrl = `${window.location.origin}/callback${qs ? `?${qs}` : ''}`
+      // Store params in localStorage to survive the login redirect
+      const walletId = searchParams.get('wallet_id')
+      const amount = searchParams.get('amount')
+      const redirectUrl = searchParams.get('redirect_url')
+      
+      if (walletId) localStorage.setItem('payment_wallet_id', walletId)
+      if (amount) localStorage.setItem('payment_amount', amount)
+      if (redirectUrl) localStorage.setItem('payment_redirect_url', redirectUrl)
+
+      // Use a fixed callback URL that matches what's configured in Keycloak
+      const callbackUrl = `${window.location.origin}/callback`
       const loginUrl = await fetchLoginUrl(callbackUrl)
       window.location.href = loginUrl
     } catch {
