@@ -16,7 +16,10 @@ from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 from payment_service.controllers.auth_controller import register_routes as register_auth_routes
 from payment_service.controllers.payment_controller import register_routes as register_payment_routes
+from payment_service.controllers.user_controller import register_routes as register_user_routes
 from payment_service.database import init_db
+# Import models so db.create_all() registers the new tables
+from payment_service.models import user_profile, payment_otp  # noqa: F401
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -43,6 +46,7 @@ def payment_static(filename):
 
 register_auth_routes(app)
 register_payment_routes(app)
+register_user_routes(app)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002)

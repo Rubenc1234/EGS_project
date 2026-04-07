@@ -1,7 +1,12 @@
 import stripe
 from flask import jsonify, request, Response
 from payment_service.services import payment_service
-from payment_service.controllers.auth_controller import require_token
+from payment_service.controllers.auth_controller import require_token, get_user_id_from_token
+
+
+def _user_id() -> str:
+    token = request.headers.get("Authorization", "").split(" ", 1)[-1]
+    return get_user_id_from_token(token)
 
 
 def register_routes(app):
@@ -16,6 +21,8 @@ def register_routes(app):
         wallet_id = data.get("wallet_id") or data.get("to_wallet")
         redirect_url = data.get("redirect_url")
 
+        payment_method_id = data.get("payment_method_id")
+
         if not user_id or amount is None:
             return jsonify({"error": "user_id and amount are required"}), 400
 
@@ -26,6 +33,7 @@ def register_routes(app):
                 phone_number=phone_number,
                 wallet_id=wallet_id,
                 redirect_url=redirect_url,
+                payment_method_id=payment_method_id,
             )
         except RuntimeError as exc:
             return jsonify({"error": "payment_provider_error", "detail": str(exc)}), 502
@@ -74,6 +82,33 @@ def register_routes(app):
         if not payment:
             return jsonify({"error": "Payment not found"}), 404
         return jsonify(payment.to_dict()), 200
+
+    @app.route("/v1/payments/<payment_id>/send-otp", methods=["POST"])
+    @require_token
+    def send_otp(payment_id):
+        try:
+            payment_service.send_otp(payment_id, _user_id())
+            return jsonify({"sent": True}), 200
+        except ValueError as e:
+            reason = str(e)
+            if reason == "no_phone_number":
+                return jsonify({"error": "no_phone_number"}), 422
+            return jsonify({"error": reason}), 404
+        except Exception as e:
+            return jsonify({"error": "otp_send_failed", "detail": str(e)}), 502
+
+    @app.route("/v1/payments/<payment_id>/verify", methods=["POST"])
+    @require_token
+    def verify_otp(payment_id):
+        data = request.get_json(silent=True) or {}
+        code = data.get("code", "")
+        try:
+            ok = payment_service.verify_otp(payment_id, _user_id(), code)
+            if ok:
+                return jsonify({"verified": True}), 200
+            return jsonify({"verified": False, "error": "invalid_or_expired_code"}), 400
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 404
 
     @app.route("/v1/payments/webhook", methods=["POST"])
     def stripe_webhook():

@@ -4,6 +4,7 @@ import CallbackPage from './pages/CallbackPage'
 import PaymentPage from './pages/PaymentPage'
 import SuccessPage from './pages/SuccessPage'
 import PaymentsPage from './pages/PaymentsPage'
+import ProfilePage from './pages/ProfilePage'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/pay" element={<PaymentPage />} />
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

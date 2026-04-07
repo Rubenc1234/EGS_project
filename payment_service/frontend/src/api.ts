@@ -126,8 +126,55 @@ export async function createPayment(params: {
   amount: number
   wallet_id?: string
   redirect_url?: string
+  payment_method_id?: string
 }): Promise<PaymentResponse> {
   const res = await api.post('/v1/payments', params)
+  return res.data
+}
+
+export interface SavedCard {
+  id: string
+  user_id: string
+  stripe_payment_method_id: string
+  last4: string
+  brand: string
+  exp_month: number
+  exp_year: number
+  is_default: boolean
+}
+
+export interface UserProfile {
+  user_id: string
+  phone_number: string | null
+  cards: SavedCard[]
+}
+
+export async function getProfile(): Promise<UserProfile> {
+  const res = await api.get('/v1/users/profile')
+  return res.data
+}
+
+export async function updateProfile(phoneNumber: string | null): Promise<{ user_id: string; phone_number: string | null }> {
+  const res = await api.put('/v1/users/profile', { phone_number: phoneNumber })
+  return res.data
+}
+
+export async function addCard(stripePaymentMethodId: string): Promise<SavedCard> {
+  const res = await api.post('/v1/users/cards', { stripe_payment_method_id: stripePaymentMethodId })
+  return res.data
+}
+
+export async function deleteCard(cardId: string): Promise<void> {
+  await api.delete(`/v1/users/cards/${cardId}`)
+}
+
+export async function sendOtp(paymentId: string): Promise<{ sent: boolean }> {
+  const res = await api.post(`/v1/payments/${paymentId}/send-otp`)
+  return res.data
+}
+
+export async function verifyOtp(paymentId: string, code: string): Promise<{ verified: boolean; error?: string }> {
+  const res = await api.post(`/v1/payments/${paymentId}/verify`, { code })
   return res.data
 }
 

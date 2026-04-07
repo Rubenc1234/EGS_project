@@ -1,11 +1,18 @@
 import os
+import secrets
+import hashlib
+import hmac
+from datetime import datetime, timedelta
 from io import BytesIO
 
+import stripe
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from payment_service.models.payment import Payment, PaymentStatus
+from payment_service.models.payment_otp import PaymentOTP
 from payment_service.repository import payment_repository
+from payment_service.repository import otp_repository
 from payment_service.services.providers.stripe_provider import StripePaymentProvider
 from payment_service.config import NOTIFICATIONS_BASE_URL, NOTIFICATIONS_API_KEY
 
@@ -27,6 +34,7 @@ def create_payment(
     phone_number: str | None = None,
     wallet_id: str | None = None,
     redirect_url: str | None = None,
+    payment_method_id: str | None = None,
 ) -> Payment:
     payment = Payment(
         user_id=user_id,
@@ -35,7 +43,27 @@ def create_payment(
         wallet_id=wallet_id,
         redirect_url=redirect_url,
     )
-    payment = _provider.initiate_payment(payment)
+
+    if payment_method_id:
+        # Use an existing saved card — get Stripe Customer for this user
+        from payment_service.services import user_service
+        customer_id = user_service.get_or_create_stripe_customer(user_id)
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=round(amount * 100),
+                currency="eur",
+                payment_method=payment_method_id,
+                customer=customer_id,
+                metadata={"payment_id": payment.id},
+            )
+            payment.stripe_payment_intent_id = intent.id
+            payment.stripe_client_secret = intent.client_secret
+            payment.status = PaymentStatus.PENDING
+        except stripe.error.StripeError as e:
+            raise RuntimeError(str(e)) from e
+    else:
+        payment = _provider.initiate_payment(payment)
+
     payment_repository.save(payment)
     return payment
 
@@ -119,3 +147,43 @@ def handle_webhook(payload: bytes, sig_header: str) -> None:
         payment = payment_repository.find_by_stripe_intent_id(intent_id)
         if payment and payment.status == PaymentStatus.PENDING.value:
             update_status(payment.id, PaymentStatus.CANCELLED.value)
+
+
+def send_otp(payment_id: str, user_id: str) -> None:
+    payment = payment_repository.find_by_id(payment_id)
+    if not payment or payment.user_id != user_id:
+        raise ValueError("payment_not_found")
+
+    from payment_service.services import user_service, twilio_service
+    profile = user_service.get_or_create_profile(user_id)
+    if not profile.phone_number:
+        raise ValueError("no_phone_number")
+
+    otp_repository.invalidate_previous_otps(payment_id)
+
+    code = f"{secrets.randbelow(1000000):06d}"
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    otp = PaymentOTP(payment_id=payment_id, code_hash=code_hash, expires_at=expires_at)
+    otp_repository.save_otp(otp)
+
+    twilio_service.send_otp_whatsapp(profile.phone_number, code)
+
+
+def verify_otp(payment_id: str, user_id: str, code: str) -> bool:
+    payment = payment_repository.find_by_id(payment_id)
+    if not payment or payment.user_id != user_id:
+        raise ValueError("payment_not_found")
+
+    otp = otp_repository.get_latest_otp(payment_id)
+    if not otp or otp.used or otp.expires_at < datetime.utcnow():
+        return False
+
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+    if not hmac.compare_digest(otp.code_hash, code_hash):
+        return False
+
+    otp.used = True
+    otp_repository.save_otp(otp)
+    return True

@@ -116,6 +116,10 @@ export default function PaymentsPage() {
           <Typography variant="h5" fontWeight={700} color="white">
             Os meus pagamentos
           </Typography>
+          <Button variant="outlined" size="small" onClick={() => navigate('/profile')}
+            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
+            My Profile
+          </Button>
           <Button variant="outlined" size="small" onClick={handleLogout}
             sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
             Logout

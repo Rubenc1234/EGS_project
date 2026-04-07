@@ -1,4 +1,6 @@
 import uuid
+import base64
+import json
 import logging
 from functools import wraps
 from flask import jsonify, request, session
@@ -10,6 +12,15 @@ from payment_service.services.keycloak_service import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def get_user_id_from_token(token: str) -> str:
+    """Decode JWT payload (no re-verification) and return the 'sub' claim."""
+    payload_b64 = token.split(".")[1]
+    # Add padding in case it's missing
+    payload_b64 += "=" * (-len(payload_b64) % 4)
+    payload = json.loads(base64.b64decode(payload_b64))
+    return payload["sub"]
 
 
 def require_token(f):
