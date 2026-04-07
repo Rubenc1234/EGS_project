@@ -23,6 +23,17 @@ def get_user_id_from_token(token: str) -> str:
     return payload["sub"]
 
 
+def _get_token_roles(token: str) -> list:
+    """Decode JWT payload and return realm_access roles."""
+    try:
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload = json.loads(base64.b64decode(payload_b64))
+        return payload.get("realm_access", {}).get("roles", [])
+    except Exception:
+        return []
+
+
 def require_token(f):
     """Decorator to protect routes using the payments Keycloak realm."""
     @wraps(f)
@@ -38,6 +49,25 @@ def require_token(f):
         log.warning("introspect_token result: %s (token prefix: %s...)", active, token[:20])
         if not active:
             return jsonify({"error": "Invalid or expired token"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+def require_operator(f):
+    """Decorator that requires the 'operator' realm role (on top of a valid token)."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"error": "Authorization header missing"}), 401
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0] != "Bearer":
+            return jsonify({"error": "Invalid Authorization header"}), 401
+        token = parts[1]
+        if not introspect_token(token):
+            return jsonify({"error": "Invalid or expired token"}), 401
+        if "operator" not in _get_token_roles(token):
+            return jsonify({"error": "Forbidden: operator role required"}), 403
         return f(*args, **kwargs)
     return decorated
 

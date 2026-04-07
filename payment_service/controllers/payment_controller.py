@@ -1,7 +1,7 @@
 import stripe
 from flask import jsonify, request, Response
-from payment_service.services import payment_service
-from payment_service.controllers.auth_controller import require_token, get_user_id_from_token
+from payment_service.services import payment_service, stats_service
+from payment_service.controllers.auth_controller import require_token, require_operator, get_user_id_from_token
 
 
 def _user_id() -> str:
@@ -47,6 +47,11 @@ def register_routes(app):
             return jsonify({"error": "user_id is required"}), 400
         payments = payment_service.get_user_payments(user_id)
         return jsonify([p.to_dict() for p in payments]), 200
+
+    @app.route("/v1/payments/stats", methods=["GET"])
+    @require_operator
+    def get_stats():
+        return jsonify(stats_service.get_stats()), 200
 
     @app.route("/v1/payments/<payment_id>", methods=["GET"])
     @require_token

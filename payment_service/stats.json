@@ -1,0 +1,59 @@
+{
+    "activity_patterns": {
+        "payments_by_hour": {
+            "10": 4,
+            "15": 11,
+            "16": 1
+        },
+        "payments_by_weekday": {
+            "Thursday": 12,
+            "Tuesday": 4
+        }
+    },
+    "cards": {
+        "avg_cards_per_user": 1.0,
+        "card_brand_distribution": {
+            "visa": 1
+        },
+        "most_popular_brand": "visa",
+        "total_saved_cards": 1,
+        "users_with_saved_cards": 1
+    },
+    "daily_trends_last_30_days": [
+        {
+            "count": 12,
+            "date": "2026-04-02",
+            "revenue": 135.5
+        },
+        {
+            "count": 4,
+            "date": "2026-04-07",
+            "revenue": 40.0
+        }
+    ],
+    "otps": {
+        "otp_success_rate_pct": 100.0,
+        "total_otps_sent": 3,
+        "total_otps_verified": 3
+    },
+    "overview": {
+        "avg_payments_per_user": 5.33,
+        "avg_transaction_amount": 10.97,
+        "max_transaction_amount": 25.0,
+        "min_transaction_amount": 10.0,
+        "total_payments": 16,
+        "total_revenue_eur": 175.5,
+        "total_users": 3
+    },
+    "payments_by_status": {
+        "cancelled": 0,
+        "concluded": 15,
+        "pending": 1,
+        "success_rate_pct": 100.0
+    },
+    "user_profiles": {
+        "total_profiles": 2,
+        "users_with_phone": 1,
+        "users_with_stripe_customer": 1
+    }
+}
