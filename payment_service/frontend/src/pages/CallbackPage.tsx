@@ -19,21 +19,29 @@ export default function CallbackPage() {
       return
     }
 
-    const callbackUri = new URL(window.location.href)
-    callbackUri.searchParams.delete('code')
-    callbackUri.searchParams.delete('state')
-    callbackUri.searchParams.delete('session_state')
-    callbackUri.searchParams.delete('iss')
-    const redirectUri = callbackUri.toString()
-
-    const payParams = new URLSearchParams()
-    for (const [key, value] of callbackUri.searchParams.entries()) {
-      payParams.set(key, value)
-    }
+    // Use a fixed callback URL that matches the authorization request
+    const redirectUri = `${window.location.origin}/callback`
 
     exchangeCode(code, redirectUri)
       .then((token) => {
         setToken(token)
+        
+        // Retrieve stored payment parameters
+        const walletId = localStorage.getItem('payment_wallet_id')
+        const amount = localStorage.getItem('payment_amount')
+        const redirectUrl = localStorage.getItem('payment_redirect_url')
+        
+        // Clear them after retrieval
+        localStorage.removeItem('payment_wallet_id')
+        localStorage.removeItem('payment_amount')
+        localStorage.removeItem('payment_redirect_url')
+        
+        // Build query string for /pay
+        const payParams = new URLSearchParams()
+        if (walletId) payParams.set('wallet_id', walletId)
+        if (amount) payParams.set('amount', amount)
+        if (redirectUrl) payParams.set('redirect_url', redirectUrl)
+        
         const qs = payParams.toString()
         navigate(`/pay${qs ? `?${qs}` : ''}`, { replace: true })
       })
