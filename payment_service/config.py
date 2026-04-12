@@ -1,6 +1,8 @@
 import os
 
-KEYCLOAK_URL = os.getenv("PAYMENT_KEYCLOAK_URL", "http://localhost:8080")
+KEYCLOAK_URL = os.getenv("PAYMENT_KEYCLOAK_URL", "http://localhost:8083")
+# URL público do Keycloak (acessível pelo browser) — pode diferir do interno em Docker
+KEYCLOAK_PUBLIC_URL = os.getenv("PAYMENT_KEYCLOAK_PUBLIC_URL", KEYCLOAK_URL)
 REALM = os.getenv("PAYMENT_REALM", "payments-realm")
 CLIENT_ID = os.getenv("PAYMENT_CLIENT_ID", "payments-client")
 CLIENT_SECRET = os.getenv("PAYMENT_CLIENT_SECRET", "")

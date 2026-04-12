@@ -19,27 +19,53 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8083
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "8083:8080"
     volumes:
       - payment_keycloak_data:/opt/keycloak/data
 
+  payment-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: payment-backend
+    ports:
+      - "5002:5002"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://payuser:paypassword@payment-postgres:5432/payment_db
+      PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
+      PAYMENT_KEYCLOAK_PUBLIC_URL: http://localhost:8083
+    depends_on:
+      - payment-postgres
+      - payment-keycloak
+
+  payment-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: payment-frontend
+    ports:
+      - "5174:5174"
+    environment:
+      VITE_PROXY_TARGET: http://payment-backend:5002
+    depends_on:
+      - payment-backend
+
+  payment-stripe-cli:
+    image: stripe/stripe-cli
+    container_name: payment-stripe-cli
+    command: >
+      listen
+      --api-key ${STRIPE_Secret_key}
+      --forward-to http://payment-backend:5002/v1/payments/webhook
+      --skip-verify
+    depends_on:
+      - payment-backend
+
 volumes:
   payment_pgdata:
   payment_keycloak_data:
-
-# Environment variables required by the payment backend (set in .env or shell):
-#
-# DATABASE_URL=postgresql://payuser:paypassword@localhost:5433/payment_db
-# FLASK_SECRET_KEY=<random-secret>
-#
-# PAYMENT_KEYCLOAK_URL=http://localhost:8083
-# PAYMENT_REALM=payments-realm
-# PAYMENT_CLIENT_ID=payments-client
-# PAYMENT_CLIENT_SECRET=<client-secret-from-keycloak>
-#
-# NOTIFICATIONS_BASE_URL=http://localhost:8082
-# NOTIFICATIONS_API_KEY=<api-key-from-notifications-service>
-#
-# STRIPE_Secret_key=sk_test_...
-# STRIPE_Publishable_key=pk_test_...

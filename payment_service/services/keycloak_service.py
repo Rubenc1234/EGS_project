@@ -1,14 +1,14 @@
 import logging
 import requests
 import urllib.parse
-from payment_service.config import KEYCLOAK_URL, REALM, CLIENT_ID, CLIENT_SECRET
+from payment_service.config import KEYCLOAK_URL, KEYCLOAK_PUBLIC_URL, REALM, CLIENT_ID, CLIENT_SECRET
 
 log = logging.getLogger(__name__)
 
 
 def get_login_url(callback_url: str, state: str) -> str:
     return (
-        f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/auth?"
+        f"{KEYCLOAK_PUBLIC_URL}/realms/{REALM}/protocol/openid-connect/auth?"
         f"client_id={urllib.parse.quote(CLIENT_ID)}&"
         f"response_type=code&"
         f"redirect_uri={urllib.parse.quote(callback_url)}&"
@@ -20,7 +20,7 @@ def get_login_url(callback_url: str, state: str) -> str:
 
 def get_signup_url(callback_url: str, state: str) -> str:
     return (
-        f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/registrations?"
+        f"{KEYCLOAK_PUBLIC_URL}/realms/{REALM}/protocol/openid-connect/registrations?"
         f"client_id={urllib.parse.quote(CLIENT_ID)}&"
         f"response_type=code&"
         f"redirect_uri={urllib.parse.quote(callback_url)}&"

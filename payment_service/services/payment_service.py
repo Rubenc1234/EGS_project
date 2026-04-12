@@ -14,18 +14,7 @@ from payment_service.models.payment_otp import PaymentOTP
 from payment_service.repository import payment_repository
 from payment_service.repository import otp_repository
 from payment_service.services.providers.stripe_provider import StripePaymentProvider
-from payment_service.config import NOTIFICATIONS_BASE_URL, NOTIFICATIONS_API_KEY
-
 _provider = StripePaymentProvider()
-
-try:
-    from clients.notifications_client import NotificationsClient
-    _notifications = NotificationsClient(NOTIFICATIONS_BASE_URL, NOTIFICATIONS_API_KEY)
-except ImportError:
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-    from clients.notifications_client import NotificationsClient
-    _notifications = NotificationsClient(NOTIFICATIONS_BASE_URL, NOTIFICATIONS_API_KEY)
 
 
 def create_payment(
@@ -117,17 +106,6 @@ def update_status(payment_id: str, status: str) -> Payment | None:
         return None
     payment.status = PaymentStatus(status).value
     payment_repository.update(payment)
-
-    if status == PaymentStatus.CONCLUDED.value:
-        _notifications.send_event(
-            user_id=payment.user_id,
-            data={
-                "event": "payment_concluded",
-                "payment_id": payment.id,
-                "wallet_id": payment.wallet_id,
-                "amount": payment.amount,
-            },
-        )
 
     return payment
 
