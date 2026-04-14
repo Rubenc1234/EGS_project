@@ -84,4 +84,19 @@ export async function getRealBlockchainBalance(walletAddress: string) {
   }
 }
 
+export async function requestRefund(originalTxId: string, reason?: string) {
+  const res = await api.post('/v1/transactions/refund', { original_tx_id: originalTxId, reason })
+  return res.data
+}
+
+export async function acceptRefund(refundTxId: string) {
+  const res = await api.post(`/v1/transactions/refund/${refundTxId}/accept`)
+  return res.data
+}
+
+export async function denyRefund(refundTxId: string) {
+  const res = await api.post(`/v1/transactions/refund/${refundTxId}/deny`)
+  return res.data
+}
+
 export default api

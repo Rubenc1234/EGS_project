@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getWallet, listTransactions, getRealBlockchainBalance } from '../services/api'
+import { getWallet, listTransactions, getRealBlockchainBalance, requestRefund, acceptRefund, denyRefund } from '../services/api'
 import useSSE from '../hooks/useSSE'
-import { Box, Button, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar, Alert } from '@mui/material'
+import { Box, Button, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Snackbar, Alert, IconButton, Tooltip } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
 import api from '../services/api'
 
 export default function Dashboard() {
@@ -32,8 +35,11 @@ export default function Dashboard() {
   const [walletIdInput, setWalletIdInput] = useState('')
   const [savingWallet, setSavingWallet] = useState(false)
 
-  // TODO: Implement SSE endpoint POST /v1/events/subscribe or similar in backend for live updates
-  // useSSE('/v1/events/me')
+  // Refund dialog state
+  const [openRefund, setOpenRefund] = useState(false)
+  const [refundTxId, setRefundTxId] = useState('')
+  const [refundReason, setRefundReason] = useState('')
+  const [loadingRefund, setLoadingRefund] = useState(false)
 
   // Extract user info from token (JWT decode)
   useEffect(() => {
@@ -176,6 +182,53 @@ export default function Dashboard() {
     }
   }
 
+  const handleRequestRefund = (txId: string) => {
+    setRefundTxId(txId)
+    setRefundReason('')
+    setOpenRefund(true)
+  }
+
+  const handleSubmitRefund = async () => {
+    try {
+      setLoadingRefund(true)
+      await requestRefund(refundTxId, refundReason)
+      setSnack({ open: true, message: 'Refund request submitted successfully!', severity: 'success' })
+      setOpenRefund(false)
+      // Invalidate queries to refresh transaction list
+      queryClient.invalidateQueries(['transactions', wallet?.id])
+    } catch (e: any) {
+      console.error('Refund request failed:', e)
+      setSnack({ open: true, message: e?.response?.data?.error || 'Failed to request refund', severity: 'error' })
+    } finally {
+      setLoadingRefund(false)
+    }
+  }
+
+  const handleAcceptRefund = async (txId: string) => {
+    if (!window.confirm('Are you sure you want to accept this refund request? The funds will be returned to the sender.')) return
+    try {
+      await acceptRefund(txId)
+      setSnack({ open: true, message: 'Refund accepted successfully!', severity: 'success' })
+      queryClient.invalidateQueries(['transactions', wallet?.id])
+      refetchRealBalance()
+    } catch (e: any) {
+      console.error('Accept refund failed:', e)
+      setSnack({ open: true, message: e?.response?.data?.error || 'Failed to accept refund', severity: 'error' })
+    }
+  }
+
+  const handleDenyRefund = async (txId: string) => {
+    if (!window.confirm('Are you sure you want to deny this refund request?')) return
+    try {
+      await denyRefund(txId)
+      setSnack({ open: true, message: 'Refund denied.', severity: 'success' })
+      queryClient.invalidateQueries(['transactions', wallet?.id])
+    } catch (e: any) {
+      console.error('Deny refund failed:', e)
+      setSnack({ open: true, message: e?.response?.data?.error || 'Failed to deny refund', severity: 'error' })
+    }
+  }
+
   return (
     <Box sx={{ padding: 3, maxWidth: 1200, margin: '0 auto' }}>
       {/* Header */}
@@ -287,7 +340,7 @@ export default function Dashboard() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField label="From wallet" value={wallet?.id ?? ''} disabled fullWidth />
             <TextField label="To wallet (0x...) or user id" value={toWallet} onChange={(e) => setToWallet(e.target.value)} fullWidth />
-            <TextField label="Amount (SepoliaETH)" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
+            <TextField label="Amount (EUR)" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
           </Box>
         </DialogContent>
         <DialogActions>
@@ -296,33 +349,31 @@ export default function Dashboard() {
         </DialogActions>
       </Dialog>
 
-      {/* Wallet ID Prompt Modal (no longer needed - wallet auto-created on login) 
-      <Dialog open={openWalletPrompt} onClose={() => {}} fullWidth maxWidth="sm">
-        <DialogTitle>Wallet Not Found</DialogTitle>
+      {/* Refund Request Reason Modal */}
+      <Dialog open={openRefund} onClose={() => setOpenRefund(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Request Refund</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <Typography>
-              Your Keycloak token doesn't include a wallet address. Please paste your wallet address (0x...) to proceed.
+              Please provide a reason for the refund request.
             </Typography>
             <TextField 
-              label="Wallet Address (0x...)" 
-              value={walletIdInput} 
-              onChange={(e) => setWalletIdInput(e.target.value)} 
+              label="Reason" 
+              value={refundReason} 
+              onChange={(e) => setRefundReason(e.target.value)} 
               fullWidth 
-              placeholder="0x1234567890abcdef..."
+              multiline
+              rows={3}
             />
-            <Typography variant="caption" color="textSecondary">
-              Tip: Check your wallet in Keycloak or use a known address for testing.
-            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleSaveWalletId} variant="contained" disabled={savingWallet}>
-            Load Wallet
+          <Button onClick={() => setOpenRefund(false)} disabled={loadingRefund}>Cancel</Button>
+          <Button onClick={handleSubmitRefund} variant="contained" color="primary" disabled={loadingRefund}>
+            Submit Request
           </Button>
         </DialogActions>
       </Dialog>
-      */}
 
       <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
         <Alert severity={snack.severity} onClose={() => setSnack({ ...snack, open: false })}>{snack.message}</Alert>
@@ -341,6 +392,7 @@ export default function Dashboard() {
                 <TableCell><strong>Description</strong></TableCell>
                 <TableCell align="right"><strong>Amount</strong></TableCell>
                 <TableCell><strong>Status</strong></TableCell>
+                <TableCell><strong>Actions</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -363,34 +415,119 @@ export default function Dashboard() {
                   // Use tx_id from JSON response (not txId from Java)
                   const key = t.tx_id || t.txId || t.id || Math.random()
                   
+                  const isSender = wallet?.id && t.from && wallet.id.toLowerCase() === t.from.toLowerCase()
+                  const isReceiver = wallet?.id && t.to && wallet.id.toLowerCase() === t.to.toLowerCase()
+
                   return (
                   <TableRow key={key} hover>
                     <TableCell>{dateStr}</TableCell>
-                    <TableCell>{t.description || t.type || 'Transaction'}</TableCell>
+                    <TableCell>
+                      {t.description || t.type || 'Transaction'}
+                      {isSender && <Typography variant="caption" display="block" color="textSecondary">Outbound to {t.to?.substring(0, 10)}...</Typography>}
+                      {isReceiver && <Typography variant="caption" display="block" color="textSecondary">Inbound from {t.from?.substring(0, 10)}...</Typography>}
+                    </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                       €{parseFloat(t.amount || '0').toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      <Box
-                        sx={{
-                          display: 'inline-block',
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          backgroundColor: t.status === 'completed' ? '#e8f5e9' : '#fff3e0',
-                          color: t.status === 'completed' ? '#2e7d32' : '#e65100',
-                        }}
-                      >
-                        {t.status}
-                      </Box>
+                      {(() => {
+                        let displayStatus = t.status;
+                        let bgColor = '#fff3e0'; // Default warning/pending
+                        let color = '#e65100';
+
+                        if (t.type === 'REFUND') {
+                          if (t.status === 'AWAITING_APPROVAL') {
+                            displayStatus = 'REFUND REQUESTED';
+                            bgColor = '#e3f2fd'; // Light blue
+                            color = '#1976d2';
+                          } else if (t.status === 'FAILED') {
+                            displayStatus = 'REJECTED';
+                            bgColor = '#ffebee'; // Light red
+                            color = '#c62828';
+                          } else {
+                            displayStatus = 'ACCEPTED';
+                            bgColor = '#e8f5e9'; // Light green
+                            color = '#2e7d32';
+                          }
+                        } else {
+                          // Regular transaction logic
+                          if (t.status === 'CONFIRMED' || t.status === 'completed') {
+                            bgColor = '#e8f5e9';
+                            color = '#2e7d32';
+                          } else if (t.status === 'AWAITING_APPROVAL') {
+                            bgColor = '#e3f2fd';
+                            color = '#1976d2';
+                          }
+                        }
+
+                        return (
+                          <Box
+                            sx={{
+                              display: 'inline-block',
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              backgroundColor: bgColor,
+                              color: color,
+                            }}
+                          >
+                            {displayStatus}
+                          </Box>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      {/* Refund Button for Sender (Original Sender requests refund) */}
+                      {isSender && (t.status === 'CONFIRMED' || t.status === 'completed') && !t.refunded && t.type !== 'REFUND' && (
+                        <Tooltip title="Request Refund">
+                          <Button 
+                            size="small" 
+                            variant="outlined" 
+                            startIcon={<RefreshIcon />}
+                            onClick={() => handleRequestRefund(t.tx_id || t.txId || t.id)}
+                          >
+                            Refund
+                          </Button>
+                        </Tooltip>
+                      )}
+
+                      {/* Accept/Deny Buttons for current user when they are the ones who received the funds originally (now they are the 'from' in the refund request) */}
+                      {isSender && t.status === 'AWAITING_APPROVAL' && t.type === 'REFUND' && (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Accept Refund">
+                            <IconButton 
+                              size="small" 
+                              color="success" 
+                              onClick={() => handleAcceptRefund(t.tx_id || t.txId || t.id)}
+                            >
+                              <CheckIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Deny Refund">
+                            <IconButton 
+                              size="small" 
+                              color="error" 
+                              onClick={() => handleDenyRefund(t.tx_id || t.txId || t.id)}
+                            >
+                              <CloseIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
+                      
+                      {t.refunded && (
+                        <Typography variant="caption" color="textSecondary">
+                          Refund Processed
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                   )
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ padding: '24px' }}>
+                  <TableCell colSpan={5} align="center" sx={{ padding: '24px' }}>
                     <Typography color="textSecondary">No transactions yet</Typography>
                   </TableCell>
                 </TableRow>

@@ -28,6 +28,10 @@ public class TransactionItemDTO {
     private String asset;
     
     private String status;
+
+    private String type;
+
+    private boolean refunded;
     
     @JsonProperty("confirmed_at")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")

@@ -16,7 +16,7 @@ import java.time.OffsetDateTime;
 public class Transaction {
 
     public enum TransactionStatus {
-        CREATED, PENDING, BROADCASTED, CONFIRMED, FAILED
+        CREATED, PENDING, BROADCASTED, CONFIRMED, FAILED, AWAITING_APPROVAL
     }
 
     public enum TransactionType {
@@ -45,7 +45,7 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private TransactionStatus status = TransactionStatus.CREATED; // CREATED, PENDING, CONFIRMED, FAILED
+    private TransactionStatus status = TransactionStatus.CREATED; // CREATED, PENDING, CONFIRMED, FAILED, BROADCASTED, AWAITING_APPROVAL
 
     @Column(name = "tx_hash")
     private String hash;

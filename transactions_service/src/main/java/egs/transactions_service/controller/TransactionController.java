@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -303,8 +304,30 @@ public class TransactionController {
     }
 
     @PostMapping("/transactions/refund")
-    public ResponseEntity<RefundResponseDTO> refundTransaction(@RequestBody RefundRequestDTO request) {
-        RefundResponseDTO response = transactionService.refundTransaction(request);
+    public ResponseEntity<?> refundTransaction(@RequestBody RefundRequestDTO request) {
+        log.info("=== POST /v1/transactions/refund ENTRY === originalTxId={}", request.getOriginalTxId());
+        try {
+            RefundResponseDTO response = transactionService.refundTransaction(request);
+            log.info("=== POST /v1/transactions/refund SUCCESS === refundTxId={}", response.getRefundTxId());
+            return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            log.warn("=== POST /v1/transactions/refund REJECTED === reason={}", e.getReason());
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", "refund_rejected", "detail", e.getReason() != null ? e.getReason() : "Invalid request"));
+        } catch (Exception e) {
+            log.error("=== POST /v1/transactions/refund ERROR === error={}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "internal_error", "detail", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/transactions/refund/{id}/accept")
+    public ResponseEntity<RefundResponseDTO> acceptRefund(@PathVariable("id") String refundTxId) {
+        RefundResponseDTO response = transactionService.acceptRefund(refundTxId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/transactions/refund/{id}/deny")
+    public ResponseEntity<RefundResponseDTO> denyRefund(@PathVariable("id") String refundTxId) {
+        RefundResponseDTO response = transactionService.denyRefund(refundTxId);
         return ResponseEntity.ok(response);
     }
 

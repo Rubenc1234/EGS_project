@@ -341,7 +341,10 @@ public class TransactionServiceImpl implements TransactionService {
                         .from(tx.getFromWallet())
                         .to(tx.getToWallet())
                         .amount(tx.getAmount().toPlainString())
+                        .asset(tx.getAsset())
                         .status(tx.getStatus().name())
+                        .type(tx.getType().name())
+                        .refunded(tx.isRefunded())
                         .confirmedAt(tx.getUpdatedAt())
                         .build())
                 .toList();
@@ -374,83 +377,150 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public RefundResponseDTO refundTransaction(RefundRequestDTO request) {
-        // Input validation and fetching the original transaction
-        egs.transactions_service.entity.Transaction originalTx = transactionRepository.findById(request.getOriginalTxId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Original transaction not found"));
+        log.info("=== Refund request for transaction: {} ===", request.getOriginalTxId());
+        try {
+            // Input validation and fetching the original transaction
+            egs.transactions_service.entity.Transaction originalTx = transactionRepository.findById(request.getOriginalTxId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Original transaction not found"));
 
-        if (egs.transactions_service.entity.Transaction.TransactionStatus.CONFIRMED != originalTx.getStatus()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only CONFIRMED transactions can be refunded");
+            if (egs.transactions_service.entity.Transaction.TransactionStatus.CONFIRMED != originalTx.getStatus()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only CONFIRMED transactions can be refunded");
+            }
+
+            if (originalTx.isRefunded()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Transaction already refunded or refund in progress");
+            }
+
+            // DB update
+            OffsetDateTime now = OffsetDateTime.now();
+
+            // Create refund transaction (AWAITING_APPROVAL)
+            // Use shorter idempotency key to avoid possible length issues
+            String refundIdempotencyKey = "ref-" + UUID.randomUUID().toString().substring(0, 8) + "-" + originalTx.getId().substring(0, 8);
+            
+            egs.transactions_service.entity.Transaction refundTx = egs.transactions_service.entity.Transaction.builder()
+                    .idempotencyKey(refundIdempotencyKey)
+                    .fromWallet(originalTx.getToWallet())
+                    .toWallet(originalTx.getFromWallet())
+                    .amount(originalTx.getAmount())
+                    .asset(originalTx.getAsset())
+                    .status(egs.transactions_service.entity.Transaction.TransactionStatus.AWAITING_APPROVAL)
+                    .type(egs.transactions_service.entity.Transaction.TransactionType.REFUND)
+                    .linkedTxId(originalTx.getId())
+                    .createdAt(now)
+                    .build();
+
+            refundTx = transactionRepository.save(refundTx);
+
+            // Update original transaction to indicate refund is in progress
+            originalTx.setRefunded(true);
+            originalTx.setUpdatedAt(now);
+            transactionRepository.save(originalTx);
+
+            log.info("Refund request {} created for original tx {}, awaiting approval from {}", 
+                    refundTx.getId(), originalTx.getId(), refundTx.getFromWallet());
+
+            return RefundResponseDTO.builder()
+                    .refundTxId(refundTx.getId())
+                    .originalTxId(originalTx.getId())
+                    .status(refundTx.getStatus().name())
+                    .message("Refund request created. Awaiting approval from the receiver.")
+                    .amountRefunded(refundTx.getAmount().toPlainString())
+                    .asset(refundTx.getAsset())
+                    .build();
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error creating refund request: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create refund request: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public RefundResponseDTO acceptRefund(String refundTxId) {
+        egs.transactions_service.entity.Transaction refundTx = transactionRepository.findById(refundTxId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Refund transaction not found"));
+
+        if (refundTx.getType() != egs.transactions_service.entity.Transaction.TransactionType.REFUND) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction is not a refund");
         }
 
-        if (originalTx.isRefunded()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Transaction already refunded or refund in progress");
+        if (refundTx.getStatus() != egs.transactions_service.entity.Transaction.TransactionStatus.AWAITING_APPROVAL) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refund is not awaiting approval");
         }
 
-        // Balance verification
-        Wallet originalReceiver = walletRepository.findById(originalTx.getToWallet().toLowerCase())
-                .orElseGet(() -> {
-                    log.info("Carteira do recetor original não encontrada. A registar na base de dados: {}", originalTx.getToWallet());
-                    Wallet newWallet = new Wallet();
-                    newWallet.setAddress(originalTx.getToWallet().toLowerCase());
-                    newWallet.setLastNativeBalance(BigDecimal.ZERO);
-                    newWallet.setLastTokenBalance(BigDecimal.ZERO);
-                    return walletRepository.save(newWallet);
-                });
-
-        log.info("{}", originalTx.getAmount());
+        // Balance verification for the one giving the refund
+        Wallet refundSender = walletRepository.findById(refundTx.getFromWallet().toLowerCase())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Refund sender wallet not found"));
 
         BigDecimal buffer = new BigDecimal("0.0001");
-        if ("EUR".equals(originalTx.getAsset())) {
-            if (originalReceiver.getLastTokenBalance() == null || originalReceiver.getLastTokenBalance().compareTo(originalTx.getAmount()) < 0) {
-                log.info("Insufficient Funds");
+        if ("EUR".equals(refundTx.getAsset())) {
+            if (refundSender.getLastTokenBalance() == null || refundSender.getLastTokenBalance().compareTo(refundTx.getAmount()) < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds for refund in Euro cache");
             }
-        } else if ("ETH".equals(originalTx.getAsset())) {
-            if (originalReceiver.getLastNativeBalance() == null || originalReceiver.getLastNativeBalance().compareTo(originalTx.getAmount().add(buffer)) < 0) {
-                log.info("Insufficient Funds: {} available, {} required (including buffer)", originalReceiver.getLastNativeBalance(), originalTx.getAmount().add(buffer));
+            refundSender.setLastTokenBalance(refundSender.getLastTokenBalance().subtract(refundTx.getAmount()));
+        } else if ("ETH".equals(refundTx.getAsset())) {
+            if (refundSender.getLastNativeBalance() == null || refundSender.getLastNativeBalance().compareTo(refundTx.getAmount().add(buffer)) < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds for refund in ETH cache");
             }
+            refundSender.setLastNativeBalance(refundSender.getLastNativeBalance().subtract(refundTx.getAmount()));
         }
 
-        // DB update
-        OffsetDateTime now = OffsetDateTime.now();
+        walletRepository.save(refundSender);
 
-        // Create refund transaction
-        egs.transactions_service.entity.Transaction refundTx = egs.transactions_service.entity.Transaction.builder()
-                .idempotencyKey("refund-" + originalTx.getId())
-                .fromWallet(originalTx.getToWallet())
-                .toWallet(originalTx.getFromWallet())
-                .amount(originalTx.getAmount())
-                .asset(originalTx.getAsset())
-                .status(egs.transactions_service.entity.Transaction.TransactionStatus.PENDING)
-                .type(egs.transactions_service.entity.Transaction.TransactionType.REFUND)
-                .linkedTxId(originalTx.getId())
-                .createdAt(now)
-                .build();
+        // Update refund transaction status
+        refundTx.setStatus(egs.transactions_service.entity.Transaction.TransactionStatus.PENDING);
+        refundTx.setUpdatedAt(OffsetDateTime.now());
+        transactionRepository.save(refundTx);
 
-        refundTx = transactionRepository.save(refundTx);
-
-        // Update original transaction
-        originalTx.setRefunded(true);
-        originalTx.setUpdatedAt(now);
-        transactionRepository.save(originalTx);
-
-        // Update cache
-        if ("EUR".equals(originalTx.getAsset())) {
-            originalReceiver.setLastTokenBalance(originalReceiver.getLastTokenBalance().subtract(originalTx.getAmount()));
-        } else if ("ETH".equals(originalTx.getAsset())) {
-            originalReceiver.setLastNativeBalance(originalReceiver.getLastNativeBalance().subtract(originalTx.getAmount()));
-        }
-        walletRepository.save(originalReceiver);
-
-        log.info("Refund {} dropped into queue for original tx {}", refundTx.getId(), originalTx.getId());
-        eventPublisher.publishEvent(new TransactionCreatedEvent(refundTx.getId()));        
+        log.info("Refund {} approved and dropped into queue", refundTx.getId());
+        eventPublisher.publishEvent(new TransactionCreatedEvent(refundTx.getId()));
 
         return RefundResponseDTO.builder()
                 .refundTxId(refundTx.getId())
-                .originalTxId(originalTx.getId())
+                .originalTxId(refundTx.getLinkedTxId())
                 .status(refundTx.getStatus().name())
-                .message("Refund initiated successfully.")
+                .message("Refund approved and initiated.")
+                .amountRefunded(refundTx.getAmount().toPlainString())
+                .asset(refundTx.getAsset())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public RefundResponseDTO denyRefund(String refundTxId) {
+        egs.transactions_service.entity.Transaction refundTx = transactionRepository.findById(refundTxId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Refund transaction not found"));
+
+        if (refundTx.getType() != egs.transactions_service.entity.Transaction.TransactionType.REFUND) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction is not a refund");
+        }
+
+        if (refundTx.getStatus() != egs.transactions_service.entity.Transaction.TransactionStatus.AWAITING_APPROVAL) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refund is not awaiting approval");
+        }
+
+        // Update refund transaction status
+        refundTx.setStatus(egs.transactions_service.entity.Transaction.TransactionStatus.FAILED);
+        refundTx.setUpdatedAt(OffsetDateTime.now());
+        transactionRepository.save(refundTx);
+
+        // Also reset the original transaction's refunded flag so it can be requested again if needed
+        if (refundTx.getLinkedTxId() != null) {
+            transactionRepository.findById(refundTx.getLinkedTxId()).ifPresent(originalTx -> {
+                originalTx.setRefunded(false);
+                transactionRepository.save(originalTx);
+            });
+        }
+
+        log.info("Refund {} denied by the receiver", refundTx.getId());
+
+        return RefundResponseDTO.builder()
+                .refundTxId(refundTx.getId())
+                .originalTxId(refundTx.getLinkedTxId())
+                .status(refundTx.getStatus().name())
+                .message("Refund request denied.")
                 .amountRefunded(refundTx.getAmount().toPlainString())
                 .asset(refundTx.getAsset())
                 .build();

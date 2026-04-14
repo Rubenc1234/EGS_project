@@ -9,4 +9,6 @@ public interface TransactionService {
     TransactionListResponseDTO listTransactions(String walletId, String status, int limit, int offset);
     Optional<TransactionResponseDTO> getTransactionById(String txId, String requesterWallet);
     RefundResponseDTO refundTransaction(RefundRequestDTO request);
+    RefundResponseDTO acceptRefund(String refundTxId);
+    RefundResponseDTO denyRefund(String refundTxId);
 }
