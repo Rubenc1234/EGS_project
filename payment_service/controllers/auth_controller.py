@@ -10,8 +10,11 @@ from payment_service.services.keycloak_service import (
     exchange_code_for_token,
     introspect_token,
 )
+from payment_service import config
 
 log = logging.getLogger(__name__)
+
+INTERNAL_KEY = config.NOTIFICATIONS_API_KEY
 
 
 def get_user_id_from_token(token: str) -> str:
@@ -35,9 +38,18 @@ def _get_token_roles(token: str) -> list:
 
 
 def require_token(f):
-    """Decorator to protect routes using the payments Keycloak realm."""
+    """Decorator to protect routes using the payments Keycloak realm.
+    Allows bypass if a valid X-Internal-Key is provided (for service-to-service calls).
+    """
     @wraps(f)
     def decorated(*args, **kwargs):
+        # 1. Check for Internal API Key bypass
+        internal_key = request.headers.get("X-Internal-Key")
+        if internal_key and internal_key == INTERNAL_KEY and INTERNAL_KEY:
+            log.info("Bypassing token check via internal API key")
+            return f(*args, **kwargs)
+
+        # 2. Regular OIDC/Keycloak check
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return jsonify({"error": "Authorization header missing"}), 401
@@ -57,6 +69,12 @@ def require_operator(f):
     """Decorator that requires the 'operator' realm role (on top of a valid token)."""
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Allow internal bypass for operators too if needed, 
+        # but usually internal calls are for specific actions.
+        internal_key = request.headers.get("X-Internal-Key")
+        if internal_key and internal_key == INTERNAL_KEY and INTERNAL_KEY:
+            return f(*args, **kwargs)
+
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return jsonify({"error": "Authorization header missing"}), 401

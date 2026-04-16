@@ -21,5 +21,5 @@ import java.math.BigDecimal;
 public class TransactionConfig {
     
     private BigDecimal feePercentage = BigDecimal.valueOf(2.0);  // 2% default
-    private String feeRecipient = "0x86a9906e6bd2ef137d6d5339154611de7a41b178";  // Bank wallet default
+    private String feeRecipient = "0xfb4341ead4862e01637bf6c06c6863562e06e465";  // Bank wallet default
 }

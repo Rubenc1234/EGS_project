@@ -2,6 +2,8 @@ import os
 import secrets
 import hashlib
 import hmac
+import logging
+import requests
 from datetime import datetime, timedelta
 from io import BytesIO
 
@@ -9,12 +11,15 @@ import stripe
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+from payment_service import config
 from payment_service.models.payment import Payment, PaymentStatus
 from payment_service.models.payment_otp import PaymentOTP
 from payment_service.repository import payment_repository
 from payment_service.repository import otp_repository
 from payment_service.services.providers.stripe_provider import StripePaymentProvider
 _provider = StripePaymentProvider()
+
+logger = logging.getLogger(__name__)
 
 
 def create_payment(
@@ -104,10 +109,41 @@ def update_status(payment_id: str, status: str) -> Payment | None:
     payment = payment_repository.find_by_id(payment_id)
     if not payment:
         return None
+    
+    old_status = payment.status
     payment.status = PaymentStatus(status).value
     payment_repository.update(payment)
 
+
+    if status == PaymentStatus.CONCLUDED.value and old_status != PaymentStatus.CONCLUDED.value:
+        _notify_transactions_service(payment_id)
+
     return payment
+
+
+def _notify_transactions_service(payment_id: str) -> None:
+    """
+    Notify the transactions_service (composer) that a payment has been concluded.
+    This triggers the blockchain transaction payout.
+    """
+    url = f"{config.TRANSACTIONS_SERVICE_URL}/v1/payments/{payment_id}"
+    try:
+        logger.info(f"Notifying transactions_service for concluded payment {payment_id} at {url}")
+        res = requests.patch(
+            url, 
+            json={"status": "concluded"},
+            headers={
+                "Content-Type": "application/json",
+                "X-Internal-Key": config.NOTIFICATIONS_API_KEY
+            },
+            timeout=5
+        )
+        if res.status_code != 200:
+            logger.error(f"Failed to notify transactions_service for payment {payment_id}: {res.status_code} - {res.text}")
+        else:
+            logger.info(f"Successfully notified transactions_service for payment {payment_id}")
+    except Exception as e:
+        logger.error(f"Error notifying transactions_service for payment {payment_id}: {str(e)}")
 
 
 def handle_webhook(payload: bytes, sig_header: str) -> None:

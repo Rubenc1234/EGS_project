@@ -28,6 +28,9 @@ public class PaymentComposerService {
     @Value("${app.bank-wallet}")
     private String bankWallet;
 
+    @Value("${app.internal-api-key}")
+    private String internalApiKey;
+
     public Map<String, Object> getLoginUrl(String redirectUri) {
         log.info("Fetching login URL for redirect_uri: {}", redirectUri);
         String url = paymentServiceUrl + "/v1/pay/login?redirect_uri=" + redirectUri;
@@ -45,6 +48,7 @@ public class PaymentComposerService {
         String url = paymentServiceUrl + "/v1/pay/callback";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Internal-Key", internalApiKey);
         HttpEntity<PaymentCallbackRequestDTO> request = new HttpEntity<>(callbackRequest, headers);
         return restTemplate.postForObject(url, request, TokenResponseDTO.class);
     }
@@ -57,10 +61,19 @@ public class PaymentComposerService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         if (authHeader != null) {
             headers.set("Authorization", authHeader);
+        } else {
+            headers.set("X-Internal-Key", internalApiKey);
         }
         HttpEntity<PaymentRequestDTO> request = new HttpEntity<>(paymentRequest, headers);
 
-        return restTemplate.postForObject(url, request, PaymentResponseDTO.class);
+        PaymentResponseDTO response = restTemplate.postForObject(url, request, PaymentResponseDTO.class);
+
+        if (response != null && "concluded".equalsIgnoreCase(response.getStatus())) {
+            log.info("Payment {} created as concluded, triggering transaction", response.getId());
+            triggerTransactionForPayment(response.getId(), authHeader);
+        }
+
+        return response;
     }
 
     public PaymentResponseDTO getPayment(String paymentId, String authHeader) {
@@ -70,6 +83,8 @@ public class PaymentComposerService {
         HttpHeaders headers = new HttpHeaders();
         if (authHeader != null) {
             headers.set("Authorization", authHeader);
+        } else {
+            headers.set("X-Internal-Key", internalApiKey);
         }
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
@@ -84,18 +99,21 @@ public class PaymentComposerService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         if (authHeader != null) {
             headers.set("Authorization", authHeader);
+        } else {
+            headers.set("X-Internal-Key", internalApiKey);
         }
         HttpEntity<PaymentUpdateDTO> request = new HttpEntity<>(update, headers);
 
         // Call payment service to update status
-        PaymentResponseDTO response = restTemplate.patchForObject(url, request, PaymentResponseDTO.class);
+        PaymentResponseDTO updatedResponse = restTemplate.patchForObject(url, request, PaymentResponseDTO.class);
 
-        if (response != null && "concluded".equalsIgnoreCase(update.getStatus())) {
-            log.info("Payment {} concluded, triggering transaction", paymentId);
+        // Trigger transaction if the status is concluded, regardless of old status
+        if (updatedResponse != null && "concluded".equalsIgnoreCase(updatedResponse.getStatus())) {
+            log.info("Payment {} updated/concluded, triggering transaction", paymentId);
             triggerTransactionForPayment(paymentId, authHeader);
         }
 
-        return response;
+        return updatedResponse;
     }
 
     private void triggerTransactionForPayment(String paymentId, String authHeader) {
