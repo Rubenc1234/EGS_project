@@ -39,9 +39,12 @@ services:
       DATABASE_URL: postgresql://payuser:paypassword@payment-postgres:5432/payment_db
       PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
       PAYMENT_KEYCLOAK_PUBLIC_URL: http://localhost:8083
+      TRANSACTIONS_SERVICE_URL: http://host.docker.internal:8081
     depends_on:
       - payment-postgres
       - payment-keycloak
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   payment-frontend:
     build:

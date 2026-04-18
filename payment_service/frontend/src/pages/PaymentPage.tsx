@@ -43,6 +43,7 @@ import {
 
 const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string
 const stripePromise = loadStripe(STRIPE_PK)
+const MIN_PAYMENT_AMOUNT_EUR = 0.5
 
 function CheckoutForm({
   walletId,
@@ -80,6 +81,10 @@ function CheckoutForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!stripe || !elements) return
+    if (amount < MIN_PAYMENT_AMOUNT_EUR) {
+      setError('Minimum payment amount is €0.50.')
+      return
+    }
     setLoading(true)
     setError(null)
 

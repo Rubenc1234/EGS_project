@@ -27,6 +27,9 @@ public class AuthController {
     @Value("${keycloak.url}")
     private String keycloakUrl;
 
+    @Value("${keycloak.public-url:${keycloak.url}}")
+    private String keycloakPublicUrl;
+
     @Value("${keycloak.realm}")
     private String realm;
 
@@ -63,7 +66,7 @@ public class AuthController {
         // Force login prompt and require fresh authentication (avoid silent SSO)
         String loginUrl = String.format(
         "%s/realms/%s/protocol/openid-connect/auth?client_id=%s&response_type=code&redirect_uri=%s&state=%s&scope=openid%%20profile%%20email&prompt=login&max_age=0",
-        keycloakUrl,
+        keycloakPublicUrl,
         URLEncoder.encode(realm, StandardCharsets.UTF_8),
         URLEncoder.encode(clientId, StandardCharsets.UTF_8),
         URLEncoder.encode(serverCallback, StandardCharsets.UTF_8),

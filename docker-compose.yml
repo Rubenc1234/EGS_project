@@ -1,0 +1,226 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./iam_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - egs-network
+
+  iam-service:
+    build:
+      context: .
+      dockerfile: iam_service/Dockerfile
+    container_name: iam-service
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_URL: http://localhost:8080
+      REALM: microservices
+      CLIENT_ID: iam-service
+      CLIENT_SECRET: 4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha
+    ports:
+      - "5000:5000"
+    depends_on:
+      - keycloak
+    networks:
+      - egs-network
+
+  transaction-postgres:
+    image: postgres:15
+    container_name: transaction-postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: transaction_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - transaction_pgdata:/var/lib/postgresql/data
+    networks:
+      - egs-network
+
+  transactions-service:
+    build:
+      context: ./transactions_service
+      dockerfile: Dockerfile
+    container_name: transactions-service
+    environment:
+      MASTER_KEY_FOR_WALLET: ${MASTER_KEY_FOR_WALLET:-}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-postgres:5432/transaction_db
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: mypassword
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_URL: http://localhost:8080
+      KEYCLOAK_REALM: microservices
+      KEYCLOAK_CLIENT_ID: iam-service
+      KEYCLOAK_CLIENT_SECRET: 4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha
+      APP_DEV_MODE: "false"
+      APP_BANK_WALLET: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+      APP_PAYMENT_SERVICE_URL: http://payment-backend:5002
+      APP_INTERNAL_API_KEY: test-key-12345
+      APP_TRANSACTION_FEE_PERCENTAGE: "2.0"
+      APP_TRANSACTION_FEE_RECIPIENT: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+      NOTIFICATIONS_BASE_URL: http://egs-notifications-api:8080
+      NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY:-}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - transaction-postgres
+      - keycloak
+      - egs-notifications-api
+    networks:
+      - egs-network
+
+  egs-notifications-postgres:
+    image: postgres:15-alpine
+    container_name: egs_notifications_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notifications
+    volumes:
+      - egs_notifications_postgres_data:/var/lib/postgresql/data
+    networks:
+      - egs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  egs-notifications-redis:
+    image: redis:7-alpine
+    container_name: egs_notifications_redis
+    volumes:
+      - egs_notifications_redis_data:/data
+    networks:
+      - egs-network
+
+  egs-notifications-api:
+    build:
+      context: ./notifications_service
+      dockerfile: Dockerfile
+    image: egs_notifications_service
+    container_name: egs_notifications_api
+    environment:
+      PORT: 8080
+      GIN_MODE: release
+      MASTER_ADMIN_SECRET: master_key
+      JWT_SECRET: jwt_key
+      JWT_EXPIRATION_MINUTES: "15"
+      DATABASE_URL: host=egs_notifications_postgres user=postgres password=postgres dbname=notifications port=5432 sslmode=disable TimeZone=UTC
+      REDIS_URL: egs_notifications_redis:6379
+    ports:
+      - "8082:8080"
+    depends_on:
+      egs-notifications-postgres:
+        condition: service_healthy
+      egs-notifications-redis:
+        condition: service_started
+    networks:
+      - egs-network
+
+  payment-postgres:
+    image: postgres:15
+    container_name: payment-postgres
+    environment:
+      POSTGRES_USER: payuser
+      POSTGRES_PASSWORD: paypassword
+      POSTGRES_DB: payment_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - payment_pgdata:/var/lib/postgresql/data
+    networks:
+      - egs-network
+
+  payment-keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: payment-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8083
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8083:8080"
+    volumes:
+      - payment_keycloak_data:/opt/keycloak/data
+      - ./payment_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    networks:
+      - egs-network
+
+  payment-backend:
+    build:
+      context: ./payment_service
+      dockerfile: Dockerfile.backend
+    container_name: payment-backend
+    env_file:
+      - ./payment_service/.env
+    environment:
+      DATABASE_URL: postgresql://payuser:paypassword@payment-postgres:5432/payment_db
+      PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
+      PAYMENT_KEYCLOAK_PUBLIC_URL: http://localhost:8083
+      TRANSACTIONS_SERVICE_URL: http://transactions-service:8081
+      NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY_PAYMENTS:-}
+    ports:
+      - "5002:5002"
+    depends_on:
+      - payment-postgres
+      - payment-keycloak
+      - transactions-service
+    networks:
+      - egs-network
+
+  payment-frontend:
+    build:
+      context: ./payment_service/frontend
+      dockerfile: Dockerfile.frontend
+    container_name: payment-frontend
+    environment:
+      VITE_PROXY_TARGET: http://payment-backend:5002
+    ports:
+      - "5174:5174"
+    depends_on:
+      - payment-backend
+    networks:
+      - egs-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
+    environment:
+      VITE_PROXY_TARGET: http://transactions-service:8081
+    ports:
+      - "5175:5175"
+    depends_on:
+      - iam-service
+      - transactions-service
+    networks:
+      - egs-network
+
+volumes:
+  keycloak_data:
+  transaction_pgdata:
+  egs_notifications_postgres_data:
+  egs_notifications_redis_data:
+  payment_pgdata:
+  payment_keycloak_data:
+
+networks:
+  egs-network:
+    name: egs-network
+    driver: bridge

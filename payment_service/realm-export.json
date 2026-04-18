@@ -1,0 +1,47 @@
+{
+  "realm": "payments-realm",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Default payment user"
+      },
+      {
+        "name": "operator",
+        "description": "Service/operator role"
+      }
+    ]
+  },
+  "groups": [],
+  "users": [],
+  "clients": [
+    {
+      "clientId": "payments-client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "wB0s7VvPaSfIHWJkkOh2gXA7Newnmwfm",
+      "redirectUris": [
+        "http://localhost:5174/callback",
+        "http://localhost:5175/callback",
+        "http://localhost:5001/v1/composer/callback"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "authorizationServicesEnabled": false
+    }
+  ]
+}

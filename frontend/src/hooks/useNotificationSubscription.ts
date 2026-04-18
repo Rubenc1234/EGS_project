@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 
 // NOTA: Substitui isto com a vapid_public_key obtida do POST /v1/admin/clients
-const VAPID_PUBLIC_KEY = 'BMCKQarSh3OM9oDTklROrv6tgYvP-5DiBmwGH3C8Qk4qVMAV1I0puFCprkJxATLP330TcHqn743-Mb7WxNR4GME';
+const VAPID_PUBLIC_KEY = 'BMMJUFw8nHie7nAvefWySNtLVkkSy9eAMr8N08kv1pu-I6v_BnEVienA45hKRpiUDdsZ9vxXZuujsS_hqwwQL0I';
 
 export const useNotificationSubscription = () => {
   const { token } = useAuth();

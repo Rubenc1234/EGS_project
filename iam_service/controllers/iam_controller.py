@@ -1,6 +1,6 @@
 from flask import jsonify, request, session
 from iam_service.services.keycloak_service import introspect_token, get_user_token
-from iam_service.config import KEYCLOAK_URL, REALM, CLIENT_ID
+from iam_service.config import KEYCLOAK_URL, KEYCLOAK_PUBLIC_URL, REALM, CLIENT_ID
 import urllib.parse
 import uuid
 
@@ -92,7 +92,7 @@ def register_routes(app):
         # Use Keycloak's dedicated /registrations endpoint for user self-service signup
         # This is more reliable than /auth?kc_action=register
         signup_url = (
-            f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/registrations?"
+            f"{KEYCLOAK_PUBLIC_URL}/realms/{REALM}/protocol/openid-connect/registrations?"
             f"client_id={urllib.parse.quote(CLIENT_ID)}&"
             f"response_type=code&"
             f"redirect_uri={urllib.parse.quote(callback_url)}&"

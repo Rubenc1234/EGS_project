@@ -2,50 +2,18 @@
 
 # stop_all.sh - Stops all microservices, databases, and the frontend.
 
-# 1. Stop background processes
-if [ -f .service_pids ]; then
-    echo "Stopping background services from .service_pids..."
-    PIDS=$(cat .service_pids)
-    for PID in $PIDS; do
-        if [ ! -z "$PID" ] && kill -0 $PID 2>/dev/null; then
-            # Kill the process and its children
-            pkill -P $PID 2>/dev/null
-            kill $PID 2>/dev/null
-            echo "Sent SIGTERM to process $PID"
-        fi
-    done
-    rm .service_pids
-else
-    echo "No .service_pids file found. Trying to kill by name patterns..."
-fi
-
-# Fallback: Kill by name patterns
-echo "Killing services by name patterns..."
-pkill -f "python3 -m iam_service.app_iam" 2>/dev/null
-pkill -f "python3 -m payment_service.app_payment" 2>/dev/null
-pkill -f "python3 app.py" 2>/dev/null
-pkill -f "go run cmd/api/main.go" 2>/dev/null
-pkill -f "spring-boot:run" 2>/dev/null
-pkill -f "npm run dev" 2>/dev/null
-# Also kill common sub-processes
-pkill -f "vite" 2>/dev/null
+# 1. Stop the unified Docker Compose stack
+echo "Stopping unified Docker stack..."
+docker-compose down
 
 # 2. Forcefully free the specific ports if still in use
-echo "Cleaning up ports (5000, 5001, 5002, 5003, 8081, 5174, 5175, 5433, 6379, 8082)..."
-for PORT in 5000 5001 5002 5003 8081 5174 5175 5433 6379 8082; do
-    # Try to find and kill processes using these ports
-    PID=$(lsof -t -i:$PORT)
+echo "Cleaning up ports (5000, 5001, 5002, 5003, 8080, 8081, 8082, 8083, 5174, 5175, 5432, 5433, 6379)..."
+for PORT in 5000 5001 5002 5003 8080 8081 8082 8083 5174 5175 5432 5433 6379; do
+    PID=$(lsof -t -i:$PORT 2>/dev/null)
     if [ ! -z "$PID" ]; then
         echo "Port $PORT is still in use by $PID. Killing..."
         kill -9 $PID 2>/dev/null
     fi
 done
-
-# 3. Stop Docker containers
-echo "Stopping Docker containers..."
-(cd iam_service && sudo docker-compose down)
-(cd payment_service && sudo docker-compose down)
-(cd transactions_service && sudo docker-compose down)
-(cd notifications_service && sudo docker-compose down)
 
 echo "All services stopped."

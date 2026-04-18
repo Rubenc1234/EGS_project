@@ -35,6 +35,11 @@ def register_routes(app):
                 redirect_url=redirect_url,
                 payment_method_id=payment_method_id,
             )
+        except ValueError as exc:
+            reason = str(exc)
+            if reason.startswith("minimum_amount_eur_"):
+                return jsonify({"error": reason, "detail": "Minimum payment amount is €0.50."}), 400
+            return jsonify({"error": reason}), 400
         except RuntimeError as exc:
             return jsonify({"error": "payment_provider_error", "detail": str(exc)}), 502
         return jsonify(payment.to_dict()), 201

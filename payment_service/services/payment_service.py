@@ -21,6 +21,8 @@ _provider = StripePaymentProvider()
 
 logger = logging.getLogger(__name__)
 
+MIN_PAYMENT_AMOUNT_EUR = 0.50
+
 
 def create_payment(
     user_id: str,
@@ -37,6 +39,9 @@ def create_payment(
         wallet_id=wallet_id,
         redirect_url=redirect_url,
     )
+
+    if amount < MIN_PAYMENT_AMOUNT_EUR:
+        raise ValueError(f"minimum_amount_eur_{MIN_PAYMENT_AMOUNT_EUR:.2f}")
 
     if payment_method_id:
         # Use an existing saved card — get Stripe Customer for this user
