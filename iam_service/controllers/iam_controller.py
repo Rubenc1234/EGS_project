@@ -51,7 +51,7 @@ def register_routes(app):
         """
         # callback_url deve ser onde o frontend espera ser redirecionado após login
         # Use transactions_service server callback by default (same as signup)
-        callback_url = request.args.get("redirect_uri", "http://localhost:8081/v1/callback")
+        callback_url = request.args.get("redirect_uri", "http://app.pt/callback")
         
         # Generate a unique state per login request and store in session
         generated_state = str(uuid.uuid4())
@@ -82,7 +82,7 @@ def register_routes(app):
         Usa /registrations endpoint (mais confiável que kc_action=register).
         Armazena state na sessão de forma segura (como em Java).
         """
-        callback_url = request.args.get("redirect_uri", "http://localhost:8081/v1/callback")
+        callback_url = request.args.get("redirect_uri", "http://app.pt/callback")
         
         # Generate a unique state per signup request and store in session
         generated_state = str(uuid.uuid4())
@@ -115,7 +115,7 @@ def register_routes(app):
         
         data = request.get_json() or {}
         code = data.get("code")
-        redirect_uri = data.get("redirect_uri", "http://localhost:5173/callback")
+        redirect_uri = data.get("redirect_uri", "http://app.pt/callback")
         
         if not code:
             return jsonify({"error": "code required"}), 400

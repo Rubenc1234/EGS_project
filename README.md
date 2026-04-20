@@ -20,10 +20,17 @@ Plataforma distribuida para autenticacao, pagamentos, notificacoes e transacoes.
 
 ## Notifications
 
-Antes de usar as subscriptions, cria o client no Notifications Service:
+Antes de usar as subscriptions, vê primeiro se já existe um client registado:
 
 ```bash
-curl -s -X POST http://localhost:8082/v1/admin/clients \
+curl -s -X GET http://notifications.pt/v1/admin/clients \
+	-H "Authorization: Bearer master_key"
+```
+
+Se a lista vier vazia, então cria um novo client no Notifications Service:
+
+```bash
+curl -s -X POST http://notifications.pt/v1/admin/clients \
 	-H "Authorization: Bearer master_key" \
 	-H "Content-Type: application/json" \
 	-d '{
@@ -32,13 +39,23 @@ curl -s -X POST http://localhost:8082/v1/admin/clients \
 	}'
 ```
 
-Esse endpoint devolve a API key do client e o VAPID necessários. Esta key deve ser usada no fluxo de notifications/subscriptions.
+O GET devolve a lista de clients já registados. O POST devolve a API key do client e o VAPID necessários. Essa key deve ser usada no fluxo de notifications/subscriptions.
+
+## Hosts locais
+
+Para a primeira fase, executa o script na raiz do projeto para mapear os nomes públicos para o IP local:
+
+```bash
+./setup_hosts.sh 127.0.0.1
+```
+
+Os nomes principais são `app.pt`, `payment.pt`, `iam.pt`, `composer.pt`, `transactions.pt`, `notifications.pt`, `keycloak.pt` e `payment-keycloak.pt`.
 
 ## Payments: utilizador necessário
 
 Antes de usar o fluxo de pagamentos, cria um utilizador no Keycloak do Payments:
 
-1. Abre http://localhost:8083/admin/master/console/#
+1. Abre http://payment-keycloak.pt/admin/master/console/#
 2. Seleciona o realm `payments-realm`
 3. Vai a `Users` e cria um utilizador
 4. Em `Credentials`, define uma password para esse utilizador
@@ -77,6 +94,8 @@ cd ../..
 ./start_all.sh
 ```
 
+O Docker expõe apenas o Traefik na porta 80; os restantes serviços ficam na rede interna.
+
 Para parar:
 
 ```bash
@@ -85,13 +104,14 @@ Para parar:
 
 ## URLs locais
 
-- Keycloak: http://localhost:8080
-- IAM: http://localhost:5000
-- Payment: http://localhost:5002
-- Notifications: http://localhost:8082
-- Transactions: http://localhost:8081
-- Frontend principal: http://localhost:5175
-- Frontend de pagamentos: http://localhost:5174
+- App principal: http://app.pt
+- Payment frontend: http://payment.pt
+- IAM: http://iam.pt
+- Composer: http://composer.pt
+- Transactions: http://transactions.pt
+- Notifications: http://notifications.pt
+- Keycloak: http://keycloak.pt
+- Payment Keycloak: http://payment-keycloak.pt
 
 ## Nota rápida
 
@@ -101,3 +121,4 @@ Se a notifications API key mudar, atualiza `set_env.sh` e volta a arrancar os se
 
 O backend de transactions está configurado para usar a blockchain real no Docker raiz.
 O modo de desenvolvimento está desativado (`dev-mode: false`), por isso o fluxo segue para o provider real.
+O Traefik é o único serviço exposto diretamente e encaminha o tráfego para a rede interna.

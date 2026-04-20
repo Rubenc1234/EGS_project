@@ -6,13 +6,14 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Paper from '@mui/material/Paper'
 
-const COMPOSER_BASE = import.meta.env.VITE_COMPOSER_BASE || 'http://localhost:5001'
+const IAM_BASE = import.meta.env.VITE_IAM_BASE_URL || 'http://iam.pt'
 // When using the Python Composer (app.py) we use a local login page that POSTs to /v1/composer/login
 const LOGIN_REDIRECT = '/login'
 
 const handleSignup = async () => {
   try {
-    const res = await fetch('http://localhost:5000/v1/signup')
+    const redirectUri = `${window.location.origin}/callback`
+    const res = await fetch(`${IAM_BASE}/v1/signup?redirect_uri=${encodeURIComponent(redirectUri)}`)
     const data = await res.json()
     if (data.signup_url) {
       window.location.href = data.signup_url

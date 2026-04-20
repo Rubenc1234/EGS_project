@@ -50,7 +50,8 @@
       "redirectUris": [
         "http://localhost:8081/v1/callback",
         "http://localhost:5173/callback",
-        "http://localhost:5001/v1/composer/callback"
+        "http://transactions.pt/*",
+        "http://app.pt/*"
       ],
       "webOrigins": [
         "*"

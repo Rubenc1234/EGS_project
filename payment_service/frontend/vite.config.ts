@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     port: 5174,
     host: true,
+    allowedHosts: ['payment.pt', 'payment-api.pt', 'payment-keycloak.pt'],
     proxy: {
       '/v1/pay': {
         target: backendTarget,

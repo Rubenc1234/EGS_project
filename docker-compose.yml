@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=egs-network
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - egs-network
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.1
     container_name: keycloak
@@ -8,11 +24,17 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://keycloak.pt
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./iam_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
-    ports:
-      - "8080:8080"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.keycloak.rule: Host(`keycloak.pt`)
+      traefik.http.routers.keycloak.entrypoints: web
+      traefik.http.services.keycloak.loadbalancer.server.port: "8080"
     networks:
       - egs-network
 
@@ -23,14 +45,17 @@ services:
     container_name: iam-service
     environment:
       KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_PUBLIC_URL: http://localhost:8080
+      KEYCLOAK_PUBLIC_URL: http://keycloak.pt
       REALM: microservices
       CLIENT_ID: iam-service
       CLIENT_SECRET: 4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha
-    ports:
-      - "5000:5000"
     depends_on:
       - keycloak
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.iam.rule: Host(`iam.pt`)
+      traefik.http.routers.iam.entrypoints: web
+      traefik.http.services.iam.loadbalancer.server.port: "5000"
     networks:
       - egs-network
 
@@ -41,8 +66,6 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: transaction_db
-    ports:
-      - "5432:5432"
     volumes:
       - transaction_pgdata:/var/lib/postgresql/data
     networks:
@@ -59,7 +82,7 @@ services:
       SPRING_DATASOURCE_USERNAME: myuser
       SPRING_DATASOURCE_PASSWORD: mypassword
       KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_PUBLIC_URL: http://localhost:8080
+      KEYCLOAK_PUBLIC_URL: http://keycloak.pt
       KEYCLOAK_REALM: microservices
       KEYCLOAK_CLIENT_ID: iam-service
       KEYCLOAK_CLIENT_SECRET: 4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha
@@ -71,12 +94,15 @@ services:
       APP_TRANSACTION_FEE_RECIPIENT: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
       NOTIFICATIONS_BASE_URL: http://egs-notifications-api:8080
       NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY:-}
-    ports:
-      - "8081:8081"
     depends_on:
       - transaction-postgres
       - keycloak
       - egs-notifications-api
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.transactions.rule: Host(`transactions.pt`)
+      traefik.http.routers.transactions.entrypoints: web
+      traefik.http.services.transactions.loadbalancer.server.port: "8081"
     networks:
       - egs-network
 
@@ -119,13 +145,16 @@ services:
       JWT_EXPIRATION_MINUTES: "15"
       DATABASE_URL: host=egs_notifications_postgres user=postgres password=postgres dbname=notifications port=5432 sslmode=disable TimeZone=UTC
       REDIS_URL: egs_notifications_redis:6379
-    ports:
-      - "8082:8080"
     depends_on:
       egs-notifications-postgres:
         condition: service_healthy
       egs-notifications-redis:
         condition: service_started
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.notifications.rule: Host(`notifications.pt`)
+      traefik.http.routers.notifications.entrypoints: web
+      traefik.http.services.notifications.loadbalancer.server.port: "8080"
     networks:
       - egs-network
 
@@ -136,8 +165,6 @@ services:
       POSTGRES_USER: payuser
       POSTGRES_PASSWORD: paypassword
       POSTGRES_DB: payment_db
-    ports:
-      - "5433:5432"
     volumes:
       - payment_pgdata:/var/lib/postgresql/data
     networks:
@@ -150,14 +177,17 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_HOSTNAME: http://localhost:8083
+      KC_HOSTNAME: http://payment-keycloak.pt
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
-    ports:
-      - "8083:8080"
     volumes:
       - payment_keycloak_data:/opt/keycloak/data
       - ./payment_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.payment-keycloak.rule: Host(`payment-keycloak.pt`)
+      traefik.http.routers.payment-keycloak.entrypoints: web
+      traefik.http.services.payment-keycloak.loadbalancer.server.port: "8080"
     networks:
       - egs-network
 
@@ -171,15 +201,18 @@ services:
     environment:
       DATABASE_URL: postgresql://payuser:paypassword@payment-postgres:5432/payment_db
       PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
-      PAYMENT_KEYCLOAK_PUBLIC_URL: http://localhost:8083
+      PAYMENT_KEYCLOAK_PUBLIC_URL: http://payment-keycloak.pt
       TRANSACTIONS_SERVICE_URL: http://transactions-service:8081
       NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY_PAYMENTS:-}
-    ports:
-      - "5002:5002"
     depends_on:
       - payment-postgres
       - payment-keycloak
       - transactions-service
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.payment-backend.rule: Host(`payment-api.pt`)
+      traefik.http.routers.payment-backend.entrypoints: web
+      traefik.http.services.payment-backend.loadbalancer.server.port: "5002"
     networks:
       - egs-network
 
@@ -190,10 +223,13 @@ services:
     container_name: payment-frontend
     environment:
       VITE_PROXY_TARGET: http://payment-backend:5002
-    ports:
-      - "5174:5174"
     depends_on:
       - payment-backend
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.payment-frontend.rule: Host(`payment.pt`)
+      traefik.http.routers.payment-frontend.entrypoints: web
+      traefik.http.services.payment-frontend.loadbalancer.server.port: "5174"
     networks:
       - egs-network
 
@@ -204,11 +240,16 @@ services:
     container_name: frontend
     environment:
       VITE_PROXY_TARGET: http://transactions-service:8081
-    ports:
-      - "5175:5175"
+      VITE_IAM_BASE_URL: http://iam.pt
+      VITE_TRANSACTIONS_BASE_URL: http://transactions.pt
     depends_on:
       - iam-service
       - transactions-service
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.frontend.rule: Host(`app.pt`)
+      traefik.http.routers.frontend.entrypoints: web
+      traefik.http.services.frontend.loadbalancer.server.port: "5175"
     networks:
       - egs-network
 

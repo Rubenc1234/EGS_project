@@ -1,6 +1,7 @@
 package egs.transactions_service.controller;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
@@ -21,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/v1")
 @Slf4j
 // Allow frontend dev servers (5173, 5174 and 5175). In production, lock this down to your real origin(s).
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"})
 public class AuthController {
 
     @Value("${keycloak.url}")
@@ -44,7 +45,7 @@ public class AuthController {
                                             @RequestParam(value = "state", required = false) String clientState,
                                             HttpServletRequest request) {
         if (redirectUri == null || redirectUri.isEmpty()) {
-            redirectUri = "http://localhost:5173/callback";
+            redirectUri = "http://app.pt/callback";
         }
 
         // Generate a secure random state per login attempt and store it in the user's session
@@ -61,7 +62,7 @@ public class AuthController {
         session.setAttribute("post_login_redirect", redirectUri);
 
         // For robust server-side flow use the server callback as Keycloak's redirect_uri
-        String serverCallback = "http://localhost:8081/v1/callback";
+        String serverCallback = "http://transactions.pt/v1/callback";
 
         // Force login prompt and require fresh authentication (avoid silent SSO)
         String loginUrl = String.format(
@@ -91,14 +92,14 @@ public class AuthController {
         String expectedState = session != null ? (String) session.getAttribute("oidc_state") : null;
         if (expectedState == null || returnedState == null || !expectedState.equals(returnedState)) {
             log.warn("OIDC state mismatch: expected={} returned={}", expectedState, returnedState);
-            String frontendErr = "http://localhost:5175/?error=invalid_state";
+            String frontendErr = "http://app.pt/?error=invalid_state";
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(java.net.URI.create(frontendErr));
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
         }
 
         if (code == null || code.isEmpty()) {
-            String frontendErr = "http://localhost:5175/?error=code_required";
+            String frontendErr = "http://app.pt/?error=code_required";
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(java.net.URI.create(frontendErr));
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
@@ -115,14 +116,18 @@ public class AuthController {
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
         form.add("code", code);
-        form.add("redirect_uri", "http://localhost:8081/v1/callback");
+        form.add("redirect_uri", "http://transactions.pt/v1/callback");
 
         HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(form, headers);
 
         try {
-            ResponseEntity<Map<String, Object>> res = rest.postForEntity(tokenUrl, tokenRequest, (Class) Map.class);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> body = (Map<String, Object>) res.getBody();
+                ResponseEntity<Map<String, Object>> res = rest.exchange(
+                    tokenUrl,
+                    HttpMethod.POST,
+                    tokenRequest,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+                );
+                Map<String, Object> body = res.getBody();
             String accessToken = null;
             Object expires = null;
             if (body != null) {
@@ -133,7 +138,7 @@ public class AuthController {
             log.info("Successfully exchanged code for token (GET callback)." );
             String postLogin = session != null ? (String) session.getAttribute("post_login_redirect") : null;
             if (postLogin == null || postLogin.isEmpty()) {
-                postLogin = "http://localhost:5175/";
+                postLogin = "http://app.pt/";
             }
 
             StringBuilder sb = new StringBuilder(postLogin);
@@ -150,7 +155,7 @@ public class AuthController {
             return new ResponseEntity<>(out, HttpStatus.FOUND);
         } catch (Exception ex) {
             log.error("Failed to exchange code for token (GET callback): {}", ex.getMessage());
-            String frontendErr = "http://localhost:5175/?error=failed_to_exchange_code";
+            String frontendErr = "http://app.pt/?error=failed_to_exchange_code";
             HttpHeaders headersOut = new HttpHeaders();
             headersOut.setLocation(java.net.URI.create(frontendErr));
             return new ResponseEntity<>(headersOut, HttpStatus.FOUND);
@@ -161,7 +166,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> handleCallback(@RequestBody Map<String, String> payload,
                                                               HttpServletRequest request) {
         String code = payload.get("code");
-        String redirectUri = payload.getOrDefault("redirect_uri", "http://localhost:5173/callback");
+        String redirectUri = payload.getOrDefault("redirect_uri", "http://app.pt/callback");
         String returnedState = payload.get("state");
 
         // Validate state against session-stored value
@@ -193,9 +198,13 @@ public class AuthController {
 
         try {
             log.info("Exchanging code for token (POST callback)");
-            ResponseEntity<Map<String, Object>> res = rest.postForEntity(tokenUrl, tokenRequest, (Class) Map.class);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> body = res.getBody();
+                ResponseEntity<Map<String, Object>> res = rest.exchange(
+                    tokenUrl,
+                    HttpMethod.POST,
+                    tokenRequest,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+                );
+                Map<String, Object> body = res.getBody();
             Map<String, Object> out = new HashMap<>();
             if (body != null) {
                 out.put("access_token", body.get("access_token"));

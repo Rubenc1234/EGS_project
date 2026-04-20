@@ -13,7 +13,7 @@ import java.util.Map;
 @RequestMapping("/v1")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"}, allowCredentials = "true")
 public class ComposerController {
 
     private final PaymentComposerService paymentComposerService;

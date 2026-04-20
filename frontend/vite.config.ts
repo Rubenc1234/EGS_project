@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    host: true,
+    allowedHosts: ['app.pt', 'transactions.pt', 'iam.pt', 'keycloak.pt'],
     proxy: {
       '/v1': {
         target: proxyTarget,

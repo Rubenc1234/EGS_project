@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: 'http://localhost:8081', withCredentials: true })
+const api = axios.create({ baseURL: import.meta.env.VITE_TRANSACTIONS_BASE_URL || 'http://transactions.pt', withCredentials: true })
 
 // set Authorization header from stored token if present using interceptor
 api.interceptors.request.use((config) => {

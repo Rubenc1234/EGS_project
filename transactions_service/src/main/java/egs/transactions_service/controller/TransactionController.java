@@ -19,15 +19,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"}, allowCredentials = "true")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -98,30 +96,6 @@ public class TransactionController {
         } catch (Exception e) {
             log.error("=== POST /v1/users/me/wallet ERROR === error={}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of("error", "internal_error", "detail", e.getMessage()));
-        }
-    }
-
-    /**
-     * Generate a deterministic wallet address from user's sub claim.
-     * In production, this should integrate with a proper key management service.
-     * For now, we use a simple hash-based approach for testing.
-     */
-    private String generateWalletAddress(String sub) {
-        // Simple deterministic generation: hash the sub claim to create an address
-        // In production, use a proper wallet/key management service
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(sub.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            // Convert first 20 bytes to hex (Ethereum address format)
-            StringBuilder address = new StringBuilder("0x");
-            for (int i = 0; i < 20; i++) {
-                address.append(String.format("%02x", hash[i] & 0xff));
-            }
-            return address.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            // Fallback: generate a random address
-            String hex = String.format("%040x", new java.util.Random().nextLong());
-            return "0x" + hex.substring(0, 40);
         }
     }
 
@@ -431,7 +405,7 @@ public class TransactionController {
      * Works with both MockBlockchainProvider and RealBlockchainProvider.
      * Usage: GET /v1/blockchain/{address}/balance
      */
-    @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"}, allowCredentials = "true")
+    @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"}, allowCredentials = "true")
     @GetMapping("/blockchain/{address}/balance")
     public ResponseEntity<?> getWalletBalance(@PathVariable("address") String address) {
         log.info("=== GET /v1/blockchain/{}/balance ===", address);

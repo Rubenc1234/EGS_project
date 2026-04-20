@@ -32,7 +32,10 @@
       "redirectUris": [
         "http://localhost:5174/callback",
         "http://localhost:5175/callback",
-        "http://localhost:5001/v1/composer/callback"
+        "http://localhost:5001/v1/composer/callback",
+        "http://payment.pt/*",
+        "http://payment-api.pt/*",
+        "http://payment-keycloak.pt/*"
       ],
       "webOrigins": [
         "*"

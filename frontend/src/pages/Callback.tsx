@@ -18,7 +18,7 @@ export default function Callback() {
       const initializeWallet = async (token: string) => {
         try {
           console.log('🔐 Initializing wallet for user...')
-          const res = await fetch('http://localhost:8081/v1/users/me/wallet', {
+          const res = await fetch(`${import.meta.env.VITE_TRANSACTIONS_BASE_URL || 'http://transactions.pt'}/v1/users/me/wallet`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -82,7 +82,7 @@ export default function Callback() {
 
       try {
         // send code to transactions_service which now performs the token exchange
-        const txBase = 'http://localhost:8081'
+        const txBase = import.meta.env.VITE_TRANSACTIONS_BASE_URL || 'http://transactions.pt'
         console.log('Callback: exchanging code', code, 'state', state)
         // debug: show the full callback url
         console.log('Callback: POST', `${txBase}/v1/callback`)
@@ -91,7 +91,8 @@ export default function Callback() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             code,
-            redirect_uri: window.location.origin + '/callback'
+            redirect_uri: window.location.origin + '/callback',
+            state: state || undefined,
           })
         })
 
