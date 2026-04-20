@@ -12,8 +12,9 @@ import (
 )
 
 type CreateClientRequest struct {
-	Name       string `json:"name" binding:"required"`
-	AdminEmail string `json:"admin_email" binding:"required,email"`
+	Name               string `json:"name" binding:"required"`
+	AdminEmail         string `json:"admin_email" binding:"required,email"`
+	NotificationsEmail string `json:"notifications_email" binding:"required,email"`
 }
 
 // CreateClient generates a new API key and VAPID keys for a new customer/app.
@@ -47,11 +48,12 @@ func CreateClient(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		client := models.Client{
-			Name:            req.Name,
-			AdminEmail:      req.AdminEmail,
-			APIKeyHash:      hash,
-			VapidPublicKey:  publicKey,
-			VapidPrivateKey: privateKey,
+			Name:               req.Name,
+			AdminEmail:         req.AdminEmail,
+			NotificationsEmail: req.NotificationsEmail,
+			APIKeyHash:         hash,
+			VapidPublicKey:     publicKey,
+			VapidPrivateKey:    privateKey,
 		}
 
 		if err := db.Create(&client).Error; err != nil {

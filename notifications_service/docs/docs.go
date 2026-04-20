@@ -430,7 +430,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Placeholder endpoint to retrieve a user's notification email for the authenticated client.",
+                "description": "Retrieves a user's notification email for the authenticated client.",
                 "produces": [
                     "application/json"
                 ],
@@ -448,6 +448,13 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
@@ -455,8 +462,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "501": {
-                        "description": "Not Implemented",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -470,7 +477,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Placeholder endpoint to create/update a user's notification email for the authenticated client.",
+                "description": "Creates or updates a user's notification email for the authenticated client.",
                 "consumes": [
                     "application/json"
                 ],
@@ -500,6 +507,13 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
@@ -514,8 +528,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "501": {
-                        "description": "Not Implemented",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -529,7 +543,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Placeholder endpoint to delete a user's notification email for the authenticated client.",
+                "description": "Deletes a user's notification email for the authenticated client.",
                 "produces": [
                     "application/json"
                 ],
@@ -547,6 +561,13 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
@@ -554,8 +575,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "501": {
-                        "description": "Not Implemented",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -579,6 +600,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "notifications_email": {
                     "type": "string"
                 },
                 "vapid_public_key": {
@@ -618,13 +642,32 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "admin_email",
-                "name"
+                "name",
+                "notifications_email"
             ],
             "properties": {
                 "admin_email": {
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "notifications_email": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handlers.EmailConfig": {
+            "type": "object",
+            "required": [
+                "template_id"
+            ],
+            "properties": {
+                "dynamic_data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "template_id": {
                     "type": "string"
                 }
             }
@@ -651,6 +694,14 @@ const docTemplate = `{
                         "auto",
                         "ltr",
                         "rtl"
+                    ]
+                },
+                "email": {
+                    "description": "Added for Omnichannel Routing",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_handlers.EmailConfig"
+                        }
                     ]
                 },
                 "icon": {

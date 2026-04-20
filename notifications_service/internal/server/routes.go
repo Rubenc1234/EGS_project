@@ -54,9 +54,9 @@ func SetupRoutes(db *gorm.DB, rdb *redis.Client) *gin.Engine {
 		composerOnly.GET("/client/info", handlers.GetClientInfo(db))
 		composerOnly.POST("/auth/token", handlers.GenerateClientToken(db))
 		composerOnly.POST("/events", middleware.RateLimitEvents(rdb, 10), handlers.Notify(db, rdb))
-		composerOnly.PUT("/users/:user_id/email", handlers.SetUserEmail())
-		composerOnly.GET("/users/:user_id/email", handlers.GetUserEmail())
-		composerOnly.DELETE("/users/:user_id/email", handlers.DeleteUserEmail())
+		composerOnly.PUT("/users/:user_id/email", handlers.SetUserEmail(db))
+		composerOnly.GET("/users/:user_id/email", handlers.GetUserEmail(db))
+		composerOnly.DELETE("/users/:user_id/email", handlers.DeleteUserEmail(db))
 	}
 
 	// Unprotected static route to fetch Web Agent

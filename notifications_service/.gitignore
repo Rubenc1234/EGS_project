@@ -33,5 +33,6 @@ Thumbs.db
 egs-notifications
 main
 
-# Keep API HTTP tests
+# Keep API HTTP tests and docs
 !tests/
+!docs/

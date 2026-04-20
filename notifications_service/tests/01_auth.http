@@ -8,7 +8,8 @@ Content-Type: application/json
 
 {
   "name": "My Startup App",
-  "admin_email": "admin@startup.com"
+  "admin_email": "admin@startup.com",
+  "notifications_email": "no-reply@startup.com"
 }
 
 > {%
@@ -34,7 +35,19 @@ Content-Type: application/json
 %}
 
 ### ============================================================================
-### Step 3: Fetch the Web Agent (Service Worker)
+### Step 3: Set user's email
+### This is optional, but it allows you to test email notifications as well.
+### ============================================================================
+PUT {{baseUrl}}/users/{{userId}}/email
+Authorization: Bearer {{api_key}}
+Content-Type: application/json
+
+{
+  "email": "user.email@testing.com"
+}
+
+### ============================================================================
+### Step 4: Fetch the Web Agent (Service Worker)
 ### Run the push_test with a http server to test the subscription
 ### ============================================================================
 

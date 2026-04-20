@@ -3,7 +3,10 @@ package handlers
 import (
 	"net/http"
 
+	"egs-notifications/internal/models"
+
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type SetUserEmailRequest struct {
@@ -12,20 +15,22 @@ type SetUserEmailRequest struct {
 
 // SetUserEmail sets or updates the notification email for a user in the authenticated client scope.
 // @Summary Set user notification email
-// @Description Placeholder endpoint to create/update a user's notification email for the authenticated client.
+// @Description Creates or updates a user's notification email for the authenticated client.
 // @Tags users
 // @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param user_id path string true "User ID"
 // @Param payload body SetUserEmailRequest true "Email payload"
-// @Success 501 {object} map[string]interface{}
+// @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
 // @Router /users/{user_id}/email [put]
-func SetUserEmail() gin.HandlerFunc {
+func SetUserEmail(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.Param("user_id")
+		clientID := c.MustGet("clientID").(uint)
 
 		var req SetUserEmailRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -33,51 +38,85 @@ func SetUserEmail() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error":   "not implemented",
-			"message": "user email storage is not implemented yet",
+		userEmail := models.UserEmail{
+			ClientID: clientID,
+			UserID:   userID,
+			Email:    req.Email,
+		}
+
+		// Update if exists, otherwise create
+		if err := db.Where(models.UserEmail{ClientID: clientID, UserID: userID}).Assign(models.UserEmail{Email: req.Email}).FirstOrCreate(&userEmail).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set user email"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Email updated successfully",
 			"user_id": userID,
-			"email":   req.Email,
+			"email":   userEmail.Email,
 		})
 	}
 }
 
 // GetUserEmail returns the notification email for a user in the authenticated client scope.
 // @Summary Get user notification email
-// @Description Placeholder endpoint to retrieve a user's notification email for the authenticated client.
+// @Description Retrieves a user's notification email for the authenticated client.
 // @Tags users
 // @Security BearerAuth
 // @Produce json
 // @Param user_id path string true "User ID"
-// @Success 501 {object} map[string]interface{}
+// @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
 // @Router /users/{user_id}/email [get]
-func GetUserEmail() gin.HandlerFunc {
+func GetUserEmail(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error":   "not implemented",
-			"message": "user email retrieval is not implemented yet",
-			"user_id": c.Param("user_id"),
+		userID := c.Param("user_id")
+		clientID := c.MustGet("clientID").(uint)
+
+		var userEmail models.UserEmail
+		if err := db.Where("client_id = ? AND user_id = ?", clientID, userID).First(&userEmail).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User email not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"user_id": userEmail.UserID,
+			"email":   userEmail.Email,
 		})
 	}
 }
 
 // DeleteUserEmail removes the notification email for a user in the authenticated client scope.
 // @Summary Delete user notification email
-// @Description Placeholder endpoint to delete a user's notification email for the authenticated client.
+// @Description Deletes a user's notification email for the authenticated client.
 // @Tags users
 // @Security BearerAuth
 // @Produce json
 // @Param user_id path string true "User ID"
-// @Success 501 {object} map[string]interface{}
+// @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
 // @Router /users/{user_id}/email [delete]
-func DeleteUserEmail() gin.HandlerFunc {
+func DeleteUserEmail(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error":   "not implemented",
-			"message": "user email deletion is not implemented yet",
-			"user_id": c.Param("user_id"),
+		userID := c.Param("user_id")
+		clientID := c.MustGet("clientID").(uint)
+
+		result := db.Where("client_id = ? AND user_id = ?", clientID, userID).Delete(&models.UserEmail{})
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user email"})
+			return
+		}
+
+		if result.RowsAffected == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User email not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "User email deleted successfully",
+			"user_id": userID,
 		})
 	}
 }

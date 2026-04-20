@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,7 +40,14 @@ type NotificationPayload struct {
 
 	Timestamp          int64    `json:"timestamp,omitempty"`
 
-	Actions            []Action `json:"actions,omitempty" binding:"omitempty,dive"`
+	Actions            []Action      `json:"actions,omitempty" binding:"omitempty,dive"`
+	Email              *EmailConfig  `json:"email,omitempty"` // Added for Omnichannel Routing
+}
+
+// EmailConfig holds the template data for SendGrid
+type EmailConfig struct {
+	TemplateID  string                 `json:"template_id" binding:"required"`
+	DynamicData map[string]interface{} `json:"dynamic_data"`
 }
 
 type Action struct {
@@ -184,6 +194,7 @@ func Notify(db *gorm.DB, rdb *redis.Client) gin.HandlerFunc {
 
 		workerPayload := payload
 		workerPayload.UserIDs = nil
+		workerPayload.Email = nil // Strip email config before sending to browser
 		wpPayloadBytes, _ := json.Marshal(workerPayload)
 
 		// Google FCM and Apple APNs strictly drop encrypted payloads > 4096 bytes.
@@ -201,10 +212,92 @@ func Notify(db *gorm.DB, rdb *redis.Client) gin.HandlerFunc {
 		c.JSON(http.StatusAccepted, gin.H{
 			"status": "processing",
 			"target_count": len(payload.UserIDs),
+			"channels": map[string]bool{
+				"web_push": true,
+				"email":    payload.Email != nil,
+			},
 		})
 
-		// Spin up the background worker
+		// Spin up the background worker for Web Push
 		go processBroadcastAsync(db, rdb, client, payload)
+
+		// Spin up the background worker for Email (if provided)
+		if payload.Email != nil {
+			go processEmailAsync(db, client, payload.UserIDs, payload.Email)
+		}
+	}
+}
+
+// processEmailAsync handles fetching user emails and dispatching to SendGrid
+func processEmailAsync(db *gorm.DB, client models.Client, userIDs []string, emailCfg *EmailConfig) {
+	// Fetch actual database lookup for user emails
+	var users []models.UserEmail
+	if err := db.Where("client_id = ? AND user_id IN ?", client.ID, userIDs).Find(&users).Error; err != nil {
+		slog.Error("Failed to fetch user emails from database", "error", err)
+		return
+	}
+
+	userEmails := make(map[string]string)
+	for _, u := range users {
+		userEmails[u.UserID] = u.Email
+	}
+
+	var personalizations []map[string]interface{}
+	for _, uid := range userIDs {
+		email, exists := userEmails[uid]
+		if !exists {
+			continue // Skip if user has no email registered
+		}
+
+		personalizations = append(personalizations, map[string]interface{}{
+			"to": []map[string]string{{"email": email}},
+			"dynamic_template_data": emailCfg.DynamicData,
+		})
+	}
+
+	if len(personalizations) == 0 {
+		slog.Warn("Email broadcast skipped: no valid emails found", "client_id", client.ID)
+		return
+	}
+
+	sendGridReq := map[string]interface{}{
+		"personalizations": personalizations,
+		"from": map[string]string{
+			"email": client.NotificationsEmail,
+			"name":  client.Name,
+		},
+		"template_id": emailCfg.TemplateID,
+	}
+
+	apiKey := os.Getenv("SENDGRID_API_KEY")
+	if apiKey == "" {
+		slog.Error("SENDGRID_API_KEY is not set. Email not sent.")
+		return
+	}
+
+	jsonData, _ := json.Marshal(sendGridReq)
+	req, err := http.NewRequestWithContext(context.Background(), "POST", "https://api.sendgrid.com/v3/mail/send", bytes.NewBuffer(jsonData))
+	if err != nil {
+		slog.Error("Failed to create SendGrid request", "error", err)
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		slog.Error("Failed to send email via SendGrid", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		slog.Error("SendGrid API error", "status", resp.StatusCode, "response", string(bodyBytes))
+	} else {
+		slog.Info("Async email broadcast completed", "client_id", client.ID, "targets_found", len(personalizations))
 	}
 }
 
@@ -300,6 +393,7 @@ func processBroadcastAsync(db *gorm.DB, rdb *redis.Client, client models.Client,
 	// Prepare payload (strip the user_ids slice so it doesn't inflate the webpush payload size)
 	workerPayload := payload
 	workerPayload.UserIDs = nil
+	workerPayload.Email = nil // Strip email config before sending to browser
 	wpPayloadBytes, _ := json.Marshal(workerPayload)
 
 	var pushedCount atomic.Int32

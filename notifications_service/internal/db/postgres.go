@@ -26,7 +26,7 @@ func InitDB(dsn string) *gorm.DB {
 	}
 
 	slog.Info("Running database migrations...")
-	err = db.AutoMigrate(&models.Client{}, &models.PushSubscription{})
+	err = db.AutoMigrate(&models.Client{}, &models.PushSubscription{}, &models.UserEmail{})
 	if err != nil {
 		slog.Error("Failed to migrate database", "error", err)
 		os.Exit(1)

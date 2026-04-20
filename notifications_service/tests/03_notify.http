@@ -1,0 +1,130 @@
+### ============================================================================
+### Step 5a: Composer Backend Pushes Normal Notification (Omnichannel)
+### This will trigger the background worker. It will immediately return
+### a 202 Accepted, and process BOTH Web Push and an Email Notification.
+### This payload utilizes every possible Web Push property.
+### ============================================================================
+POST {{baseUrl}}/events
+Authorization: Bearer {{api_key}}
+Content-Type: application/json
+
+{
+  "user_ids": [
+    "{{userId}}"
+  ],
+  "title": "Security Alert: New Login",
+  "message": "We noticed a new login to your account from a new device.",
+  "icon": "https://cdn-icons-png.flaticon.com/512/1006/1006771.png",
+  "url": "https://yourwebsite.com/settings/security",
+  "image": "https://via.placeholder.com/800x400/ff0000/ffffff?text=Security+Alert",
+  "badge": "https://cdn-icons-png.flaticon.com/512/1006/1006771-badge.png",
+  "dir": "ltr",
+  "lang": "en-US",
+  "tag": "security-alert",
+  "renotify": true,
+  "requireInteraction": true,
+  "silent": false,
+  "vibrate": [300, 100, 400],
+  "timestamp": 1711248456000,
+  "actions": [
+    {
+      "action": "secure_account",
+      "title": "Secure Account",
+      "icon": "https://cdn-icons-png.flaticon.com/16/lock.png",
+      "action_url": "https://yourwebsite.com/settings/security/review"
+    },
+    {
+      "action": "ignore",
+      "title": "Ignore",
+      "icon": "https://cdn-icons-png.flaticon.com/16/close.png",
+      "action_url": "https://yourwebsite.com/settings/security/ignore"
+    }
+  ],
+  "email": {
+    "template_id": "d-742610721c0a4467b2d4de08fbe1eab0",
+    "dynamic_data": {
+      "is_receipt": false,
+      "subject": "Security Alert: New Login detected",
+      "logo_url": "https://via.placeholder.com/150x40/003087/FFFFFF?text=YOUR+LOGO",
+      "company_name": "My SaaS Brand",
+      "customer_name": "John Doe",
+      "header_text": "Security Alert: New Login",
+      "body_text": "We noticed a new login to your account from a new device in Aveiro, Portugal. If this was you, no further action is needed. If you did not authorize this, please <strong>reset your password</strong> immediately.",
+      "cta_text": "Secure My Account",
+      "dashboard_url": "https://yourwebsite.com/settings/security",
+      "support_url": "https://yourwebsite.com/support",
+      "current_year": "2026",
+      "company_address": "123 Business Rd, Suite 100, Tech City, TX 75001"
+    }
+  }
+}
+
+### ============================================================================
+### Step 5b: Composer Backend Pushes Receipt (Omnichannel)
+### This triggers BOTH Web Push and an Email Receipt with an itemized list.
+### This payload utilizes every possible Web Push property.
+### ============================================================================
+POST {{baseUrl}}/events
+Authorization: Bearer {{api_key}}
+Content-Type: application/json
+
+{
+  "user_ids": [
+    "{{userId}}"
+  ],
+  "title": "Payment Successful",
+  "message": "Your payment of $299.00 USD to Acme Electronics LLC was successful.",
+  "icon": "https://cdn-icons-png.flaticon.com/512/1006/1006771.png",
+  "url": "https://yourwebsite.com/dashboard/transactions",
+  "image": "https://via.placeholder.com/800x400/003087/ffffff?text=Payment+Receipt",
+  "badge": "https://cdn-icons-png.flaticon.com/512/1006/1006771-badge.png",
+  "dir": "auto",
+  "lang": "en-GB",
+  "tag": "payment-receipt-12345",
+  "renotify": false,
+  "requireInteraction": false,
+  "silent": true,
+  "vibrate": [100, 50, 100],
+  "timestamp": 1711248456000,
+  "actions": [
+    {
+      "action": "view_receipt",
+      "title": "View Receipt",
+      "icon": "https://cdn-icons-png.flaticon.com/16/receipt.png",
+      "action_url": "https://yourwebsite.com/dashboard/transactions/12345"
+    }
+  ],
+  "email": {
+    "template_id": "d-742610721c0a4467b2d4de08fbe1eab0",
+    "dynamic_data": {
+      "is_receipt": true,
+      "subject": "Receipt for your payment to Acme Electronics LLC",
+      "logo_url": "https://via.placeholder.com/150x40/003087/FFFFFF?text=YOUR+LOGO",
+      "company_name": "My SaaS Brand",
+      "customer_name": "John Doe",
+      "merchant_name": "Acme Electronics LLC",
+      "header_text": "You sent a payment",
+      "body_text": "You successfully sent a payment to <strong>Acme Electronics LLC</strong>.",
+      "total_amount": "$299.00 USD",
+      "transaction_id": "TXN-9876543210",
+      "transaction_date": "April 20, 2026",
+      "payment_method": "Visa ending in 4242",
+      "items": [
+        {
+          "description": "Noise Cancelling Headphones - Pro Series",
+          "amount": "$279.00"
+        },
+        {
+          "description": "Extended 2-Year Warranty",
+          "amount": "$0.00"
+        }
+      ],
+      "shipping_amount": "$20.00",
+      "cta_text": "View Receipt",
+      "dashboard_url": "https://yourwebsite.com/dashboard/transactions",
+      "support_url": "https://yourwebsite.com/support",
+      "current_year": "2026",
+      "company_address": "123 Business Rd, Suite 100, Tech City, TX 75001"
+    }
+  }
+}
