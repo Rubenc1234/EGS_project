@@ -15,6 +15,7 @@ from payment_service import config
 log = logging.getLogger(__name__)
 
 INTERNAL_KEY = config.NOTIFICATIONS_API_KEY
+DEFAULT_CALLBACK_URL = f"{config.PAYMENT_PUBLIC_URL.rstrip('/')}/callback"
 
 
 def get_user_id_from_token(token: str) -> str:
@@ -94,7 +95,7 @@ def register_routes(app):
 
     @app.route("/v1/pay/login", methods=["GET"])
     def get_login():
-        callback_url = request.args.get("redirect_uri", "http://localhost:5174/callback")
+        callback_url = request.args.get("redirect_uri", DEFAULT_CALLBACK_URL)
         state = str(uuid.uuid4())
         session["oidc_state"] = state
         login_url = get_login_url(callback_url, state)
@@ -102,7 +103,7 @@ def register_routes(app):
 
     @app.route("/v1/pay/signup", methods=["GET"])
     def get_signup():
-        callback_url = request.args.get("redirect_uri", "http://localhost:5174/callback")
+        callback_url = request.args.get("redirect_uri", DEFAULT_CALLBACK_URL)
         state = str(uuid.uuid4())
         session["oidc_state"] = state
         signup_url = get_signup_url(callback_url, state)
@@ -112,7 +113,7 @@ def register_routes(app):
     def handle_callback():
         data = request.get_json() or {}
         code = data.get("code")
-        redirect_uri = data.get("redirect_uri", "http://localhost:5174/callback")
+        redirect_uri = data.get("redirect_uri", DEFAULT_CALLBACK_URL)
         if not code:
             return jsonify({"error": "code required"}), 400
         try:

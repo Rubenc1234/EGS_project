@@ -11,6 +11,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import api from '../services/api'
 
 export default function Dashboard() {
+  const paymentBaseUrl = import.meta.env.VITE_PAYMENT_BASE_URL || 'http://payment.pt'
   const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery(['wallet'], getWallet)
   const queryClient = useQueryClient()
   const { data: txs, isLoading: txsLoading } = useQuery(['transactions', wallet?.id], () => 
@@ -99,7 +100,7 @@ export default function Dashboard() {
     const walletId = wallet?.id
     const redirectUrl = window.location.origin + '/dashboard'
     // Redirect to payment service with pre-filled parameters to skip the manual entry page
-    const paymentUrl = `http://localhost:5174/?wallet_id=${walletId}&amount=${amount}&redirect_url=${encodeURIComponent(redirectUrl)}`
+    const paymentUrl = `${paymentBaseUrl}/?wallet_id=${walletId}&amount=${amount}&redirect_url=${encodeURIComponent(redirectUrl)}`
     
     window.location.href = paymentUrl
   }

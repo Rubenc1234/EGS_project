@@ -39,6 +39,7 @@ services:
       DATABASE_URL: postgresql://payuser:paypassword@payment-postgres:5432/payment_db
       PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
       PAYMENT_KEYCLOAK_PUBLIC_URL: http://localhost:8083
+      PAYMENT_PUBLIC_URL: http://localhost:5174
       TRANSACTIONS_SERVICE_URL: http://host.docker.internal:8081
     depends_on:
       - payment-postgres
@@ -55,6 +56,7 @@ services:
       - "5174:5174"
     environment:
       VITE_PROXY_TARGET: http://payment-backend:5002
+      VITE_PAYMENT_DEFAULT_REDIRECT_URL: http://localhost:5174/payments
     depends_on:
       - payment-backend
 

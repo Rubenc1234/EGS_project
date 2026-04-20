@@ -202,6 +202,7 @@ services:
       DATABASE_URL: postgresql://payuser:paypassword@payment-postgres:5432/payment_db
       PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
       PAYMENT_KEYCLOAK_PUBLIC_URL: http://payment-keycloak.pt
+      PAYMENT_PUBLIC_URL: http://payment.pt
       TRANSACTIONS_SERVICE_URL: http://transactions-service:8081
       NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY_PAYMENTS:-}
     depends_on:
@@ -223,6 +224,7 @@ services:
     container_name: payment-frontend
     environment:
       VITE_PROXY_TARGET: http://payment-backend:5002
+      VITE_PAYMENT_DEFAULT_REDIRECT_URL: http://app.pt/dashboard
     depends_on:
       - payment-backend
     labels:
@@ -242,6 +244,7 @@ services:
       VITE_PROXY_TARGET: http://transactions-service:8081
       VITE_IAM_BASE_URL: http://iam.pt
       VITE_TRANSACTIONS_BASE_URL: http://transactions.pt
+      VITE_PAYMENT_BASE_URL: http://payment.pt
     depends_on:
       - iam-service
       - transactions-service

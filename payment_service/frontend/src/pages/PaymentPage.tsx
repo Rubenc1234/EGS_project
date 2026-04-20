@@ -44,6 +44,7 @@ import {
 const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string
 const stripePromise = loadStripe(STRIPE_PK)
 const MIN_PAYMENT_AMOUNT_EUR = 0.5
+const DEFAULT_REDIRECT_URL = import.meta.env.VITE_PAYMENT_DEFAULT_REDIRECT_URL || 'http://app.pt/dashboard'
 
 function CheckoutForm({
   walletId,
@@ -336,7 +337,7 @@ function CheckoutForm({
 function TestParamsForm({ onSubmit }: { onSubmit: (w: string, a: number, r: string) => void }) {
   const [walletId, setWalletId] = useState('test-wallet-123')
   const [amount, setAmount] = useState('10')
-  const [redirectUrl, setRedirectUrl] = useState('http://localhost:5174/payments')
+  const [redirectUrl, setRedirectUrl] = useState(DEFAULT_REDIRECT_URL)
 
   return (
     <Box
