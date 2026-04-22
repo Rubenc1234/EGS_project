@@ -5,6 +5,7 @@ import PaymentPage from './pages/PaymentPage'
 import SuccessPage from './pages/SuccessPage'
 import PaymentsPage from './pages/PaymentsPage'
 import ProfilePage from './pages/ProfilePage'
+import StatsPage from './pages/StatsPage'
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/stats" element={<StatsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

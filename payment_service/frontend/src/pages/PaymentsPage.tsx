@@ -16,7 +16,7 @@ import {
   Tab,
   Tabs,
 } from '@mui/material'
-import { cancelPayment, clearToken, downloadReceipt, getUserIdFromToken, getUserPayments, PaymentResponse } from '../api'
+import { cancelPayment, clearToken, downloadReceipt, getUserIdFromToken, getUserPayments, isOperator, PaymentResponse } from '../api'
 
 const STATUS_COLOR: Record<string, 'warning' | 'success' | 'error'> = {
   pending: 'warning',
@@ -120,6 +120,12 @@ export default function PaymentsPage() {
             sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
             My Profile
           </Button>
+          {isOperator() && (
+            <Button variant="outlined" size="small" onClick={() => navigate('/stats')}
+              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
+              Stats
+            </Button>
+          )}
           <Button variant="outlined" size="small" onClick={handleLogout}
             sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
             Logout

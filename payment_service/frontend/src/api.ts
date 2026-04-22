@@ -178,3 +178,59 @@ export async function verifyOtp(paymentId: string, code: string): Promise<{ veri
   return res.data
 }
 
+export function isOperator(): boolean {
+  const token = getToken()
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return Array.isArray(payload.realm_access?.roles) && payload.realm_access.roles.includes('operator')
+  } catch {
+    return false
+  }
+}
+
+export interface StatsResponse {
+  overview: {
+    total_users: number
+    total_payments: number
+    total_revenue_eur: number
+    avg_transaction_amount: number
+    min_transaction_amount: number
+    max_transaction_amount: number
+    avg_payments_per_user: number
+  }
+  payments_by_status: {
+    pending: number
+    concluded: number
+    cancelled: number
+    success_rate_pct: number
+  }
+  daily_trends_last_30_days: { date: string; count: number; revenue: number }[]
+  cards: {
+    total_saved_cards: number
+    users_with_saved_cards: number
+    avg_cards_per_user: number
+    card_brand_distribution: Record<string, number>
+    most_popular_brand: string
+  }
+  user_profiles: {
+    total_profiles: number
+    users_with_phone: number
+    users_with_stripe_customer: number
+  }
+  otps: {
+    total_otps_sent: number
+    total_otps_verified: number
+    otp_success_rate_pct: number
+  }
+  activity_patterns: {
+    payments_by_hour: Record<string, number>
+    payments_by_weekday: Record<string, number>
+  }
+}
+
+export async function getStats(): Promise<StatsResponse> {
+  const res = await api.get('/v1/payments/stats')
+  return res.data
+}
+
