@@ -5,15 +5,14 @@ services:
     image: traefik:v3.1
     container_name: traefik
     command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=egs-network
       - --entrypoints.web.address=:80
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.file.watch=true
       - --log.level=INFO
     ports:
       - "80:80"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
     networks:
       - egs-network
 
@@ -78,6 +77,7 @@ services:
     container_name: transactions-service
     environment:
       MASTER_KEY_FOR_WALLET: ${MASTER_KEY_FOR_WALLET:-}
+      BLOCKCHAIN_NODE_URL: ${BLOCKCHAIN_NODE_URL:-}
       SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-postgres:5432/transaction_db
       SPRING_DATASOURCE_USERNAME: myuser
       SPRING_DATASOURCE_PASSWORD: mypassword
@@ -267,4 +267,3 @@ volumes:
 networks:
   egs-network:
     name: egs-network
-    driver: bridge

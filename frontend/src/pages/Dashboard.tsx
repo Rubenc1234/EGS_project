@@ -208,8 +208,12 @@ export default function Dashboard() {
   const handleAcceptRefund = async (txId: string) => {
     if (!window.confirm('Are you sure you want to accept this refund request? The funds will be returned to the sender.')) return
     try {
-      await acceptRefund(txId)
-      setSnack({ open: true, message: 'Refund accepted successfully!', severity: 'success' })
+      const response = await acceptRefund(txId)
+      setSnack({
+        open: true,
+        message: response?.message || 'Refund accepted. Blockchain submission started.',
+        severity: 'success'
+      })
       queryClient.invalidateQueries(['transactions', wallet?.id])
       refetchRealBalance()
     } catch (e: any) {
@@ -441,14 +445,24 @@ export default function Dashboard() {
                             displayStatus = 'REFUND REQUESTED';
                             bgColor = '#e3f2fd'; // Light blue
                             color = '#1976d2';
+                          } else if (t.status === 'PENDING') {
+                            displayStatus = 'ACCEPTED - SUBMITTING';
+                            bgColor = '#fff8e1';
+                            color = '#ff8f00';
+                          } else if (t.status === 'BROADCASTED') {
+                            displayStatus = 'SENT TO BLOCKCHAIN';
+                            bgColor = '#ede7f6';
+                            color = '#5e35b1';
                           } else if (t.status === 'FAILED') {
                             displayStatus = 'REJECTED';
                             bgColor = '#ffebee'; // Light red
                             color = '#c62828';
-                          } else {
-                            displayStatus = 'ACCEPTED';
-                            bgColor = '#e8f5e9'; // Light green
+                          } else if (t.status === 'CONFIRMED') {
+                            displayStatus = 'REFUND CONFIRMED';
+                            bgColor = '#e8f5e9';
                             color = '#2e7d32';
+                          } else {
+                            displayStatus = t.status;
                           }
                         } else {
                           // Regular transaction logic

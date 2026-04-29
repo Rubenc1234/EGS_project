@@ -214,6 +214,12 @@ public class TransactionController {
             TransactionResponseDTO response = transactionService.createTransaction(request);
             log.info("=== POST /v1/transactions SUCCESS === tx_id={} status={}", response.getTxId(), response.getStatus());
             return ResponseEntity.ok(response);
+        } catch (ResponseStatusException e) {
+            log.warn("=== POST /v1/transactions REJECTED === status={} reason={}", e.getStatusCode(), e.getReason());
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
+                    "error", "transaction_rejected",
+                    "detail", e.getReason() != null ? e.getReason() : "Transaction rejected"
+            ));
         } catch (IllegalArgumentException iae) {
             log.warn("=== POST /v1/transactions VALIDATION ERROR === error={}", iae.getMessage(), iae);
             return ResponseEntity.badRequest().body(Map.of("error", "validation_error", "detail", iae.getMessage()));

@@ -19,25 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import org.web3j.abi.FunctionEncoder;
-import org.web3j.abi.FunctionReturnDecoder;
-import org.web3j.abi.TypeReference;
-import org.web3j.abi.datatypes.Address;
-import org.web3j.abi.datatypes.Function;
-import org.web3j.abi.datatypes.Type;
-import org.web3j.abi.datatypes.generated.Uint256;
-import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.DefaultBlockParameterName;
-import org.web3j.protocol.core.methods.request.Transaction;
-import org.web3j.protocol.core.methods.response.EthCall;
-import org.web3j.protocol.core.methods.response.EthGetBalance;
-import org.web3j.utils.Convert;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.RoundingMode;
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,8 +30,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class TransactionServiceImpl implements TransactionService {
-
-    private final Web3j web3j;
     private final BlockchainProvider blockchainProvider;
     private final BlockchainConfig blockchainConfig;
     private final WalletRepository walletRepository;
@@ -56,7 +38,6 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final FeeCalculationService feeCalculationService;
     private final TransactionFeeRepository transactionFeeRepository;
-    private final RefundService refundService;
 
     @Override
     @Transactional
@@ -156,47 +137,14 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    private BigInteger queryTokenBalance(String walletId, String contractAddress) throws Exception {
-        Function function = new Function(
-                "balanceOf",
-                List.of(new Address(walletId)),
-                List.of(new TypeReference<Uint256>() {})
-        );
-        return queryUint256(contractAddress, function);
-    }
-
-    private int queryTokenDecimals(String contractAddress) throws Exception {
-        Function function = new Function(
-                "decimals",
-                Collections.emptyList(),
-                List.of(new TypeReference<Uint256>() {})
-        );
-        BigInteger result = queryUint256(contractAddress, function);
-        return result.intValue();
-    }
-
-    private BigInteger queryUint256(String contractAddress, Function function) throws Exception {
-        String encodedFunction = FunctionEncoder.encode(function);
-        EthCall response = web3j.ethCall(
-                Transaction.createEthCallTransaction(null, contractAddress, encodedFunction),
-                DefaultBlockParameterName.LATEST
-        ).send();
-
-        if (response.hasError()) {
-            throw new RuntimeException("Web3j call error: " + response.getError().getMessage());
-        }
-
-        List<Type> values = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
-        if (values.isEmpty()) {
-            return BigInteger.ZERO;
-        }
-        return (BigInteger) values.get(0).getValue();
-    }
-
     @Override
     @Transactional
     public TransactionResponseDTO createTransaction(TransactionRequestDTO request) {
         log.info("createTransaction called: from={} to={} amount={} asset={} idempotencyKey={}", request.getFromWallet(), request.getToWallet(), request.getAmount(), request.getAsset(), request.getIdempotencyKey());
+
+        if ("real".equalsIgnoreCase(blockchainConfig.getProvider()) && !blockchainProvider.isAvailable()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Blockchain RPC unavailable. Try again in a moment.");
+        }
         
         // Validate format
         validateWalletFormat(request.getFromWallet());
@@ -481,7 +429,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .refundTxId(refundTx.getId())
                 .originalTxId(refundTx.getLinkedTxId())
                 .status(refundTx.getStatus().name())
-                .message("Refund approved and initiated.")
+            .message("Refund accepted. Blockchain submission started and confirmation is still pending.")
                 .amountRefunded(refundTx.getAmount().toPlainString())
                 .asset(refundTx.getAsset())
                 .build();

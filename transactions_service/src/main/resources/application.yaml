@@ -35,7 +35,7 @@ blockchain:
   provider: real  # <- TEM: mock
   
   node:
-    url: "https://sepolia.infura.io/v3/af4602fc6da24f91bb25a7b9e55a2ec4"
+    url: ${BLOCKCHAIN_NODE_URL}
     chainId: 11155111  # Ethereum Sepolia Testnet
 
 # Keycloak / OIDC settings used for Composer login flow

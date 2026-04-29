@@ -1,0 +1,90 @@
+http:
+  routers:
+    app:
+      rule: Host(`app.pt`)
+      entryPoints:
+        - web
+      service: frontend
+
+    payment-frontend:
+      rule: Host(`payment.pt`)
+      entryPoints:
+        - web
+      service: payment-frontend
+
+    iam:
+      rule: Host(`iam.pt`)
+      entryPoints:
+        - web
+      service: iam-service
+
+    transactions:
+      rule: Host(`transactions.pt`)
+      entryPoints:
+        - web
+      service: transactions-service
+
+    notifications:
+      rule: Host(`notifications.pt`)
+      entryPoints:
+        - web
+      service: notifications-api
+
+    payment-backend:
+      rule: Host(`payment-api.pt`)
+      entryPoints:
+        - web
+      service: payment-backend
+
+    keycloak:
+      rule: Host(`keycloak.pt`)
+      entryPoints:
+        - web
+      service: keycloak
+
+    payment-keycloak:
+      rule: Host(`payment-keycloak.pt`)
+      entryPoints:
+        - web
+      service: payment-keycloak
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: http://frontend:5175
+
+    payment-frontend:
+      loadBalancer:
+        servers:
+          - url: http://payment-frontend:5174
+
+    iam-service:
+      loadBalancer:
+        servers:
+          - url: http://iam-service:5000
+
+    transactions-service:
+      loadBalancer:
+        servers:
+          - url: http://transactions-service:8081
+
+    notifications-api:
+      loadBalancer:
+        servers:
+          - url: http://egs-notifications-api:8080
+
+    payment-backend:
+      loadBalancer:
+        servers:
+          - url: http://payment-backend:5002
+
+    keycloak:
+      loadBalancer:
+        servers:
+          - url: http://keycloak:8080
+
+    payment-keycloak:
+      loadBalancer:
+        servers:
+          - url: http://payment-keycloak:8080

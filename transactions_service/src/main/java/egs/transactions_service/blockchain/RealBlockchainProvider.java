@@ -14,8 +14,6 @@ import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
-import org.web3j.tx.RawTransactionManager;
-import org.web3j.tx.response.NoOpProcessor;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -32,13 +30,16 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RealBlockchainProvider implements BlockchainProvider {
 
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 750;
+
     private final Web3j web3j;
     private final BlockchainConfig blockchainConfig;
 
     @Override
     public BigDecimal getBalance(String address) {
         try {
-            EthGetBalance balance = web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST).send();
+            EthGetBalance balance = executeWithRetry("getBalance", () -> web3j.ethGetBalance(address, DefaultBlockParameterName.LATEST).send());
             BigDecimal balanceInEth = Convert.fromWei(new BigDecimal(balance.getBalance()), Convert.Unit.ETHER);
             log.debug("   [REAL] getBalance({}) = {} ETH", address, balanceInEth);
             return balanceInEth;
@@ -52,6 +53,11 @@ public class RealBlockchainProvider implements BlockchainProvider {
     public String sendTransaction(String fromAddress, String toAddress, BigDecimal amount, String privateKey) {
         try {
             log.info("   [REAL] 📤 Preparando transação: {} ETH de {} → {}", amount, fromAddress, toAddress);
+            log.debug("   [REAL] RPC chainId configured: {}", blockchainConfig.getNode() != null ? blockchainConfig.getNode().getChainId() : "n/a");
+
+            if (!isAvailable()) {
+                throw new RuntimeException("Blockchain RPC unavailable");
+            }
             
             // 1. Load credentials from private key
             Credentials credentials = Credentials.create(privateKey);
@@ -98,7 +104,7 @@ public class RealBlockchainProvider implements BlockchainProvider {
             log.info("   [REAL]    Transaction signed, hex length: {}", hexSignedMessage.length());
             
             // 8. Send raw transaction
-            EthSendTransaction response = web3j.ethSendRawTransaction(hexSignedMessage).send();
+            EthSendTransaction response = executeWithRetry("sendTransaction", () -> web3j.ethSendRawTransaction(hexSignedMessage).send());
             
             if (response.getError() != null) {
                 log.error("   [REAL]    ❌ RPC Error: {}", response.getError().getMessage());
@@ -126,8 +132,10 @@ public class RealBlockchainProvider implements BlockchainProvider {
             log.debug("   [REAL] getTransactionReceipt({})", txHash);
             
             // Query para transaction receipt usando web3j
-            org.web3j.protocol.core.methods.response.EthGetTransactionReceipt response = 
-                web3j.ethGetTransactionReceipt(txHash).send();
+            org.web3j.protocol.core.methods.response.EthGetTransactionReceipt response = executeWithRetry(
+                "getTransactionReceipt",
+                () -> web3j.ethGetTransactionReceipt(txHash).send()
+            );
             
             if (response.getTransactionReceipt().isPresent()) {
                 org.web3j.protocol.core.methods.response.TransactionReceipt web3jReceipt = 
@@ -163,7 +171,7 @@ public class RealBlockchainProvider implements BlockchainProvider {
     @Override
     public BigInteger getGasPrice() {
         try {
-            EthGasPrice gasPrice = web3j.ethGasPrice().send();
+            EthGasPrice gasPrice = executeWithRetry("getGasPrice", () -> web3j.ethGasPrice().send());
             log.debug("   [REAL] getGasPrice() = {} Gwei", gasPrice.getGasPrice().divide(BigInteger.valueOf(1_000_000_000)));
             return gasPrice.getGasPrice();
         } catch (Exception e) {
@@ -175,7 +183,7 @@ public class RealBlockchainProvider implements BlockchainProvider {
     @Override
     public BigInteger getNonce(String address) {
         try {
-            EthGetTransactionCount count = web3j.ethGetTransactionCount(address, DefaultBlockParameterName.LATEST).send();
+            EthGetTransactionCount count = executeWithRetry("getNonce", () -> web3j.ethGetTransactionCount(address, DefaultBlockParameterName.LATEST).send());
             log.debug("   [REAL] getNonce({}) = {}", address, count.getTransactionCount());
             return count.getTransactionCount();
         } catch (Exception e) {
@@ -187,7 +195,7 @@ public class RealBlockchainProvider implements BlockchainProvider {
     @Override
     public boolean isAvailable() {
         try {
-            web3j.web3ClientVersion().send();
+            executeWithRetry("isAvailable", () -> web3j.web3ClientVersion().send());
             return true;
         } catch (Exception e) {
             log.error("   [REAL] ❌ Blockchain não acessível");
@@ -198,5 +206,36 @@ public class RealBlockchainProvider implements BlockchainProvider {
     @Override
     public String getProviderName() {
         return "RealBlockchain (Polygon Amoy RPC)";
+    }
+
+    private <T> T executeWithRetry(String operation, ThrowingSupplier<T> action) throws Exception {
+        Exception lastError = null;
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                if (attempt > 1) {
+                    log.warn("   [REAL] 🔁 Retrying {} (attempt {}/{})", operation, attempt, MAX_RETRIES);
+                }
+                return action.get();
+            } catch (Exception e) {
+                lastError = e;
+            }
+
+            if (attempt < MAX_RETRIES) {
+                try {
+                    Thread.sleep(RETRY_DELAY_MS * attempt);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while retrying " + operation, interruptedException);
+                }
+            }
+        }
+
+        throw lastError != null ? lastError : new RuntimeException("Unknown failure during " + operation);
+    }
+
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws Exception;
     }
 }
