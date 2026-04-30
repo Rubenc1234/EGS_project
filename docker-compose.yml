@@ -29,11 +29,6 @@ services:
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./iam_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.keycloak.rule: Host(`keycloak.pt`)
-      traefik.http.routers.keycloak.entrypoints: web
-      traefik.http.services.keycloak.loadbalancer.server.port: "8080"
     networks:
       - egs-network
 
@@ -50,11 +45,6 @@ services:
       CLIENT_SECRET: 4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha
     depends_on:
       - keycloak
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.iam.rule: Host(`iam.pt`)
-      traefik.http.routers.iam.entrypoints: web
-      traefik.http.services.iam.loadbalancer.server.port: "5000"
     networks:
       - egs-network
 
@@ -68,7 +58,7 @@ services:
     volumes:
       - transaction_pgdata:/var/lib/postgresql/data
     networks:
-      - egs-network
+      - transactions-db-network
 
   transactions-service:
     build:
@@ -98,13 +88,9 @@ services:
       - transaction-postgres
       - keycloak
       - egs-notifications-api
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.transactions.rule: Host(`transactions.pt`)
-      traefik.http.routers.transactions.entrypoints: web
-      traefik.http.services.transactions.loadbalancer.server.port: "8081"
     networks:
       - egs-network
+      - transactions-db-network
 
   egs-notifications-postgres:
     image: postgres:15-alpine
@@ -116,7 +102,7 @@ services:
     volumes:
       - egs_notifications_postgres_data:/var/lib/postgresql/data
     networks:
-      - egs-network
+      - notifications-db-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -129,7 +115,7 @@ services:
     volumes:
       - egs_notifications_redis_data:/data
     networks:
-      - egs-network
+      - notifications-db-network
 
   egs-notifications-api:
     build:
@@ -150,13 +136,9 @@ services:
         condition: service_healthy
       egs-notifications-redis:
         condition: service_started
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.notifications.rule: Host(`notifications.pt`)
-      traefik.http.routers.notifications.entrypoints: web
-      traefik.http.services.notifications.loadbalancer.server.port: "8080"
     networks:
       - egs-network
+      - notifications-db-network
 
   payment-postgres:
     image: postgres:15
@@ -168,7 +150,7 @@ services:
     volumes:
       - payment_pgdata:/var/lib/postgresql/data
     networks:
-      - egs-network
+      - payment-db-network
 
   payment-keycloak:
     image: quay.io/keycloak/keycloak:26.1
@@ -183,11 +165,6 @@ services:
     volumes:
       - payment_keycloak_data:/opt/keycloak/data
       - ./payment_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.payment-keycloak.rule: Host(`payment-keycloak.pt`)
-      traefik.http.routers.payment-keycloak.entrypoints: web
-      traefik.http.services.payment-keycloak.loadbalancer.server.port: "8080"
     networks:
       - egs-network
 
@@ -209,13 +186,9 @@ services:
       - payment-postgres
       - payment-keycloak
       - transactions-service
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.payment-backend.rule: Host(`payment-api.pt`)
-      traefik.http.routers.payment-backend.entrypoints: web
-      traefik.http.services.payment-backend.loadbalancer.server.port: "5002"
     networks:
       - egs-network
+      - payment-db-network
 
   payment-frontend:
     build:
@@ -227,11 +200,6 @@ services:
       VITE_PAYMENT_DEFAULT_REDIRECT_URL: http://app.pt/dashboard
     depends_on:
       - payment-backend
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.payment-frontend.rule: Host(`payment.pt`)
-      traefik.http.routers.payment-frontend.entrypoints: web
-      traefik.http.services.payment-frontend.loadbalancer.server.port: "5174"
     networks:
       - egs-network
 
@@ -248,11 +216,6 @@ services:
     depends_on:
       - iam-service
       - transactions-service
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.frontend.rule: Host(`app.pt`)
-      traefik.http.routers.frontend.entrypoints: web
-      traefik.http.services.frontend.loadbalancer.server.port: "5175"
     networks:
       - egs-network
 
@@ -267,3 +230,15 @@ volumes:
 networks:
   egs-network:
     name: egs-network
+
+  transactions-db-network:
+    name: transactions-db-network
+    internal: true
+
+  payment-db-network:
+    name: payment-db-network
+    internal: true
+
+  notifications-db-network:
+    name: notifications-db-network
+    internal: true
