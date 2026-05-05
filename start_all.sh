@@ -4,13 +4,14 @@
 # Function to stop all processes on exit if something fails
 cleanup() {
     echo "Stopping all services..."
-    ./stop_all.sh
+    bash ./stop_all.sh
     exit
 }
 
 trap cleanup ERR INT TERM
 
 ENV_SCRIPT="./set_env.sh"
+VAULT_ENV_FILE="./.vault-env"
 
 if [[ -f "$ENV_SCRIPT" ]]; then
     echo "✅ Environment script '$ENV_SCRIPT' encontrado."
@@ -26,12 +27,20 @@ else
     exit 1
 fi
 
+# Bootstrap Vault with the current secrets and export them for the compose run.
+bash ./scripts/vault_bootstrap.sh
+bash ./scripts/vault_export_env.sh > "$VAULT_ENV_FILE"
+
+# shellcheck disable=SC1090
+source "$VAULT_ENV_FILE"
+
 # 1. Start the unified Docker Compose stack
 echo "Starting unified Docker stack..."
 docker-compose up -d --build
 
 echo "--------------------------------------------------"
 echo "All services started in background!"
+echo "Vault: http://localhost:8200 (internal container; used for secret bootstrap)"
 echo "Traefik: http://localhost"
 echo "App: http://app.pt"
 echo "Payment UI: http://payment.pt"

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+source "$ROOT_DIR/set_env.sh"
+
+read_env_value() {
+  local file_path="$1"
+  local key_name="$2"
+
+  awk -v key="$key_name" '
+    $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+      sub("^[[:space:]]*" key "[[:space:]]*=[[:space:]]*", "", $0)
+      gsub(/^"/, "", $0)
+      gsub(/"$/, "", $0)
+      print
+      exit
+    }
+  ' "$file_path"
+}
+
+quote_value() {
+  printf '%q' "$1"
+}
+
+require_file_value() {
+  local file_path="$1"
+  local key_name="$2"
+  local value
+  value="$(read_env_value "$file_path" "$key_name")"
+  if [[ -z "$value" ]]; then
+    echo "Missing $key_name in $file_path" >&2
+    exit 1
+  fi
+  printf '%s' "$value"
+}
+
+vault_up() {
+  docker-compose -f docker-compose.vault.yml up -d vault >/dev/null
+}
+
+wait_for_vault() {
+  local attempts=0
+  until docker-compose -f docker-compose.vault.yml exec -T vault sh -lc 'export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault status >/dev/null 2>&1'; do
+    attempts=$((attempts + 1))
+    if [[ $attempts -ge 30 ]]; then
+      echo "Vault did not become ready in time" >&2
+      exit 1
+    fi
+    sleep 1
+  done
+}
+
+vault_put() {
+  local path="$1"
+  shift
+
+  docker-compose -f docker-compose.vault.yml exec -T vault sh -s <<EOF
+set -eu
+export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_TOKEN=root
+vault kv put $path $*
+EOF
+}
+
+vault_up
+wait_for_vault
+
+iam_client_secret="$(require_file_value "$ROOT_DIR/.env" "CLIENT_SECRET")"
+payment_stripe_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "STRIPE_Secret_key")"
+payment_stripe_webhook_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "STRIPE_WEBHOOK_SECRET")"
+payment_client_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_CLIENT_SECRET")"
+notifications_db_url="$(require_file_value "$ROOT_DIR/notifications_service/.env" "DATABASE_URL")"
+transaction_db_password="mypassword"
+notifications_db_password="postgres"
+payment_db_password="paypassword"
+
+vault_put secret/egs/global \
+  master_key_secret="$(quote_value "$MASTER_KEY_SECRET")" \
+  blockchain_node_url="$(quote_value "$BLOCKCHAIN_NODE_URL")" \
+  notifications_api_key="$(quote_value "$NOTIFICATIONS_API_KEY")" \
+  notifications_api_key_payments="$(quote_value "$NOTIFICATIONS_API_KEY_PAYMENTS")"
+
+vault_put secret/egs/iam \
+  client_secret="$(quote_value "$iam_client_secret")" \
+  keycloak_admin_password="$(quote_value "admin")"
+
+vault_put secret/egs/transactions \
+  keycloak_client_secret="$(quote_value "$iam_client_secret")" \
+  master_key_for_wallet="$(quote_value "$MASTER_KEY_FOR_WALLET")" \
+  app_internal_api_key="$(quote_value "test-key-12345")" \
+  transaction_db_password="$(quote_value "$transaction_db_password")"
+
+vault_put secret/egs/notifications \
+  master_admin_secret="$(quote_value "$MASTER_ADMIN_SECRET")" \
+  jwt_secret="$(quote_value "$JWT_SECRET")" \
+  database_url="$(quote_value "$notifications_db_url")" \
+  notifications_db_password="$(quote_value "$notifications_db_password")"
+
+vault_put secret/egs/payment \
+  stripe_secret_key="$(quote_value "$payment_stripe_secret")" \
+  stripe_webhook_secret="$(quote_value "$payment_stripe_webhook_secret")" \
+  payment_client_secret="$(quote_value "$payment_client_secret")" \
+  keycloak_admin_password="$(quote_value "admin")" \
+  payment_db_password="$(quote_value "$payment_db_password")"
+
+echo "Vault bootstrap completed."

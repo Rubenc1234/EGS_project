@@ -5,6 +5,7 @@
 # 1. Stop the unified Docker Compose stack
 echo "Stopping unified Docker stack..."
 docker-compose down
+docker-compose -f docker-compose.vault.yml down 2>/dev/null || true
 
 # 2. Forcefully free the specific ports if still in use
 echo "Cleaning up ports (5000, 5001, 5002, 5003, 8080, 8081, 8082, 8083, 5174, 5175, 5432, 5433, 6379)..."

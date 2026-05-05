@@ -18,3 +18,7 @@ fund_wallets.sh
 
 # node modules
 frontend/node_modules/
+
+#
+traefik/certs
+.vault-env
