@@ -19,16 +19,21 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.1
     container_name: keycloak
-    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HOSTNAME: http://keycloak.pt
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      ENV_FILE: /vault/secrets/keycloak.env
+    entrypoint: ["sh", "/vault/entrypoint.sh", "/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+    user: "0"
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./iam_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+      - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
+      - vault-keycloak:/vault/secrets
+    depends_on:
+      - vault-agent-keycloak
     networks:
       - egs-network
 
@@ -42,9 +47,12 @@ services:
       KEYCLOAK_PUBLIC_URL: http://keycloak.pt
       REALM: microservices
       CLIENT_ID: iam-service
-      CLIENT_SECRET: ${IAM_CLIENT_SECRET}
+      ENV_FILE: /vault/secrets/iam.env
     depends_on:
       - keycloak
+      - vault-agent-iam
+    volumes:
+      - vault-iam:/vault/secrets
     networks:
       - egs-network
 
@@ -53,10 +61,15 @@ services:
     container_name: transaction-postgres
     environment:
       POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: ${TRANSACTION_DB_PASSWORD}
       POSTGRES_DB: transaction_db
+      ENV_FILE: /vault/secrets/transaction-postgres.env
+    entrypoint: ["sh", "/vault/entrypoint.sh", "docker-entrypoint.sh", "postgres"]
     volumes:
       - transaction_pgdata:/var/lib/postgresql/data
+      - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
+      - vault-transaction-postgres:/vault/secrets
+    depends_on:
+      - vault-agent-transaction-postgres
     networks:
       - transactions-db-network
 
@@ -66,28 +79,26 @@ services:
       dockerfile: Dockerfile
     container_name: transactions-service
     environment:
-      MASTER_KEY_FOR_WALLET: ${MASTER_KEY_FOR_WALLET:-}
-      BLOCKCHAIN_NODE_URL: ${BLOCKCHAIN_NODE_URL:-}
       SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-postgres:5432/transaction_db
       SPRING_DATASOURCE_USERNAME: myuser
-      SPRING_DATASOURCE_PASSWORD: ${TRANSACTION_DB_PASSWORD}
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_PUBLIC_URL: http://keycloak.pt
       KEYCLOAK_REALM: microservices
       KEYCLOAK_CLIENT_ID: iam-service
-      KEYCLOAK_CLIENT_SECRET: ${IAM_CLIENT_SECRET}
       APP_DEV_MODE: "false"
       APP_BANK_WALLET: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
       APP_PAYMENT_SERVICE_URL: http://payment-backend:5002
-      APP_INTERNAL_API_KEY: ${APP_INTERNAL_API_KEY}
       APP_TRANSACTION_FEE_PERCENTAGE: "2.0"
       APP_TRANSACTION_FEE_RECIPIENT: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
       NOTIFICATIONS_BASE_URL: http://egs-notifications-api:8080
-      NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY}
+      ENV_FILE: /vault/secrets/transactions.env
     depends_on:
       - transaction-postgres
       - keycloak
       - egs-notifications-api
+      - vault-agent-transactions
+    volumes:
+      - vault-transactions:/vault/secrets
     networks:
       - egs-network
       - transactions-db-network
@@ -97,10 +108,15 @@ services:
     container_name: egs_notifications_postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
       POSTGRES_DB: notifications
+      ENV_FILE: /vault/secrets/notifications-postgres.env
+    entrypoint: ["sh", "/vault/entrypoint.sh", "docker-entrypoint.sh", "postgres"]
     volumes:
       - egs_notifications_postgres_data:/var/lib/postgresql/data
+      - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
+      - vault-notifications-postgres:/vault/secrets
+    depends_on:
+      - vault-agent-notifications-postgres
     networks:
       - notifications-db-network
     healthcheck:
@@ -126,16 +142,15 @@ services:
     environment:
       PORT: 8080
       GIN_MODE: release
-      MASTER_ADMIN_SECRET: ${MASTER_ADMIN_SECRET}
-      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MINUTES: "15"
-      DATABASE_URL: host=egs_notifications_postgres user=postgres password=${NOTIFICATIONS_DB_PASSWORD} dbname=notifications port=5432 sslmode=disable TimeZone=UTC
       REDIS_URL: egs_notifications_redis:6379
+      ENV_FILE: /vault/secrets/notifications.env
     depends_on:
-      egs-notifications-postgres:
-        condition: service_healthy
-      egs-notifications-redis:
-        condition: service_started
+      - egs-notifications-postgres
+      - egs-notifications-redis
+      - vault-agent-notifications
+    volumes:
+      - vault-notifications:/vault/secrets
     networks:
       - egs-network
       - notifications-db-network
@@ -145,26 +160,36 @@ services:
     container_name: payment-postgres
     environment:
       POSTGRES_USER: payuser
-      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD}
       POSTGRES_DB: payment_db
+      ENV_FILE: /vault/secrets/payment-postgres.env
+    entrypoint: ["sh", "/vault/entrypoint.sh", "docker-entrypoint.sh", "postgres"]
     volumes:
       - payment_pgdata:/var/lib/postgresql/data
+      - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
+      - vault-payment-postgres:/vault/secrets
+    depends_on:
+      - vault-agent-payment-postgres
     networks:
       - payment-db-network
 
   payment-keycloak:
     image: quay.io/keycloak/keycloak:26.1
     container_name: payment-keycloak
-    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: ${PAYMENT_KEYCLOAK_ADMIN_PASSWORD}
       KC_HOSTNAME: http://payment-keycloak.pt
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      ENV_FILE: /vault/secrets/payment-keycloak.env
+    entrypoint: ["sh", "/vault/entrypoint.sh", "/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+    user: "0"
     volumes:
       - payment_keycloak_data:/opt/keycloak/data
       - ./payment_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+      - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
+      - vault-payment-keycloak:/vault/secrets
+    depends_on:
+      - vault-agent-payment-keycloak
     networks:
       - egs-network
 
@@ -174,21 +199,20 @@ services:
       dockerfile: Dockerfile.backend
     container_name: payment-backend
     environment:
-      DATABASE_URL: postgresql://payuser:${PAYMENT_DB_PASSWORD}@payment-postgres:5432/payment_db
       PAYMENT_KEYCLOAK_URL: http://payment-keycloak:8080
       PAYMENT_KEYCLOAK_PUBLIC_URL: http://payment-keycloak.pt
       PAYMENT_PUBLIC_URL: http://payment.pt
       PAYMENT_REALM: payments-realm
       PAYMENT_CLIENT_ID: payments-client
-      PAYMENT_CLIENT_SECRET: ${PAYMENT_CLIENT_SECRET}
       TRANSACTIONS_SERVICE_URL: http://transactions-service:8081
-      NOTIFICATIONS_API_KEY: ${NOTIFICATIONS_API_KEY_PAYMENTS}
-      STRIPE_SECRET_KEY: ${PAYMENT_STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${PAYMENT_STRIPE_WEBHOOK_SECRET}
+      ENV_FILE: /vault/secrets/payment.env
     depends_on:
       - payment-postgres
       - payment-keycloak
       - transactions-service
+      - vault-agent-payment
+    volumes:
+      - vault-payment:/vault/secrets
     networks:
       - egs-network
       - payment-db-network
@@ -222,6 +246,150 @@ services:
     networks:
       - egs-network
 
+  vault-agent-transactions:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-transactions
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/transactions.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-transactions:/vault/secrets
+      - ./.vault/approle/transactions/role_id:/vault/role_id:ro
+      - ./.vault/approle/transactions/secret_id:/vault/secret_id:ro
+      - ./vault/agent/transactions.hcl:/vault/config/transactions.hcl:ro
+      - ./vault/templates/transactions.env.tmpl:/vault/templates/transactions.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-iam:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-iam
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/iam.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-iam:/vault/secrets
+      - ./.vault/approle/iam/role_id:/vault/role_id:ro
+      - ./.vault/approle/iam/secret_id:/vault/secret_id:ro
+      - ./vault/agent/iam.hcl:/vault/config/iam.hcl:ro
+      - ./vault/templates/iam.env.tmpl:/vault/templates/iam.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-notifications:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-notifications
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/notifications.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-notifications:/vault/secrets
+      - ./.vault/approle/notifications/role_id:/vault/role_id:ro
+      - ./.vault/approle/notifications/secret_id:/vault/secret_id:ro
+      - ./vault/agent/notifications.hcl:/vault/config/notifications.hcl:ro
+      - ./vault/templates/notifications.env.tmpl:/vault/templates/notifications.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-payment:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-payment
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/payment.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-payment:/vault/secrets
+      - ./.vault/approle/payment/role_id:/vault/role_id:ro
+      - ./.vault/approle/payment/secret_id:/vault/secret_id:ro
+      - ./vault/agent/payment.hcl:/vault/config/payment.hcl:ro
+      - ./vault/templates/payment.env.tmpl:/vault/templates/payment.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-transaction-postgres:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-transaction-postgres
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/transaction-postgres.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-transaction-postgres:/vault/secrets
+      - ./.vault/approle/transaction-postgres/role_id:/vault/role_id:ro
+      - ./.vault/approle/transaction-postgres/secret_id:/vault/secret_id:ro
+      - ./vault/agent/transaction-postgres.hcl:/vault/config/transaction-postgres.hcl:ro
+      - ./vault/templates/transaction-postgres.env.tmpl:/vault/templates/transaction-postgres.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-notifications-postgres:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-notifications-postgres
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/notifications-postgres.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-notifications-postgres:/vault/secrets
+      - ./.vault/approle/notifications-postgres/role_id:/vault/role_id:ro
+      - ./.vault/approle/notifications-postgres/secret_id:/vault/secret_id:ro
+      - ./vault/agent/notifications-postgres.hcl:/vault/config/notifications-postgres.hcl:ro
+      - ./vault/templates/notifications-postgres.env.tmpl:/vault/templates/notifications-postgres.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-payment-postgres:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-payment-postgres
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/payment-postgres.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-payment-postgres:/vault/secrets
+      - ./.vault/approle/payment-postgres/role_id:/vault/role_id:ro
+      - ./.vault/approle/payment-postgres/secret_id:/vault/secret_id:ro
+      - ./vault/agent/payment-postgres.hcl:/vault/config/payment-postgres.hcl:ro
+      - ./vault/templates/payment-postgres.env.tmpl:/vault/templates/payment-postgres.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-keycloak:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-keycloak
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/keycloak.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-keycloak:/vault/secrets
+      - ./.vault/approle/keycloak/role_id:/vault/role_id:ro
+      - ./.vault/approle/keycloak/secret_id:/vault/secret_id:ro
+      - ./vault/agent/keycloak.hcl:/vault/config/keycloak.hcl:ro
+      - ./vault/templates/keycloak.env.tmpl:/vault/templates/keycloak.env.tmpl:ro
+    networks:
+      - egs-network
+
+  vault-agent-payment-keycloak:
+    image: hashicorp/vault:1.17
+    container_name: vault-agent-payment-keycloak
+    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/payment-keycloak.hcl"
+    user: "0"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-payment-keycloak:/vault/secrets
+      - ./.vault/approle/payment-keycloak/role_id:/vault/role_id:ro
+      - ./.vault/approle/payment-keycloak/secret_id:/vault/secret_id:ro
+      - ./vault/agent/payment-keycloak.hcl:/vault/config/payment-keycloak.hcl:ro
+      - ./vault/templates/payment-keycloak.env.tmpl:/vault/templates/payment-keycloak.env.tmpl:ro
+    networks:
+      - egs-network
+
 volumes:
   keycloak_data:
   transaction_pgdata:
@@ -229,10 +397,20 @@ volumes:
   egs_notifications_redis_data:
   payment_pgdata:
   payment_keycloak_data:
+  vault-iam:
+  vault-transactions:
+  vault-notifications:
+  vault-payment:
+  vault-keycloak:
+  vault-payment-keycloak:
+  vault-transaction-postgres:
+  vault-notifications-postgres:
+  vault-payment-postgres:
 
 networks:
   egs-network:
     name: egs-network
+    external: true
 
   transactions-db-network:
     name: transactions-db-network

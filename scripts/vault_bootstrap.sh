@@ -37,6 +37,9 @@ require_file_value() {
 }
 
 vault_up() {
+  if ! docker network inspect egs-network >/dev/null 2>&1; then
+    docker network create egs-network >/dev/null
+  fi
   docker-compose -f docker-compose.vault.yml up -d vault >/dev/null
 }
 
@@ -91,6 +94,102 @@ vault_put secret/egs/transactions \
   master_key_for_wallet="$(quote_value "$MASTER_KEY_FOR_WALLET")" \
   app_internal_api_key="$(quote_value "test-key-12345")" \
   transaction_db_password="$(quote_value "$transaction_db_password")"
+
+docker-compose -f docker-compose.vault.yml exec -T vault sh -s <<'EOF'
+set -eu
+export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_TOKEN=root
+vault auth enable approle || true
+vault policy write egs-transactions - <<'POLICY'
+path "secret/data/egs/transactions" {
+  capabilities = ["read"]
+}
+
+path "secret/data/egs/global" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-iam - <<'POLICY'
+path "secret/data/egs/iam" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-notifications - <<'POLICY'
+path "secret/data/egs/notifications" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-payment - <<'POLICY'
+path "secret/data/egs/payment" {
+  capabilities = ["read"]
+}
+
+path "secret/data/egs/global" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-transaction-postgres - <<'POLICY'
+path "secret/data/egs/transactions" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-notifications-postgres - <<'POLICY'
+path "secret/data/egs/notifications" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-payment-postgres - <<'POLICY'
+path "secret/data/egs/payment" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-keycloak - <<'POLICY'
+path "secret/data/egs/iam" {
+  capabilities = ["read"]
+}
+POLICY
+vault policy write egs-payment-keycloak - <<'POLICY'
+path "secret/data/egs/payment" {
+  capabilities = ["read"]
+}
+POLICY
+vault write auth/approle/role/transactions \
+  token_policies="egs-transactions" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/iam \
+  token_policies="egs-iam" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/notifications \
+  token_policies="egs-notifications" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/payment \
+  token_policies="egs-payment" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/transaction-postgres \
+  token_policies="egs-transaction-postgres" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/notifications-postgres \
+  token_policies="egs-notifications-postgres" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/payment-postgres \
+  token_policies="egs-payment-postgres" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/keycloak \
+  token_policies="egs-keycloak" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+vault write auth/approle/role/payment-keycloak \
+  token_policies="egs-payment-keycloak" \
+  token_ttl="1h" \
+  token_max_ttl="4h"
+EOF
 
 vault_put secret/egs/notifications \
   master_admin_secret="$(quote_value "$MASTER_ADMIN_SECRET")" \

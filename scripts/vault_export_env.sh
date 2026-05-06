@@ -11,21 +11,34 @@ export_secret() {
   printf 'export %s=%q\n' "$env_name" "$value"
 }
 
-export_secret MASTER_KEY_SECRET secret/egs/global master_key_secret
-export_secret BLOCKCHAIN_NODE_URL secret/egs/global blockchain_node_url
-export_secret NOTIFICATIONS_API_KEY secret/egs/global notifications_api_key
-export_secret NOTIFICATIONS_API_KEY_PAYMENTS secret/egs/global notifications_api_key_payments
-export_secret IAM_CLIENT_SECRET secret/egs/iam client_secret
+export_approle_role_id() {
+  local env_name="$1"
+  local role_name="$2"
+  local value
+
+  value="$(docker-compose -f docker-compose.vault.yml exec -T vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault read -field=role_id auth/approle/role/${role_name}/role-id")"
+  printf 'export %s=%q\n' "$env_name" "$value"
+}
+
+export_approle_secret_id() {
+  local env_name="$1"
+  local role_name="$2"
+  local value
+
+  value="$(docker-compose -f docker-compose.vault.yml exec -T vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault write -f -field=secret_id auth/approle/role/${role_name}/secret-id")"
+  printf 'export %s=%q\n' "$env_name" "$value"
+}
+
 export_secret KEYCLOAK_ADMIN_PASSWORD secret/egs/iam keycloak_admin_password
-export_secret KEYCLOAK_CLIENT_SECRET secret/egs/transactions keycloak_client_secret
-export_secret MASTER_KEY_FOR_WALLET secret/egs/transactions master_key_for_wallet
-export_secret APP_INTERNAL_API_KEY secret/egs/transactions app_internal_api_key
 export_secret TRANSACTION_DB_PASSWORD secret/egs/transactions transaction_db_password
-export_secret MASTER_ADMIN_SECRET secret/egs/notifications master_admin_secret
-export_secret JWT_SECRET secret/egs/notifications jwt_secret
 export_secret NOTIFICATIONS_DB_PASSWORD secret/egs/notifications notifications_db_password
-export_secret PAYMENT_STRIPE_SECRET_KEY secret/egs/payment stripe_secret_key
-export_secret PAYMENT_STRIPE_WEBHOOK_SECRET secret/egs/payment stripe_webhook_secret
-export_secret PAYMENT_CLIENT_SECRET secret/egs/payment payment_client_secret
 export_secret PAYMENT_KEYCLOAK_ADMIN_PASSWORD secret/egs/payment keycloak_admin_password
 export_secret PAYMENT_DB_PASSWORD secret/egs/payment payment_db_password
+export_approle_role_id TRANSACTIONS_VAULT_ROLE_ID transactions
+export_approle_secret_id TRANSACTIONS_VAULT_SECRET_ID transactions
+export_approle_role_id IAM_VAULT_ROLE_ID iam
+export_approle_secret_id IAM_VAULT_SECRET_ID iam
+export_approle_role_id NOTIFICATIONS_VAULT_ROLE_ID notifications
+export_approle_secret_id NOTIFICATIONS_VAULT_SECRET_ID notifications
+export_approle_role_id PAYMENT_VAULT_ROLE_ID payment
+export_approle_secret_id PAYMENT_VAULT_SECRET_ID payment

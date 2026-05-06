@@ -14,7 +14,10 @@ services:
       - "8200:8200"
     networks:
       - vault-network
+      - egs-network
 
 networks:
   vault-network:
     name: vault-network
+  egs-network:
+    external: true

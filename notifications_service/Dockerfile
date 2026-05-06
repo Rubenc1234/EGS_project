@@ -26,12 +26,14 @@ FROM alpine:latest
 WORKDIR /app
 
 # Install ca-certificates for Web Push external HTTPS requests
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates tzdata curl jq
 
 COPY --from=builder /app/egs-notifications .
 COPY --from=builder /app/docs ./docs
 COPY --from=builder /app/webagent ./webagent
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["./egs-notifications"]
+ENTRYPOINT ["/app/entrypoint.sh"]
