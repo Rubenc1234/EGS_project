@@ -50,7 +50,9 @@
       "redirectUris": [
         "http://localhost:8081/v1/callback",
         "http://localhost:5173/callback",
+        "http://transactions.pt/v1/callback",
         "http://transactions.pt/*",
+        "http://app.pt/callback",
         "http://app.pt/*"
       ],
       "webOrigins": [
@@ -58,6 +60,7 @@
       ],
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
       "authorizationServicesEnabled": true
     }
   ]

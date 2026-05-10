@@ -1,0 +1,35 @@
+apiVersion: 1
+
+datasources:
+  - name: Transactions-DB
+    type: postgres
+    url: transaction-postgres:5432
+    database: transaction_db
+    user: myuser
+    secureJsonData:
+      password: ${TRANSACTION_DB_PASSWORD}
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 15
+
+  - name: Notifications-DB
+    type: postgres
+    url: egs_notifications_postgres:5432
+    database: notifications
+    user: postgres
+    secureJsonData:
+      password: ${NOTIFICATIONS_DB_PASSWORD}
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 15
+
+  - name: Payments-DB
+    type: postgres
+    url: payment-postgres:5432
+    database: payment_db
+    user: payuser
+    secureJsonData:
+      password: ${PAYMENT_DB_PASSWORD}
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 15

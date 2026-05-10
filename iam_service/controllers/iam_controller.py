@@ -59,7 +59,7 @@ def register_routes(app):
         session['post_login_redirect'] = callback_url
         
         login_url = (
-            f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/auth?"
+            f"{KEYCLOAK_PUBLIC_URL}/realms/{REALM}/protocol/openid-connect/auth?"
             f"client_id={urllib.parse.quote(CLIENT_ID)}&"
             f"response_type=code&"
             f"redirect_uri={urllib.parse.quote(callback_url)}&"

@@ -112,6 +112,7 @@ Para parar:
 - Notifications: http://notifications.pt
 - Keycloak: http://keycloak.pt
 - Payment Keycloak: http://payment-keycloak.pt
+- Grafana: http://grafana.pt
 
 ## Nota rápida
 
