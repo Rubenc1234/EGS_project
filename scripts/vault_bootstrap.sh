@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# This script seeds Vault with the secrets the stack needs.
+# It is safe to run again when you want to refresh the stored values.
 source "$ROOT_DIR/set_env.sh"
 
 read_env_value() {
@@ -37,6 +39,7 @@ require_file_value() {
 }
 
 vault_up() {
+  # Keep Vault on the shared app network and start the dev container if needed.
   if ! docker network inspect egs-network >/dev/null 2>&1; then
     docker network create egs-network >/dev/null
   fi
@@ -44,6 +47,7 @@ vault_up() {
 }
 
 wait_for_vault() {
+  # Wait until the dev Vault accepts commands before writing secrets.
   local attempts=0
   until docker-compose -f docker-compose.vault.yml exec -T vault sh -lc 'export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault status >/dev/null 2>&1'; do
     attempts=$((attempts + 1))
@@ -56,6 +60,7 @@ wait_for_vault() {
 }
 
 vault_put() {
+  # Store one KV v2 secret path in Vault using the root token.
   local path="$1"
   shift
 

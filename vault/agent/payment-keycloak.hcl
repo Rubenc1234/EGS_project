@@ -11,7 +11,7 @@ auto_auth {
   }
   sink "file" {
     config = {
-      path = "/vault/token"
+      path = "/vault/secrets/token"
     }
   }
 }
@@ -23,4 +23,4 @@ template {
 }
 
 exit_after_auth = false
-pid_file = "/vault/agent.pid"
+pid_file = "/vault/secrets/agent.pid"

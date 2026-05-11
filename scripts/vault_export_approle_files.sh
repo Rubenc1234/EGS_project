@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APPROLE_DIR="$ROOT_DIR/.vault/approle"
 
+# Export the AppRole credentials from Vault into local files.
+# The Vault Agents read these files to authenticate on startup.
 mkdir -p "$APPROLE_DIR"
 
 write_file() {
@@ -26,6 +28,7 @@ write_secret_id() {
 }
 
 create_approle_files() {
+  # Each role gets its own folder with a role_id and secret_id file.
   local role_name="$1"
   local target_dir="$APPROLE_DIR/$role_name"
   local role_id

@@ -26,12 +26,11 @@ services:
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       ENV_FILE: /vault/secrets/keycloak.env
     entrypoint: ["sh", "/vault/entrypoint.sh", "/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
-    user: "0"
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./iam_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
       - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
-      - vault-keycloak:/vault/secrets
+      - ./.vault/secrets/keycloak:/vault/secrets:ro
     depends_on:
       - vault-agent-keycloak
     networks:
@@ -52,7 +51,7 @@ services:
       - keycloak
       - vault-agent-iam
     volumes:
-      - vault-iam:/vault/secrets
+      - ./.vault/secrets/iam:/vault/secrets:ro
     networks:
       - egs-network
 
@@ -67,7 +66,7 @@ services:
     volumes:
       - transaction_pgdata:/var/lib/postgresql/data
       - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
-      - vault-transaction-postgres:/vault/secrets
+      - ./.vault/secrets/transaction-postgres:/vault/secrets:ro
     depends_on:
       - vault-agent-transaction-postgres
     networks:
@@ -98,7 +97,7 @@ services:
       - egs-notifications-api
       - vault-agent-transactions
     volumes:
-      - vault-transactions:/vault/secrets
+      - ./.vault/secrets/transactions:/vault/secrets:ro
     networks:
       - egs-network
       - transactions-db-network
@@ -114,7 +113,7 @@ services:
     volumes:
       - egs_notifications_postgres_data:/var/lib/postgresql/data
       - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
-      - vault-notifications-postgres:/vault/secrets
+      - ./.vault/secrets/notifications-postgres:/vault/secrets:ro
     depends_on:
       - vault-agent-notifications-postgres
     networks:
@@ -150,7 +149,7 @@ services:
       - egs-notifications-redis
       - vault-agent-notifications
     volumes:
-      - vault-notifications:/vault/secrets
+      - ./.vault/secrets/notifications:/vault/secrets:ro
     networks:
       - egs-network
       - notifications-db-network
@@ -166,7 +165,7 @@ services:
     volumes:
       - payment_pgdata:/var/lib/postgresql/data
       - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
-      - vault-payment-postgres:/vault/secrets
+      - ./.vault/secrets/payment-postgres:/vault/secrets:ro
     depends_on:
       - vault-agent-payment-postgres
     networks:
@@ -182,12 +181,11 @@ services:
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       ENV_FILE: /vault/secrets/payment-keycloak.env
     entrypoint: ["sh", "/vault/entrypoint.sh", "/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
-    user: "0"
     volumes:
       - payment_keycloak_data:/opt/keycloak/data
       - ./payment_service/realm-export.json:/opt/keycloak/data/import/realm.json:ro
       - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
-      - vault-payment-keycloak:/vault/secrets
+      - ./.vault/secrets/payment-keycloak:/vault/secrets:ro
     depends_on:
       - vault-agent-payment-keycloak
     networks:
@@ -212,7 +210,7 @@ services:
       - transactions-service
       - vault-agent-payment
     volumes:
-      - vault-payment:/vault/secrets
+      - ./.vault/secrets/payment:/vault/secrets:ro
     networks:
       - egs-network
       - payment-db-network
@@ -249,12 +247,14 @@ services:
   vault-agent-transactions:
     image: hashicorp/vault:1.17
     container_name: vault-agent-transactions
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/transactions.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/transactions.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-transactions:/vault/secrets
+      - ./.vault/secrets/transactions:/vault/secrets
       - ./.vault/approle/transactions/role_id:/vault/role_id:ro
       - ./.vault/approle/transactions/secret_id:/vault/secret_id:ro
       - ./vault/agent/transactions.hcl:/vault/config/transactions.hcl:ro
@@ -265,12 +265,14 @@ services:
   vault-agent-iam:
     image: hashicorp/vault:1.17
     container_name: vault-agent-iam
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/iam.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/iam.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-iam:/vault/secrets
+      - ./.vault/secrets/iam:/vault/secrets
       - ./.vault/approle/iam/role_id:/vault/role_id:ro
       - ./.vault/approle/iam/secret_id:/vault/secret_id:ro
       - ./vault/agent/iam.hcl:/vault/config/iam.hcl:ro
@@ -281,12 +283,14 @@ services:
   vault-agent-notifications:
     image: hashicorp/vault:1.17
     container_name: vault-agent-notifications
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/notifications.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/notifications.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-notifications:/vault/secrets
+      - ./.vault/secrets/notifications:/vault/secrets
       - ./.vault/approle/notifications/role_id:/vault/role_id:ro
       - ./.vault/approle/notifications/secret_id:/vault/secret_id:ro
       - ./vault/agent/notifications.hcl:/vault/config/notifications.hcl:ro
@@ -297,12 +301,14 @@ services:
   vault-agent-payment:
     image: hashicorp/vault:1.17
     container_name: vault-agent-payment
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/payment.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/payment.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-payment:/vault/secrets
+      - ./.vault/secrets/payment:/vault/secrets
       - ./.vault/approle/payment/role_id:/vault/role_id:ro
       - ./.vault/approle/payment/secret_id:/vault/secret_id:ro
       - ./vault/agent/payment.hcl:/vault/config/payment.hcl:ro
@@ -313,12 +319,14 @@ services:
   vault-agent-transaction-postgres:
     image: hashicorp/vault:1.17
     container_name: vault-agent-transaction-postgres
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/transaction-postgres.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/transaction-postgres.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-transaction-postgres:/vault/secrets
+      - ./.vault/secrets/transaction-postgres:/vault/secrets
       - ./.vault/approle/transaction-postgres/role_id:/vault/role_id:ro
       - ./.vault/approle/transaction-postgres/secret_id:/vault/secret_id:ro
       - ./vault/agent/transaction-postgres.hcl:/vault/config/transaction-postgres.hcl:ro
@@ -329,12 +337,14 @@ services:
   vault-agent-notifications-postgres:
     image: hashicorp/vault:1.17
     container_name: vault-agent-notifications-postgres
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/notifications-postgres.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/notifications-postgres.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-notifications-postgres:/vault/secrets
+      - ./.vault/secrets/notifications-postgres:/vault/secrets
       - ./.vault/approle/notifications-postgres/role_id:/vault/role_id:ro
       - ./.vault/approle/notifications-postgres/secret_id:/vault/secret_id:ro
       - ./vault/agent/notifications-postgres.hcl:/vault/config/notifications-postgres.hcl:ro
@@ -345,12 +355,14 @@ services:
   vault-agent-payment-postgres:
     image: hashicorp/vault:1.17
     container_name: vault-agent-payment-postgres
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/payment-postgres.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/payment-postgres.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-payment-postgres:/vault/secrets
+      - ./.vault/secrets/payment-postgres:/vault/secrets
       - ./.vault/approle/payment-postgres/role_id:/vault/role_id:ro
       - ./.vault/approle/payment-postgres/secret_id:/vault/secret_id:ro
       - ./vault/agent/payment-postgres.hcl:/vault/config/payment-postgres.hcl:ro
@@ -361,12 +373,14 @@ services:
   vault-agent-keycloak:
     image: hashicorp/vault:1.17
     container_name: vault-agent-keycloak
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/keycloak.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/keycloak.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-keycloak:/vault/secrets
+      - ./.vault/secrets/keycloak:/vault/secrets
       - ./.vault/approle/keycloak/role_id:/vault/role_id:ro
       - ./.vault/approle/keycloak/secret_id:/vault/secret_id:ro
       - ./vault/agent/keycloak.hcl:/vault/config/keycloak.hcl:ro
@@ -377,12 +391,14 @@ services:
   vault-agent-payment-keycloak:
     image: hashicorp/vault:1.17
     container_name: vault-agent-payment-keycloak
-    command: sh -c "chmod 777 /vault/secrets && vault agent -config=/vault/config/payment-keycloak.hcl"
-    user: "0"
-    cap_add:
-      - IPC_LOCK
+    entrypoint: ["vault"]
+    command: ["agent", "-config=/vault/config/payment-keycloak.hcl"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+      SKIP_SETCAP: "1"
     volumes:
-      - vault-payment-keycloak:/vault/secrets
+      - ./.vault/secrets/payment-keycloak:/vault/secrets
       - ./.vault/approle/payment-keycloak/role_id:/vault/role_id:ro
       - ./.vault/approle/payment-keycloak/secret_id:/vault/secret_id:ro
       - ./vault/agent/payment-keycloak.hcl:/vault/config/payment-keycloak.hcl:ro
@@ -397,15 +413,6 @@ volumes:
   egs_notifications_redis_data:
   payment_pgdata:
   payment_keycloak_data:
-  vault-iam:
-  vault-transactions:
-  vault-notifications:
-  vault-payment:
-  vault-keycloak:
-  vault-payment-keycloak:
-  vault-transaction-postgres:
-  vault-notifications-postgres:
-  vault-payment-postgres:
 
 networks:
   egs-network:
