@@ -48,6 +48,12 @@ http:
         - web
       service: payment-keycloak
 
+    grafana:
+      rule: Host(`grafana.pt`)
+      entryPoints:
+        - web
+      service: grafana
+
   services:
     frontend:
       loadBalancer:
@@ -88,3 +94,8 @@ http:
       loadBalancer:
         servers:
           - url: http://payment-keycloak:8080
+
+    grafana:
+      loadBalancer:
+        servers:
+          - url: http://grafana:3000

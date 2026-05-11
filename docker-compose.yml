@@ -244,6 +244,26 @@ services:
     networks:
       - egs-network
 
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - TRANSACTION_DB_PASSWORD=${TRANSACTION_DB_PASSWORD:-mypassword}
+      - NOTIFICATIONS_DB_PASSWORD=${NOTIFICATIONS_DB_PASSWORD:-postgres}
+      - PAYMENT_DB_PASSWORD=${PAYMENT_DB_PASSWORD:-paypassword}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - egs-network
+      - transactions-db-network
+      - notifications-db-network
+      - payment-db-network
+    depends_on:
+      - transaction-postgres
+      - egs-notifications-postgres
+      - payment-postgres
+
   vault-agent-transactions:
     image: hashicorp/vault:1.17
     container_name: vault-agent-transactions

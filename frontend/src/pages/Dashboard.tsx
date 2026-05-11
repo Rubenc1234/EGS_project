@@ -431,8 +431,11 @@ export default function Dashboard() {
                       {isSender && <Typography variant="caption" display="block" color="textSecondary">Outbound to {t.to?.substring(0, 10)}...</Typography>}
                       {isReceiver && <Typography variant="caption" display="block" color="textSecondary">Inbound from {t.from?.substring(0, 10)}...</Typography>}
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                      €{parseFloat(t.amount || '0').toFixed(2)}
+                    <TableCell align="right" sx={{ 
+                      fontWeight: 'bold',
+                      color: isSender ? 'error.main' : (isReceiver ? 'success.main' : 'inherit')
+                    }}>
+                      {isSender ? '-' : ''}€{parseFloat(t.amount || '0').toFixed(2)}
                     </TableCell>
                     <TableCell>
                       {(() => {

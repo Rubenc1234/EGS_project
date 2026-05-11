@@ -38,6 +38,7 @@ $HOST_IP notifications.pt
 $HOST_IP transactions.pt
 $HOST_IP keycloak.pt
 $HOST_IP payment-keycloak.pt
+$HOST_IP grafana.pt
 $MARKER_END
 EOF
 

@@ -14,7 +14,6 @@ from payment_service import config
 
 log = logging.getLogger(__name__)
 
-INTERNAL_KEY = config.NOTIFICATIONS_API_KEY
 DEFAULT_CALLBACK_URL = f"{config.PAYMENT_PUBLIC_URL.rstrip('/')}/callback"
 
 
@@ -46,8 +45,10 @@ def require_token(f):
     def decorated(*args, **kwargs):
         # 1. Check for Internal API Key bypass
         internal_key = request.headers.get("X-Internal-Key")
-        if internal_key and internal_key == INTERNAL_KEY and INTERNAL_KEY:
-            log.info("Bypassing token check via internal API key")
+        current_internal_key = config.NOTIFICATIONS_API_KEY
+        log.warning("Checking bypass: received=%s, expected=%s", internal_key, current_internal_key)
+        if internal_key and current_internal_key and internal_key == current_internal_key:
+            log.warning("Bypassing token check via internal API key")
             return f(*args, **kwargs)
 
         # 2. Regular OIDC/Keycloak check

@@ -297,6 +297,22 @@ func processEmailAsync(db *gorm.DB, client models.Client, userIDs []string, emai
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		slog.Error("SendGrid API error", "status", resp.StatusCode, "response", string(bodyBytes))
 	} else {
+		// Log email notifications to database for monitoring
+		var notificationLogs []models.NotificationLog
+		for _, uid := range userIDs {
+			notificationLogs = append(notificationLogs, models.NotificationLog{
+				ClientID: client.ID,
+				UserID:   uid,
+				Title:    "Email Notification", // Or some more descriptive title if available
+				Channel:  "email",
+				Status:   "sent",
+			})
+		}
+		if len(notificationLogs) > 0 {
+			if err := db.Create(&notificationLogs).Error; err != nil {
+				slog.Error("Failed to save email notification logs", "error", err)
+			}
+		}
 		slog.Info("Async email broadcast completed", "client_id", client.ID, "targets_found", len(personalizations))
 	}
 }
@@ -452,6 +468,23 @@ func processBroadcastAsync(db *gorm.DB, rdb *redis.Client, client models.Client,
 
 	// Wait for all workers to finish
 	wg.Wait()
+
+	// Log notifications to database for monitoring
+	var notificationLogs []models.NotificationLog
+	for _, uid := range payload.UserIDs {
+		notificationLogs = append(notificationLogs, models.NotificationLog{
+			ClientID: client.ID,
+			UserID:   uid,
+			Title:    payload.Title,
+			Channel:  "web_push",
+			Status:   "sent",
+		})
+	}
+	if len(notificationLogs) > 0 {
+		if err := db.Create(&notificationLogs).Error; err != nil {
+			slog.Error("Failed to save notification logs", "error", err)
+		}
+	}
 
 	slog.Info("Async broadcast completed", "client_id", client.ID, "targets_found", len(subsToSend), "devices_triggered", pushedCount.Load())
 }

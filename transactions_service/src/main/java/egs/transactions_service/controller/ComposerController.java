@@ -17,6 +17,9 @@ import java.util.Map;
 public class ComposerController {
 
     private final PaymentComposerService paymentComposerService;
+    
+    @org.springframework.beans.factory.annotation.Value("${app.internal-api-key}")
+    private String internalApiKey;
 
     @GetMapping("/pay/login")
     public ResponseEntity<?> getLoginUrl(@RequestParam("redirect_uri") String redirectUri) {
@@ -101,15 +104,29 @@ public class ComposerController {
     public ResponseEntity<?> updatePayment(
             @PathVariable("payment_id") String paymentId,
             @RequestBody PaymentUpdateDTO update,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Internal-Key", required = false) String internalKey) {
         log.info("PATCH /v1/payments/{} called with status: {}", paymentId, update.getStatus());
         
         if (update.getStatus() == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "status required"));
         }
 
+        // Allow bypass if internal key is provided
+        String activeAuth = authHeader;
+        log.info("Checking auth: authHeader={}, internalKey={}, internalApiKey={}", 
+            authHeader != null ? "present" : "null", internalKey, internalApiKey);
+            
+        if (activeAuth == null && internalApiKey != null && internalApiKey.equals(internalKey)) {
+             // We don't have a user token, but we have the internal key.
+             log.info("Bypassing Authorization check for payment update via internal key");
+        } else if (activeAuth == null) {
+             log.warn("Authorization failed: header missing and internal key mismatch");
+             return ResponseEntity.status(401).body(Map.of("error", "Authorization header missing"));
+        }
+
         try {
-            PaymentResponseDTO response = paymentComposerService.updatePayment(paymentId, update, authHeader);
+            PaymentResponseDTO response = paymentComposerService.updatePayment(paymentId, update, activeAuth);
             return ResponseEntity.ok(response);
         } catch (org.springframework.web.client.HttpStatusCodeException e) {
             log.error("Error from payment service for payment {}: {} - {}", paymentId, e.getStatusCode(), e.getResponseBodyAsString());
