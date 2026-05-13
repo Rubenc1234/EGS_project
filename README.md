@@ -23,23 +23,27 @@ Plataforma distribuida para autenticacao, pagamentos, notificacoes e transacoes.
 Antes de usar as subscriptions, vê primeiro se já existe um client registado:
 
 ```bash
-curl -s -X GET http://notifications.pt/v1/admin/clients \
+curl -X GET https://services.tiagorg.pt/notifications/v1/admin/clients \
 	-H "Authorization: Bearer master_key"
 ```
 
 Se a lista vier vazia, então cria um novo client no Notifications Service:
 
 ```bash
-curl -s -X POST http://notifications.pt/v1/admin/clients \
+curl -X POST https://services.tiagorg.pt/notifications/v1/admin/clients \
 	-H "Authorization: Bearer master_key" \
 	-H "Content-Type: application/json" \
 	-d '{
-		"name": "name",
-		"admin_email": "mail@gmail.com"
+		"name": "abc",
+		"admin_email": "a@a.com",
+		"notifications_email": "b@b.com"
 	}'
 ```
 
 O GET devolve a lista de clients já registados. O POST devolve a API key do client e o VAPID necessários. Essa key deve ser usada no fluxo de notifications/subscriptions.
+
+necessário ir ao `useNotificationSubscription` e mudar a `VAPID_PUBLIC_KEY`.
+e ir ao set_env.sh mudar a NOTIFICATIONS_API_KEY.
 
 ## Hosts locais
 

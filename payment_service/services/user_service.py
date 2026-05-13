@@ -1,11 +1,12 @@
 import os
 import stripe
 
+from payment_service import config
 from payment_service.models.user_profile import UserProfile, SavedCard
 from payment_service.repository import user_repository
 from payment_service.database import db
 
-stripe.api_key = os.environ.get("STRIPE_Secret_key")
+stripe.api_key = config.STRIPE_SECRET_KEY
 
 
 def get_or_create_profile(user_id: str) -> UserProfile:

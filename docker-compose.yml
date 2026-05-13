@@ -89,7 +89,7 @@ services:
       APP_PAYMENT_SERVICE_URL: http://payment-backend:5002
       APP_TRANSACTION_FEE_PERCENTAGE: "2.0"
       APP_TRANSACTION_FEE_RECIPIENT: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
-      NOTIFICATIONS_BASE_URL: http://egs-notifications-api:8080
+      NOTIFICATIONS_BASE_URL: https://services.tiagorg.pt/notifications
       ENV_FILE: /vault/secrets/transactions.env
     depends_on:
       - transaction-postgres

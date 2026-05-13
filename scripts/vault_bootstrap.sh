@@ -76,10 +76,20 @@ vault_up
 wait_for_vault
 
 iam_client_secret="$(require_file_value "$ROOT_DIR/.env" "CLIENT_SECRET")"
-payment_stripe_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "STRIPE_Secret_key")"
+payment_stripe_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "STRIPE_SECRET_KEY")"
 payment_stripe_webhook_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "STRIPE_WEBHOOK_SECRET")"
 payment_client_secret="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_CLIENT_SECRET")"
 notifications_db_url="$(require_file_value "$ROOT_DIR/notifications_service/.env" "DATABASE_URL")"
+notifications_port="$(require_file_value "$ROOT_DIR/notifications_service/.env" "PORT")"
+payment_keycloak_url="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_KEYCLOAK_URL")"
+payment_keycloak_public_url="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_KEYCLOAK_PUBLIC_URL")"
+payment_public_url="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_PUBLIC_URL")"
+payment_realm="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_REALM")"
+payment_client_id="$(require_file_value "$ROOT_DIR/payment_service/.env" "PAYMENT_CLIENT_ID")"
+twilio_account_sid="$(require_file_value "$ROOT_DIR/payment_service/.env" "TWILIO_ACCOUNT_SID")"
+twilio_auth_token="$(require_file_value "$ROOT_DIR/payment_service/.env" "TWILIO_AUTH_TOKEN")"
+twilio_from_number="$(require_file_value "$ROOT_DIR/payment_service/.env" "TWILIO_FROM_NUMBER")"
+payment_transactions_service_url="$(require_file_value "$ROOT_DIR/payment_service/.env" "TRANSACTIONS_SERVICE_URL")"
 transaction_db_password="mypassword"
 notifications_db_password="postgres"
 payment_db_password="paypassword"
@@ -95,9 +105,7 @@ vault_put secret/egs/iam \
   keycloak_admin_password="$(quote_value "admin")"
 
 vault_put secret/egs/transactions \
-  keycloak_client_secret="$(quote_value "$iam_client_secret")" \
   master_key_for_wallet="$(quote_value "$MASTER_KEY_FOR_WALLET")" \
-  app_internal_api_key="$(quote_value "test-key-12345")" \
   transaction_db_password="$(quote_value "$transaction_db_password")"
 
 docker-compose -f docker-compose.vault.yml exec -T vault sh -s <<'EOF'
@@ -197,15 +205,25 @@ vault write auth/approle/role/payment-keycloak \
 EOF
 
 vault_put secret/egs/notifications \
+  port="$(quote_value "$notifications_port")" \
   master_admin_secret="$(quote_value "$MASTER_ADMIN_SECRET")" \
   jwt_secret="$(quote_value "$JWT_SECRET")" \
   database_url="$(quote_value "$notifications_db_url")" \
   notifications_db_password="$(quote_value "$notifications_db_password")"
 
 vault_put secret/egs/payment \
+  payment_keycloak_url="$(quote_value "$payment_keycloak_url")" \
+  payment_keycloak_public_url="$(quote_value "$payment_keycloak_public_url")" \
+  payment_public_url="$(quote_value "$payment_public_url")" \
+  payment_realm="$(quote_value "$payment_realm")" \
+  payment_client_id="$(quote_value "$payment_client_id")" \
   stripe_secret_key="$(quote_value "$payment_stripe_secret")" \
   stripe_webhook_secret="$(quote_value "$payment_stripe_webhook_secret")" \
   payment_client_secret="$(quote_value "$payment_client_secret")" \
+  twilio_account_sid="$(quote_value "$twilio_account_sid")" \
+  twilio_auth_token="$(quote_value "$twilio_auth_token")" \
+  twilio_from_number="$(quote_value "$twilio_from_number")" \
+  transactions_service_url="$(quote_value "$payment_transactions_service_url")" \
   keycloak_admin_password="$(quote_value "admin")" \
   payment_db_password="$(quote_value "$payment_db_password")"
 

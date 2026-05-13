@@ -65,7 +65,7 @@ services:
     container_name: payment-stripe-cli
     command: >
       listen
-      --api-key ${STRIPE_Secret_key}
+      --api-key ${STRIPE_SECRET_KEY}
       --forward-to http://payment-backend:5002/v1/payments/webhook
       --skip-verify
     depends_on:

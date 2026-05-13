@@ -2,10 +2,11 @@ import os
 
 import stripe
 
+from payment_service import config
 from payment_service.models.payment import Payment, PaymentStatus
 from payment_service.services.providers.base_provider import BasePaymentProvider
 
-stripe.api_key = os.environ.get("STRIPE_Secret_key")
+stripe.api_key = config.STRIPE_SECRET_KEY
 
 
 class StripePaymentProvider(BasePaymentProvider):
