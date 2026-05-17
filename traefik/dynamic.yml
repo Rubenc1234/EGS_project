@@ -58,7 +58,7 @@ http:
     frontend:
       loadBalancer:
         servers:
-          - url: http://frontend:5175
+          - url: http://frontend:80
 
     payment-frontend:
       loadBalancer:
