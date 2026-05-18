@@ -19,8 +19,11 @@ import {
   RadioGroup,
   TextField,
   Typography,
+  Fade,
 } from '@mui/material'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
+import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined'
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined'
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -64,13 +67,11 @@ function CheckoutForm({
   const savedCards: SavedCard[] = profile?.cards ?? []
   const hasPhone = !!profile?.phone_number
 
-  // 'new' means typing a new card; otherwise it's the SavedCard.id
   const [selectedCard, setSelectedCard] = useState<string>(savedCards.length > 0 ? savedCards[0].id : 'new')
   const [saveNewCard, setSaveNewCard] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // OTP dialog state
   const [otpDialogOpen, setOtpDialogOpen] = useState(false)
   const [otpCode, setOtpCode] = useState('')
   const [otpError, setOtpError] = useState<string | null>(null)
@@ -83,7 +84,7 @@ function CheckoutForm({
     e.preventDefault()
     if (!stripe || !elements) return
     if (amount < MIN_PAYMENT_AMOUNT_EUR) {
-      setError('Minimum payment amount is €0.50.')
+      setError('O montante mínimo de pagamento é €0.50.')
       return
     }
     setLoading(true)
@@ -100,7 +101,7 @@ function CheckoutForm({
       })
 
       if (!payment.stripe_client_secret) {
-        throw new Error('No client secret returned from server.')
+        throw new Error('Erro na comunicação com o servidor de pagamentos.')
       }
 
       let stripeResult
@@ -110,38 +111,34 @@ function CheckoutForm({
         })
       } else {
         const card = elements.getElement(CardElement)
-        if (!card) throw new Error('Card element not found.')
+        if (!card) throw new Error('Elemento do cartão não encontrado.')
         stripeResult = await stripe.confirmCardPayment(payment.stripe_client_secret, {
           payment_method: { card },
         })
       }
 
       if (stripeResult.error) {
-        setError(stripeResult.error.message ?? 'Payment failed.')
+        setError(stripeResult.error.message ?? 'O pagamento falhou.')
         setLoading(false)
         return
       }
 
-      // Optionally save the new card (best-effort)
       if (!savedCard && saveNewCard && stripeResult.paymentIntent?.payment_method) {
         try {
           await addCard(stripeResult.paymentIntent.payment_method as string)
         } catch {
-          // best-effort — don't block the flow
+          // best-effort
         }
       }
 
-      // Send OTP
       setCurrentPaymentId(payment.id)
       setSuccessParams({ redirectUrl, amount })
 
       try {
         await sendOtp(payment.id)
-        // OTP sent — open dialog
         setOtpDialogOpen(true)
         setLoading(false)
       } catch (err: unknown) {
-        // If no phone number, skip OTP and go to success
         const status = (err as { response?: { status?: number; data?: { error?: string } } })?.response?.status
         const errorCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
         if (status === 422 && errorCode === 'no_phone_number') {
@@ -151,7 +148,7 @@ function CheckoutForm({
         throw err
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unexpected error occurred.'
+      const msg = err instanceof Error ? err.message : 'Ocorreu um erro inesperado.'
       setError(msg)
       setLoading(false)
     }
@@ -166,11 +163,11 @@ function CheckoutForm({
       if (result.verified) {
         navigate(`/success?redirect_url=${encodeURIComponent(successParams.redirectUrl)}&amount=${successParams.amount}`)
       } else {
-        setOtpError('Invalid or expired code. Try again.')
+        setOtpError('Código inválido ou expirado. Tente novamente.')
         setOtpLoading(false)
       }
     } catch {
-      setOtpError('Verification failed. Please try again.')
+      setOtpError('Falha na verificação. Por favor, tente novamente.')
       setOtpLoading(false)
     }
   }
@@ -183,7 +180,7 @@ function CheckoutForm({
       await sendOtp(currentPaymentId)
       setOtpCode('')
     } catch {
-      setOtpError('Failed to resend code.')
+      setOtpError('Não foi possível reenviar o código.')
     } finally {
       setOtpResending(false)
     }
@@ -191,91 +188,160 @@ function CheckoutForm({
 
   return (
     <>
-      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
         {!hasPhone && (
-          <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
-            No phone number set — OTP verification will be skipped.{' '}
-            <a href="/profile" style={{ color: 'inherit', fontWeight: 600 }}>Add phone in Profile</a>
+          <Alert 
+            severity="info" 
+            variant="outlined"
+            sx={{ 
+              borderRadius: '12px', 
+              borderColor: '#e0e0e0',
+              bgcolor: '#fcfcfd',
+              color: '#555',
+              fontSize: '0.85rem',
+              '& .MuiAlert-icon': { color: '#757575' }
+            }}
+          >
+            Sem contacto telefónico associado. A verificação OTP será ignorada.{' '}
+            <a href="/profile" style={{ color: '#1976d2', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid' }}>
+              Adicionar telefone no perfil
+            </a>
           </Alert>
         )}
 
         {/* Saved cards selection */}
         {savedCards.length > 0 && (
           <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
-              PAYMENT METHOD
+            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.5px' }}>
+              MÉTODO DE PAGAMENTO
             </Typography>
             <FormControl fullWidth>
               <RadioGroup value={selectedCard} onChange={e => setSelectedCard(e.target.value)}>
-                {savedCards.map(card => (
-                  <FormControlLabel
-                    key={card.id}
-                    value={card.id}
-                    control={<Radio size="small" />}
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{card.brand}</Typography>
-                        <Typography variant="body2" color="text.secondary">•••• {card.last4}</Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          {card.exp_month.toString().padStart(2, '0')}/{card.exp_year}
-                        </Typography>
-                        {card.is_default && <Chip label="Default" size="small" color="primary" variant="outlined" sx={{ height: 18, fontSize: 10 }} />}
-                      </Box>
-                    }
-                    sx={{ border: '1px solid', borderColor: selectedCard === card.id ? 'primary.main' : 'divider', borderRadius: 1.5, mx: 0, mb: 0.5, pr: 1 }}
-                  />
-                ))}
+                {savedCards.map(card => {
+                  const isSelected = selectedCard === card.id
+                  return (
+                    <FormControlLabel
+                      key={card.id}
+                      value={card.id}
+                      control={<Radio size="small" sx={{ display: 'none' }} />}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                          <CreditCardOutlinedIcon sx={{ color: isSelected ? 'primary.main' : 'text.secondary', fontSize: 20 }} />
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="body2" sx={{ textTransform: 'capitalize', fontWeight: 600, color: isSelected ? 'text.primary' : 'text.secondary' }}>
+                              {card.brand} •••• {card.last4}
+                            </Typography>
+                            <Typography variant="caption" color="text.disabled">
+                              Expira em {card.exp_month.toString().padStart(2, '0')}/{card.exp_year}
+                            </Typography>
+                          </Box>
+                          {card.is_default && (
+                            <Chip 
+                              label="Predefinido" 
+                              size="small" 
+                              sx={{ ml: 'auto', height: 20, fontSize: '0.65rem', fontWeight: 600, bgcolor: '#f0f4f9', color: '#1a73e8' }} 
+                            />
+                          )}
+                        </Box>
+                      }
+                      sx={{ 
+                        border: '1px solid', 
+                        borderColor: isSelected ? 'primary.main' : '#e0e0e0', 
+                        bgcolor: isSelected ? '#f8faff' : '#ffffff',
+                        borderRadius: '12px', 
+                        mx: 0, 
+                        mb: 1.2, 
+                        p: 2,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': { borderColor: isSelected ? 'primary.main' : '#b0b0b0', bgcolor: isSelected ? '#f8faff' : '#fafafa' }
+                      }}
+                    />
+                  )
+                })}
+                
                 <FormControlLabel
                   value="new"
-                  control={<Radio size="small" />}
-                  label={<Typography variant="body2">Use a new card</Typography>}
-                  sx={{ border: '1px solid', borderColor: selectedCard === 'new' ? 'primary.main' : 'divider', borderRadius: 1.5, mx: 0, pr: 1 }}
+                  control={<Radio size="small" sx={{ display: 'none' }} />}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <CreditCardOutlinedIcon sx={{ color: selectedCard === 'new' ? 'primary.main' : 'text.secondary', fontSize: 20 }} />
+                      <Typography variant="body2" fontWeight={600} color={selectedCard === 'new' ? 'text.primary' : 'text.secondary'}>
+                        Utilizar um novo cartão de crédito
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ 
+                    border: '1px solid', 
+                    borderColor: selectedCard === 'new' ? 'primary.main' : '#e0e0e0', 
+                    bgcolor: selectedCard === 'new' ? '#f8faff' : '#ffffff',
+                    borderRadius: '12px', 
+                    mx: 0, 
+                    p: 2,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { borderColor: selectedCard === 'new' ? 'primary.main' : '#b0b0b0', bgcolor: selectedCard === 'new' ? '#f8faff' : '#fafafa' }
+                  }}
                 />
               </RadioGroup>
             </FormControl>
           </Box>
         )}
 
-        {/* New card input — shown when no saved cards or "new" selected */}
+        {/* New card input */}
         {(savedCards.length === 0 || selectedCard === 'new') && (
-          <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
-              {savedCards.length === 0 ? 'CARD DETAILS' : 'NEW CARD'}
-            </Typography>
-            <Box
-              sx={{
-                border: '1.5px solid',
-                borderColor: 'divider',
-                borderRadius: 1.5,
-                p: 1.8,
-                '&:focus-within': { borderColor: 'primary.main' },
-                transition: 'border-color 0.2s',
-              }}
-            >
-              <CardElement
-                options={{
-                  style: {
-                    base: { fontSize: '15px', color: '#1a1a1a', '::placeholder': { color: '#aab7c4' } },
-                    invalid: { color: '#e53935' },
-                  },
+          <Fade in timeout={300}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.5px' }}>
+                DADOS DO CARTÃO
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid',
+                  borderColor: '#e0e0e0',
+                  bgcolor: '#ffffff',
+                  borderRadius: '12px',
+                  p: 2.2,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                  '&:focus-within': { borderColor: 'primary.main', boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.12)' },
+                  transition: 'all 0.2s ease',
                 }}
-              />
+              >
+                <CardElement
+                  options={{
+                    style: {
+                      base: { 
+                        fontSize: '15px', 
+                        color: '#212121', 
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        '::placeholder': { color: '#9e9e9e' } 
+                      },
+                      invalid: { color: '#d32f2f' },
+                    },
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, px: 0.5 }}>
+                <Typography variant="caption" color="text.disabled">
+                  Modo teste: 4242 4242... · Qualquer data/CVC futura.
+                </Typography>
+                <FormControlLabel
+                  control={<Radio size="small" checked={saveNewCard} onClick={() => setSaveNewCard(v => !v)} sx={{ p: 0.5 }} />}
+                  label={<Typography variant="caption" color="text.secondary" fontWeight={500}>Guardar cartão</Typography>}
+                  sx={{ mr: 0 }}
+                />
+              </Box>
             </Box>
-            <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>
-              Test card: 4242 4242 4242 4242 · any future date · any CVC
-            </Typography>
-            <FormControlLabel
-              control={<Radio size="small" checked={saveNewCard} onClick={() => setSaveNewCard(v => !v)} />}
-              label={<Typography variant="caption">Save this card for future payments</Typography>}
-              sx={{ mt: 0.5, ml: -0.5 }}
-            />
-          </Box>
+          </Fade>
         )}
 
         {error && (
-          <Box sx={{ bgcolor: '#fff3f3', border: '1px solid #ffcdd2', borderRadius: 1.5, p: 1.5 }}>
-            <Typography color="error" variant="body2">{error}</Typography>
-          </Box>
+          <Fade in>
+            <Box sx={{ bgcolor: '#fff5f5', border: '1px solid #ffdbdb', borderRadius: '12px', p: 2 }}>
+              <Typography color="#c62828" variant="body2" fontWeight={500}>{error}</Typography>
+            </Box>
+          </Fade>
         )}
 
         <Button
@@ -284,49 +350,66 @@ function CheckoutForm({
           size="large"
           fullWidth
           disabled={loading || !stripe}
-          sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, fontSize: '1rem' }}
+          disableElevation
+          sx={{ 
+            py: 2, 
+            borderRadius: '12px', 
+            fontWeight: 600, 
+            fontSize: '0.95rem',
+            textTransform: 'none',
+            background: '#111111', 
+            '&:hover': {
+              background: '#292929',
+              boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+            },
+            '&:disabled': {
+              background: '#f5f5f5',
+              color: '#9e9e9e'
+            },
+            transition: 'all 0.2s ease'
+          }}
         >
           {loading
-            ? <CircularProgress size={22} color="inherit" />
+            ? <CircularProgress size={22} color="inherit" thickness={4} />
             : <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LockOutlinedIcon fontSize="small" />
-                Pay €{amount.toFixed(2)}
+                <LockOutlinedIcon sx={{ fontSize: 18 }} />
+                Pagar €{amount.toFixed(2)}
               </Box>
           }
         </Button>
       </Box>
 
       {/* OTP Verification Dialog */}
-      <Dialog open={otpDialogOpen} maxWidth="xs" fullWidth>
-        <DialogTitle>Verify Payment</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            Enter the 6-digit code sent to your WhatsApp number.
+      <Dialog open={otpDialogOpen} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: '20px', p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Verificação de Segurança</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+            Introduza o código de 6 dígitos que enviámos para o seu número associado ao WhatsApp.
           </Typography>
           <TextField
-            label="Verification code"
-            value={otpCode}
-            onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputProps={{ inputMode: 'numeric', maxLength: 6 }}
             autoFocus
             fullWidth
+            placeholder="000000"
+            value={otpCode}
+            onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputProps={{ inputMode: 'numeric', maxLength: 6, style: { letterSpacing: '12px', textAlign: 'center', fontSize: '1.6rem', fontWeight: 700, paddingLeft: '12px' } }}
+            variant="outlined"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
           />
-          {otpError && <Alert severity="error">{otpError}</Alert>}
+          {otpError && <Alert severity="error" sx={{ borderRadius: '10px' }}>{otpError}</Alert>}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button
-            onClick={handleResendOtp}
-            disabled={otpResending}
-            size="small"
-          >
-            {otpResending ? <CircularProgress size={16} /> : 'Resend'}
+          <Button onClick={handleResendOtp} disabled={otpResending} sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}>
+            {otpResending ? <CircularProgress size={16} /> : 'Reenviar código'}
           </Button>
           <Button
             variant="contained"
             onClick={handleVerifyOtp}
             disabled={otpLoading || otpCode.length !== 6}
+            disableElevation
+            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, px: 3, bgcolor: '#111' }}
           >
-            {otpLoading ? <CircularProgress size={18} color="inherit" /> : 'Verify'}
+            {otpLoading ? <CircularProgress size={18} color="inherit" /> : 'Confirmar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -340,38 +423,42 @@ function TestParamsForm({ onSubmit }: { onSubmit: (w: string, a: number, r: stri
   const [redirectUrl, setRedirectUrl] = useState(DEFAULT_REDIRECT_URL)
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+    <Box 
+      sx={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#f8fafd',
+        backgroundImage: `
+          radial-gradient(at 0% 0%, hsla(210, 100%, 85%, 0.4) 0px, transparent 50%),
+          radial-gradient(at 100% 0%, hsla(220, 100%, 75%, 0.2) 0px, transparent 50%),
+          radial-gradient(at 100% 100%, hsla(240, 100%, 90%, 0.4) 0px, transparent 50%)
+        `,
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        p: 2 
       }}
     >
       <Container maxWidth="xs">
-        <Paper elevation={12} sx={{ borderRadius: 3, p: 4, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AccountBalanceWalletOutlinedIcon color="primary" />
-            <Typography variant="h6" fontWeight={700}>Test Mode</Typography>
-            <Chip label="Dev only" size="small" color="warning" sx={{ ml: 'auto' }} />
+        <Paper elevation={0} sx={{ borderRadius: '16px', border: '1px solid #e0e0e0', p: 4, display: 'flex', flexDirection: 'column', gap: 3, boxShadow: '0 20px 40px rgba(0, 0, 0, 0.04)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <AccountBalanceWalletOutlinedIcon sx={{ color: 'text.primary' }} />
+            <Typography variant="subtitle1" fontWeight={700}>Ambiente de Testes</Typography>
+            <Chip label="Dev" size="small" sx={{ ml: 'auto', fontWeight: 600, bgcolor: '#fff3e0', color: '#b78103' }} />
           </Box>
-          <Typography variant="body2" color="text.secondary">
-            In production the composer passes these automatically via URL params.
-          </Typography>
           <Divider />
-          <TextField label="Wallet ID" value={walletId} onChange={e => setWalletId(e.target.value)} size="small" fullWidth />
-          <TextField label="Amount (€)" type="number" value={amount} onChange={e => setAmount(e.target.value)} size="small" fullWidth slotProps={{ htmlInput: { min: 0.5, step: 0.01 } }} />
-          <TextField label="Redirect URL after payment" value={redirectUrl} onChange={e => setRedirectUrl(e.target.value)} size="small" fullWidth />
+          <TextField label="Wallet ID" value={walletId} onChange={e => setWalletId(e.target.value)} fullWidth slotProps={{ input: { style: { borderRadius: '10px' } } }} />
+          <TextField label="Montante (€)" type="number" value={amount} onChange={e => setAmount(e.target.value)} fullWidth />
+          <TextField label="URL de Redirecionamento" value={redirectUrl} onChange={e => setRedirectUrl(e.target.value)} fullWidth />
           <Button
             variant="contained"
             size="large"
             fullWidth
             disabled={!walletId || !amount || !redirectUrl}
             onClick={() => onSubmit(walletId, parseFloat(amount), redirectUrl)}
-            sx={{ py: 1.5, borderRadius: 2, fontWeight: 600 }}
+            disableElevation
+            sx={{ py: 1.5, borderRadius: '10px', fontWeight: 600, textTransform: 'none', bgcolor: '#111' }}
           >
-            Continue to Payment
+            Aceder ao Checkout
           </Button>
         </Paper>
       </Container>
@@ -391,7 +478,7 @@ export default function PaymentPage() {
 
   useEffect(() => {
     if (walletId && amount && redirectUrl) {
-      getProfile().then(setProfile).catch(() => {/* non-fatal */})
+      getProfile().then(setProfile).catch(() => {})
     }
   }, [walletId, amount, redirectUrl])
 
@@ -408,67 +495,79 @@ export default function PaymentPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
+        backgroundColor: '#6297e5',
+        backgroundImage: `
+          radial-gradient(at 0% 0%, hsla(210, 100%, 85%, 0.4) 0px, transparent 50%),
+          radial-gradient(at 100% 0%, hsla(220, 100%, 75%, 0.2) 0px, transparent 50%),
+          radial-gradient(at 100% 100%, hsla(240, 100%, 90%, 0.4) 0px, transparent 50%),
+          radial-gradient(at 0% 100%, hsla(200, 100%, 80%, 0.2) 0px, transparent 50%)
+        `,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        p: 2
       }}
     >
-      <Container maxWidth="xs">
-        <Paper elevation={12} sx={{ borderRadius: 3, overflow: 'hidden' }}>
-          {/* Header */}
-          <Box
-            sx={{
-              background: 'linear-gradient(135deg, #1565c0, #1976d2)',
-              py: 3,
-              px: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <AccountBalanceWalletOutlinedIcon sx={{ color: 'white', fontSize: 32 }} />
-            <Box>
-              <Typography variant="h6" fontWeight={700} color="white">
-                Wallet Top-up
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-                {walletId}
+      <Container maxWidth="xs" disableGutters>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            borderRadius: '24px', 
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            boxShadow: '0 25px 50px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.02)', 
+            bgcolor: '#ffffff',
+            backdropFilter: 'blur(10px)' // Efeito ligeiro de vidro nas bordas onde a luz interage
+          }}
+        >
+          {/* Header Minimalista */}
+          <Box sx={{ pt: 4, px: 4, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ width: 10, height: 10, bgcolor: '#10b981', borderRadius: '50%', boxShadow: '0 0 8px rgba(16,185,129,0.4)' }} /> 
+              <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                Carregamento
               </Typography>
             </Box>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.disabled', bgcolor: '#f4f5f6', px: 1, py: 0.5, borderRadius: '6px' }}>
+              ID: {walletId.slice(-8)}
+            </Typography>
           </Box>
 
-          <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* Amount summary */}
-            <Box
-              sx={{
-                bgcolor: '#f0f4ff',
-                border: '1px solid #c5cae9',
-                borderRadius: 2,
-                p: 2,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Box>
-                <Typography variant="body2" color="text.secondary">Amount to add</Typography>
-                <Typography variant="h4" fontWeight={800} color="primary">
+          <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Secção de Montante Re-desenhada */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ letterSpacing: '0.8px' }}>
+                VALOR A DEPOSITAR
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                <Typography variant="h3" fontWeight={800} color="text.primary" sx={{ letterSpacing: '-1.5px' }}>
                   €{amount.toFixed(2)}
                 </Typography>
+                <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
+                  EUR
+                </Typography>
               </Box>
-              <Chip label="EUR" variant="outlined" color="primary" />
             </Box>
 
-            <Divider />
+            <Divider sx={{ borderColor: '#f1f3f5' }} />
 
             <Elements stripe={stripePromise}>
               <CheckoutForm walletId={walletId} amount={amount} redirectUrl={redirectUrl} profile={profile} />
             </Elements>
 
-            <Typography variant="caption" color="text.disabled" textAlign="center">
-              Secured by Stripe · 256-bit TLS encryption
-            </Typography>
+            {/* Rodapé de Segurança Premium */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mt: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.disabled' }}>
+                <VerifiedUserOutlinedIcon sx={{ fontSize: 14, color: '#10b981' }} />
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                  Pagamento Seguro via Stripe
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem', textAlign: 'center', px: 2 }}>
+                Encriptação SSL de 256 bits · Compatível com normas PCI-DSS
+              </Typography>
+            </Box>
           </Box>
         </Paper>
       </Container>

@@ -244,6 +244,22 @@ services:
     networks:
       - egs-network
 
+  payment-stripe-cli:
+    image: stripe/stripe-cli
+    container_name: payment-stripe-cli
+    entrypoint: ["/bin/sh", "/vault/entrypoint.sh", "/bin/sh", "-c",
+                 "stripe listen --api-key $$STRIPE_SECRET_KEY --forward-to http://payment-backend:5002/v1/payments/webhook"]
+    environment:
+      ENV_FILE: /vault/secrets/payment.env
+    volumes:
+      - ./scripts/vault/entrypoint-env.sh:/vault/entrypoint.sh:ro
+      - ./.vault/secrets/payment:/vault/secrets:ro
+    depends_on:
+      - payment-backend
+      - vault-agent-payment
+    networks:
+      - egs-network
+
   grafana:
     image: grafana/grafana:10.0.0
     container_name: grafana
