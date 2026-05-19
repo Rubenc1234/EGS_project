@@ -19,7 +19,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import PhoneIcon from '@mui/icons-material/Phone'
@@ -142,22 +141,14 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CircularProgress />
+      <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress sx={{ color: 'white' }} />
       </Box>
     )
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)' }}>
-      {/* Header */}
-      <Box sx={{ background: 'rgba(0,0,0,0.2)', py: 2, px: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <IconButton onClick={() => navigate('/payments')} sx={{ color: 'white' }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h6" fontWeight={700} color="white">My Profile</Typography>
-      </Box>
-
+    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)', pt: 8 }}>
       <Container maxWidth="sm" sx={{ py: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
         {/* Phone Section */}
         <Paper elevation={6} sx={{ borderRadius: 3, p: 3 }}>

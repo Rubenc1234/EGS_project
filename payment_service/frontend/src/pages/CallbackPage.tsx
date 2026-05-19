@@ -43,7 +43,11 @@ export default function CallbackPage() {
         if (redirectUrl) payParams.set('redirect_url', redirectUrl)
         
         const qs = payParams.toString()
-        navigate(`/pay${qs ? `?${qs}` : ''}`, { replace: true })
+        if (walletId && amount) {
+          navigate(`/pay${qs ? `?${qs}` : ''}`, { replace: true })
+        } else {
+          navigate('/home', { replace: true })
+        }
       })
       .catch((err) => {
         const detail = err?.response?.data?.detail ?? err?.response?.data?.error ?? err?.message ?? 'Unknown error'

@@ -19,8 +19,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (getToken()) {
-      const qs = searchParams.toString()
-      navigate(`/pay${qs ? `?${qs}` : ''}`, { replace: true })
+      const hasPaymentParams = searchParams.has('wallet_id') || searchParams.has('amount')
+      if (hasPaymentParams) {
+        const qs = searchParams.toString()
+        navigate(`/pay?${qs}`, { replace: true })
+      } else {
+        navigate('/home', { replace: true })
+      }
     }
   }, [navigate, searchParams])
 
@@ -49,7 +54,7 @@ export default function LoginPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
+        background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -63,7 +68,7 @@ export default function LoginPage() {
           {/* Header strip */}
           <Box
             sx={{
-              background: 'linear-gradient(135deg, #1565c0, #1976d2)',
+              background: 'linear-gradient(135deg, #0891b2, #06b6d4)',
               py: 4,
               display: 'flex',
               flexDirection: 'column',
