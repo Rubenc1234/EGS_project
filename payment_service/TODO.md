@@ -53,7 +53,7 @@ O `/pay` continua a ser a API de checkout que a app principal chama, mas o servi
 
 ## Backend — Novo Endpoint
 
-- [ ] **`GET /v1/users/summary`** — Resumo do utilizador autenticado para o dashboard
+- [x] **`GET /v1/users/summary`** — Resumo do utilizador autenticado para o dashboard
   ```json
   {
     "total_spent": 150.00,
@@ -71,11 +71,11 @@ O `/pay` continua a ser a API de checkout que a app principal chama, mas o servi
 
 ## Backend — Qualidade
 
-- [ ] **Validação de inputs** nos endpoints:
+- [x] **Validação de inputs** nos endpoints:
   - `amount`: obrigatório, > 0, máximo razoável (ex: 10.000€)
   - `phone_number`: formato E.164 (`+351XXXXXXXXX`)
   - `wallet_id`: não pode ser vazio/null
 
-- [ ] **Proteção brute-force no OTP**: máximo 3 tentativas erradas → bloquear o pagamento
+- [x] **Proteção brute-force no OTP**: máximo 3 tentativas erradas → bloquear o pagamento
 
 ---
