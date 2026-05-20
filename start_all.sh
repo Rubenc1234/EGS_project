@@ -14,7 +14,7 @@ start_vault() {
     docker-compose -f docker-compose.vault.yml up -d vault >/dev/null
 }
 
-start_vault
+#start_vault
 
 export HOST_UID="$(id -u)"
 export HOST_GID="$(id -g)"
@@ -48,7 +48,7 @@ fi
 # 1. Start the unified Docker Compose stack
 echo "Starting unified Docker stack..."
 # --build
-docker-compose up -d --build
+docker-compose up -d
 
 echo "--------------------------------------------------"
 echo "All services started in background!"

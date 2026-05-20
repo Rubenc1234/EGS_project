@@ -25,7 +25,7 @@ import java.util.Map;
 @RequestMapping("/v1")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt", "http://transactions-frontend.grupo3-egs-deti-ua.pt", "http://transactions.grupo3-egs-deti-ua.pt", "http://iam.grupo3-egs-deti-ua.pt", "http://keycloak.grupo3-egs-deti-ua.pt", "https://transactions-frontend.grupo3-egs-deti-ua.pt", "https://transactions.grupo3-egs-deti-ua.pt", "https://iam.grupo3-egs-deti-ua.pt", "https://keycloak.grupo3-egs-deti-ua.pt"}, allowCredentials = "true")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -411,7 +411,7 @@ public class TransactionController {
      * Works with both MockBlockchainProvider and RealBlockchainProvider.
      * Usage: GET /v1/blockchain/{address}/balance
      */
-    @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"}, allowCredentials = "true")
+    @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt", "http://transactions-frontend.grupo3-egs-deti-ua.pt", "http://transactions.grupo3-egs-deti-ua.pt", "http://iam.grupo3-egs-deti-ua.pt", "http://keycloak.grupo3-egs-deti-ua.pt", "https://transactions-frontend.grupo3-egs-deti-ua.pt", "https://transactions.grupo3-egs-deti-ua.pt", "https://iam.grupo3-egs-deti-ua.pt", "https://keycloak.grupo3-egs-deti-ua.pt"}, allowCredentials = "true")
     @GetMapping("/blockchain/{address}/balance")
     public ResponseEntity<?> getWalletBalance(@PathVariable("address") String address) {
         log.info("=== GET /v1/blockchain/{}/balance ===", address);

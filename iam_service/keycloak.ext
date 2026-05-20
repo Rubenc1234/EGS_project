@@ -1,0 +1,19 @@
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+prompt             = no
+
+[ req_distinguished_name ]
+C = PT
+ST = Porto
+L = Porto
+O = EGS
+CN = keycloak.grupo3-egs-deti-ua.pt
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = keycloak.grupo3-egs-deti-ua.pt
+DNS.2 = keycloak

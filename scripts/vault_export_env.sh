@@ -7,7 +7,7 @@ export_secret() {
   local field_name="$3"
   local value
 
-  value="$(docker-compose -f docker-compose.vault.yml exec -T vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault kv get -field=${field_name} ${vault_path}")"
+  value="$(docker-compose -f docker-compose.vault.yml exec -T -e VAULT_TOKEN vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=${VAULT_TOKEN:-root}; vault kv get -field=${field_name} ${vault_path}")"
   printf 'export %s=%q\n' "$env_name" "$value"
 }
 
@@ -16,7 +16,7 @@ export_approle_role_id() {
   local role_name="$2"
   local value
 
-  value="$(docker-compose -f docker-compose.vault.yml exec -T vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault read -field=role_id auth/approle/role/${role_name}/role-id")"
+  value="$(docker-compose -f docker-compose.vault.yml exec -T -e VAULT_TOKEN vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=${VAULT_TOKEN:-root}; vault read -field=role_id auth/approle/role/${role_name}/role-id")"
   printf 'export %s=%q\n' "$env_name" "$value"
 }
 
@@ -25,7 +25,7 @@ export_approle_secret_id() {
   local role_name="$2"
   local value
 
-  value="$(docker-compose -f docker-compose.vault.yml exec -T vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault write -f -field=secret_id auth/approle/role/${role_name}/secret-id")"
+  value="$(docker-compose -f docker-compose.vault.yml exec -T -e VAULT_TOKEN vault sh -lc "export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=${VAULT_TOKEN:-root}; vault write -f -field=secret_id auth/approle/role/${role_name}/secret-id")"
   printf 'export %s=%q\n' "$env_name" "$value"
 }
 

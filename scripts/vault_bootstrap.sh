@@ -49,7 +49,7 @@ vault_up() {
 wait_for_vault() {
   # Wait until the dev Vault accepts commands before writing secrets.
   local attempts=0
-  until docker-compose -f docker-compose.vault.yml exec -T vault sh -lc 'export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=root; vault status >/dev/null 2>&1'; do
+  until docker-compose -f docker-compose.vault.yml exec -T -e VAULT_TOKEN vault sh -lc 'export VAULT_ADDR=http://127.0.0.1:8200; export VAULT_TOKEN=${VAULT_TOKEN:-root}; vault status >/dev/null 2>&1'; do
     attempts=$((attempts + 1))
     if [[ $attempts -ge 30 ]]; then
       echo "Vault did not become ready in time" >&2
@@ -64,10 +64,10 @@ vault_put() {
   local path="$1"
   shift
 
-  docker-compose -f docker-compose.vault.yml exec -T vault sh -s <<EOF
+  docker-compose -f docker-compose.vault.yml exec -T -e VAULT_TOKEN vault sh -s <<EOF
 set -eu
 export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_TOKEN=root
+export VAULT_TOKEN=${VAULT_TOKEN:-root}
 vault kv put $path $*
 EOF
 }
@@ -108,10 +108,10 @@ vault_put secret/egs/transactions \
   master_key_for_wallet="$(quote_value "$MASTER_KEY_FOR_WALLET")" \
   transaction_db_password="$(quote_value "$transaction_db_password")"
 
-docker-compose -f docker-compose.vault.yml exec -T vault sh -s <<'EOF'
+docker-compose -f docker-compose.vault.yml exec -T -e VAULT_TOKEN vault sh -s <<'EOF'
 set -eu
 export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_TOKEN=root
+export VAULT_TOKEN=${VAULT_TOKEN:-root}
 vault auth enable approle || true
 vault policy write egs-transactions - <<'POLICY'
 path "secret/data/egs/transactions" {

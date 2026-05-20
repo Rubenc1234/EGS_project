@@ -86,6 +86,51 @@ export MASTER_KEY_FOR_WALLET="something"
 
 ## Arranque rápido
 
+## Vault persistente (setup inicial)
+
+Para inicializar o Vault persistente, criar secrets e gerar AppRoles:
+
+```bash
+./scripts/vault_setup_persistent.sh
+```
+
+Guarda o ficheiro `.vault/init.json` em local seguro. E necessario para unseal e para recuperar o root token.
+
+## Vault no Kubernetes
+
+Subir o Vault no cluster:
+
+```bash
+kubectl apply -f k8s/vault.yaml
+```
+
+Inicializar e unseal (gera `vault-init.json` local):
+
+```bash
+kubectl -n tenant-grupo3-egs-deti-ua-pt exec -it deploy/vault -- \
+	vault operator init -key-shares=1 -key-threshold=1 -format=json > vault-init.json
+
+UNSEAL_KEY="$(jq -r '.unseal_keys_b64[0]' vault-init.json)"
+kubectl -n tenant-grupo3-egs-deti-ua-pt exec -it deploy/vault -- \
+	vault operator unseal "$UNSEAL_KEY"
+```
+
+Bootstrap de secrets e AppRoles no Vault do cluster:
+
+```bash
+export VAULT_TOKEN="$(jq -r '.root_token' vault-init.json)"
+./scripts/vault_bootstrap_k8s.sh
+```
+
+Migrar secrets do Vault local para o Vault do cluster:
+
+```bash
+export VAULT_TOKEN_LOCAL="<root-token-local>"
+export VAULT_TOKEN="$(jq -r '.root_token' vault-init.json)"
+./scripts/vault_migrate_to_k8s.sh
+```
+
+
 Antes de arrancar a UI, instala as dependências dos dois frontends:
 
 ```bash
@@ -93,6 +138,19 @@ cd frontend && npm install
 cd ../payment_service/frontend && npm install
 cd ../..
 ```
+
+Dps de executar setup persistente é necessário dar unseal todas as vezes...
+```bash
+docker-compose -f docker-compose.vault.yml up -d vault
+```
+
+```bash
+UNSEAL_KEY="$(jq -r '.unseal_keys_b64[0]' .vault/init.json)"
+docker-compose -f docker-compose.vault.yml exec -T vault sh -lc \
+"export VAULT_ADDR=http://127.0.0.1:8200; vault operator unseal ${UNSEAL_KEY}"
+```
+
+UNSEAL_KEY está no .vault/init.json
 
 ```bash
 ./start_all.sh

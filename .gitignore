@@ -15,6 +15,13 @@ docs/
 notes.txt
 set_env.sh
 fund_wallets.sh
+commands.txt
+INCONSISTENCIES.md
+PROJECT_ARCHITECTURE.md
+*.txt
+certs/
+k8s/
+k8s.zip
 
 # node modules
 frontend/node_modules/
