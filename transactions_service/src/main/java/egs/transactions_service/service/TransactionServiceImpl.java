@@ -71,8 +71,8 @@ public class TransactionServiceImpl implements TransactionService {
 
             // Token Balance (Euro)
             log.info("=== Querying token balance (EUR) ===");
-            BigDecimal tokenBalance = BigDecimal.ZERO;  // Mock blockchain doesn't support token queries
-            log.info("=== Token balance: {} EUR (mock) ===", tokenBalance);
+            BigDecimal tokenBalance = nativeBalance; // Use balance from provider (ETH in real, EUR in mock)
+            log.info("=== Token balance: {} EUR (synced) ===", tokenBalance);
 
             OffsetDateTime now = OffsetDateTime.now();
 

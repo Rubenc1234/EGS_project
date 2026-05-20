@@ -3,7 +3,7 @@
 # Test script to send a transaction via backend API
 # Usage: ./test_send_transaction.sh <from_wallet> <to_wallet> <amount>
 
-FROM_WALLET="${1:-0x86a9906e6bd2ef137d6d5339154611de7a41b178}"
+FROM_WALLET="${1:-0xf22b7e23782b4f7ec38e4c4148e1171a5eb5fc4e}"
 TO_WALLET="${2:-0x49c57ff03fa44d3505b96d439036755a3211ec37}"
 AMOUNT="${3:-50}"
 

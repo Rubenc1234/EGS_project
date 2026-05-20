@@ -85,10 +85,10 @@ services:
       KEYCLOAK_REALM: microservices
       KEYCLOAK_CLIENT_ID: iam-service
       APP_DEV_MODE: "false"
-      APP_BANK_WALLET: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+      APP_BANK_WALLET: "0xf22b7e23782b4f7ec38e4c4148e1171a5eb5fc4e"
       APP_PAYMENT_SERVICE_URL: http://payment-backend:5002
       APP_TRANSACTION_FEE_PERCENTAGE: "2.0"
-      APP_TRANSACTION_FEE_RECIPIENT: "0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+      APP_TRANSACTION_FEE_RECIPIENT: "0xf22b7e23782b4f7ec38e4c4148e1171a5eb5fc4e"
       NOTIFICATIONS_BASE_URL: https://services.tiagorg.pt/notifications
       ENV_FILE: /vault/secrets/transactions.env
     depends_on:

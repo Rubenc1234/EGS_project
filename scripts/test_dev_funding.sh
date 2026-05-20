@@ -2,7 +2,7 @@
 
 # Test the DEV funding endpoint
 
-WALLET="0x86a9906e6bd2ef137d6d5339154611de7a41b178"
+WALLET="0xf22b7e23782b4f7ec38e4c4148e1171a5eb5fc4e"
 AMOUNT=100
 ASSET="EUR"
 
