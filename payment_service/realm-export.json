@@ -30,16 +30,15 @@
       "publicClient": false,
       "secret": "wB0s7VvPaSfIHWJkkOh2gXA7Newnmwfm",
       "redirectUris": [
-        "http://localhost:5174/callback",
-        "http://localhost:5175/callback",
-        "http://localhost:5001/v1/composer/callback",
-        "http://payment.pt/callback",
-        "http://payment.pt/*",
-        "http://payment-api.pt/*",
-        "http://payment-keycloak.pt/*"
+        "https://payment.grupo3-egs-deti-ua.pt/callback",
+        "https://payment.grupo3-egs-deti-ua.pt/*",
+        "https://payment-api.grupo3-egs-deti-ua.pt/*",
+        "https://payment-keycloak.grupo3-egs-deti-ua.pt/*"
       ],
       "webOrigins": [
-        "*"
+        "https://payment.grupo3-egs-deti-ua.pt",
+        "https://payment-api.grupo3-egs-deti-ua.pt",
+        "https://payment-keycloak.grupo3-egs-deti-ua.pt"
       ],
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": true,

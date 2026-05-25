@@ -100,6 +100,13 @@ def register_routes(app):
         state = str(uuid.uuid4())
         session["oidc_state"] = state
         login_url = get_login_url(callback_url, state)
+        log.warning(
+            "Generated login URL: callback_url=%s state=%s session_present=%s login_url_prefix=%s",
+            callback_url,
+            state,
+            bool(session),
+            login_url[:220],
+        )
         return jsonify({"login_url": login_url}), 200
 
     @app.route("/v1/pay/signup", methods=["GET"])
@@ -108,6 +115,13 @@ def register_routes(app):
         state = str(uuid.uuid4())
         session["oidc_state"] = state
         signup_url = get_signup_url(callback_url, state)
+        log.warning(
+            "Generated signup URL: callback_url=%s state=%s session_present=%s signup_url_prefix=%s",
+            callback_url,
+            state,
+            bool(session),
+            signup_url[:220],
+        )
         return jsonify({"signup_url": signup_url}), 200
 
     @app.route("/v1/pay/callback", methods=["POST"])
@@ -115,14 +129,33 @@ def register_routes(app):
         data = request.get_json() or {}
         code = data.get("code")
         redirect_uri = data.get("redirect_uri", DEFAULT_CALLBACK_URL)
+        log.warning(
+            "Handling callback: redirect_uri=%s has_code=%s code_prefix=%s session_state=%s",
+            redirect_uri,
+            bool(code),
+            code[:12] if code else None,
+            session.get("oidc_state"),
+        )
         if not code:
             return jsonify({"error": "code required"}), 400
         try:
             token_data = exchange_code_for_token(code, redirect_uri)
+            access_token = token_data.get("access_token")
+            log.warning(
+                "Callback token exchange completed: token_present=%s expires_in=%s token_prefix=%s",
+                bool(access_token),
+                token_data.get("expires_in"),
+                access_token[:20] if access_token else None,
+            )
             return jsonify({
-                "access_token": token_data.get("access_token"),
+                "access_token": access_token,
                 "expires_in": token_data.get("expires_in"),
                 "token_type": "bearer",
             }), 200
         except Exception as e:
+            log.exception(
+                "Callback exchange failed: redirect_uri=%s code_prefix=%s",
+                redirect_uri,
+                code[:12],
+            )
             return jsonify({"error": "failed_to_exchange_code", "detail": str(e)}), 502

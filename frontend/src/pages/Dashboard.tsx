@@ -11,7 +11,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import api from '../services/api'
 
 export default function Dashboard() {
-  const paymentBaseUrl = import.meta.env.VITE_PAYMENT_BASE_URL || 'http://payment.pt'
+  const paymentBaseUrl = import.meta.env.VITE_PAYMENT_BASE_URL || 'https://payment.grupo3-egs-deti-ua.pt'
   const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery(['wallet'], getWallet)
   const queryClient = useQueryClient()
   const { data: txs, isLoading: txsLoading } = useQuery(['transactions', wallet?.id], () => 

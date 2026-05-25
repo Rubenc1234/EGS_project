@@ -1,20 +1,18 @@
 #!/usr/bin/env sh
 set -e
 
-env_file="${ENV_FILE:-/vault/secrets/payment.env}"
-attempts=0
+env_file="${ENV_FILE:-}"
 
-while [ ! -f "$env_file" ]; do
-  attempts=$((attempts + 1))
-  if [ "$attempts" -ge 30 ]; then
-    echo "Env file not found: $env_file" >&2
-    exit 1
+# Only source an env file if ENV_FILE is explicitly provided. This avoids
+# overwriting environment variables injected by Kubernetes (envFrom).
+if [ -n "$env_file" ]; then
+  if [ -f "$env_file" ]; then
+    set -a
+    . "$env_file"
+    set +a
+  else
+    echo "Env file not found: $env_file; using existing environment" >&2
   fi
-  sleep 1
-done
-
-set -a
-. "$env_file"
-set +a
+fi
 
 exec python payment_service/app_payment.py

@@ -14,6 +14,7 @@ import { fetchLoginUrl, getToken } from '../api'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -26,6 +27,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setLoading(true)
+    setError(null)
     try {
       // Store params in localStorage to survive the login redirect
       const walletId = searchParams.get('wallet_id')
@@ -39,8 +41,13 @@ export default function LoginPage() {
       // Use a fixed callback URL that matches what's configured in Keycloak
       const callbackUrl = `${window.location.origin}/callback`
       const loginUrl = await fetchLoginUrl(callbackUrl)
+      if (!loginUrl) {
+        throw new Error('The server did not return a login URL.')
+      }
       window.location.href = loginUrl
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to start sign-in.'
+      setError(message)
       setLoading(false)
     }
   }
@@ -108,6 +115,12 @@ export default function LoginPage() {
             >
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign in'}
             </Button>
+
+            {error && (
+              <Typography variant="body2" color="error" textAlign="center">
+                {error}
+              </Typography>
+            )}
 
             <Divider />
 

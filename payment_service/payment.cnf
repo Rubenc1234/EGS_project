@@ -1,0 +1,19 @@
+[req]
+distinguished_name = dn
+req_extensions = req_ext
+prompt = no
+
+[dn]
+C = PT
+ST = Porto
+L = Porto
+O = EGS
+CN = payment.grupo3-egs-deti-ua.pt
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = payment.grupo3-egs-deti-ua.pt
+DNS.2 = payment-keycloak.grupo3-egs-deti-ua.pt
+DNS.3 = payment-api.grupo3-egs-deti-ua.pt

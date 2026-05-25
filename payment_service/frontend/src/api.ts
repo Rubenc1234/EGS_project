@@ -1,7 +1,11 @@
 import axios from 'axios'
 
-// Use Vite dev proxy in local development to avoid browser CORS issues.
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '' })
+// Prefer same-origin API calls in production; Vite dev proxy can still be used locally.
+const apiBaseUrl = import.meta.env.DEV
+  ? (import.meta.env.VITE_API_BASE_URL || '')
+  : ''
+
+const api = axios.create({ baseURL: apiBaseUrl })
 
 export function isTokenExpired(token: string) {
   try {
@@ -233,4 +237,3 @@ export async function getStats(): Promise<StatsResponse> {
   const res = await api.get('/v1/payments/stats')
   return res.data
 }
-
