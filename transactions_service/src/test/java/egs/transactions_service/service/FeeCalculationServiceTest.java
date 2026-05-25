@@ -26,7 +26,7 @@ class FeeCalculationServiceTest {
     @Mock
     private TransactionConfig transactionConfig;
     
-    private final String RECIPIENT = "0x86a9906e6bd2ef137d6d5339154611de7a41b178";
+    private final String RECIPIENT = "0xf2f1fd6b53b3aa9c1acfd92ec827b0a040860948";
     private final BigDecimal FEE_PERCENTAGE = new BigDecimal("2.0");
 
     @BeforeEach
