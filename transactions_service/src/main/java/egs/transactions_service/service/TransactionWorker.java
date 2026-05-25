@@ -2,7 +2,7 @@ package egs.transactions_service.service;
 
 import egs.transactions_service.blockchain.BlockchainProvider;
 import egs.transactions_service.entity.Transaction;
-import egs.transactions_service.entity.TransactionFee;
+import egs.transactions_service.entity.Wallet;
 import egs.transactions_service.event.TransactionCreatedEvent;
 import egs.transactions_service.repository.TransactionRepository;
 import egs.transactions_service.repository.TransactionFeeRepository;
@@ -18,6 +18,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -39,9 +40,9 @@ public class TransactionWorker {
     private final BlockchainProvider blockchainProvider;
     private final KeyManagementService keyManagementService;
     private final NotificationService notificationService;
-    private final RefundService refundService;
     
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+    private final ConcurrentHashMap<String, Object> transactionLocks = new ConcurrentHashMap<>();
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -80,25 +81,7 @@ public class TransactionWorker {
 
         } catch (Exception e) {
             log.error("   ❌ Erro ao processar transação {}: {}", txId, e.getMessage(), e);
-            
-            // Get transaction details and trigger refund
-            Transaction tx = transactionRepository.findById(txId).orElse(null);
-            if (tx != null) {
-                // Find fee information to refund
-                var fee = transactionFeeRepository.findFirstByTransactionId(txId);
-                if (fee.isPresent() && fee.get().getFeeAmount() != null) {
-                    log.warn("   💰 Creating refund for fee: {} {}", fee.get().getFeeAmount(), fee.get().getAsset());
-                    refundService.createRefund(
-                        txId,
-                        tx.getFromWallet(),
-                        fee.get().getFeeAmount(),
-                        fee.get().getAsset(),
-                        "Transaction failed: " + e.getMessage()
-                    );
-                }
-            }
-            
-            updateTransactionStatus(txId, null, Transaction.TransactionStatus.FAILED);
+            finalizeFailedTransaction(txId, "Transaction failed before broadcast: " + e.getMessage());
         }
     }
 
@@ -134,35 +117,7 @@ public class TransactionWorker {
                     
                     // Transação CONFIRMADA
                     log.info("   ✅ Transação CONFIRMADA: {}", txHash);
-                    updateTransactionStatus(txId, txHash, Transaction.TransactionStatus.CONFIRMED);
-                    
-                    // Creditação ao receiver
-                    transactionRepository.findById(txId).ifPresent(tx -> {
-                        log.info("   💳 Processando crédito ao receiver: {}", tx.getToWallet());
-                        walletRepository.findById(tx.getToWallet()).ifPresent(wallet -> {
-                            if ("EUR".equals(tx.getAsset())) {
-                                wallet.setLastTokenBalance(wallet.getLastTokenBalance().add(tx.getAmount()));
-                                log.info("   ✅ Creditados {} {} (EUR) ao receiver", tx.getAmount(), tx.getAsset());
-                            } else if ("ETH".equals(tx.getAsset())) {
-                                wallet.setLastNativeBalance(wallet.getLastNativeBalance().add(tx.getAmount()));
-                                log.info("   ✅ Creditados {} {} (ETH) ao receiver", tx.getAmount(), tx.getAsset());
-                            }
-                            walletRepository.save(wallet);
-                        });
-                    });
-                    
-                    // Enviar notificação de CONFIRMED
-                    transactionRepository.findById(txId).ifPresent(tx -> {
-                        log.info("   🔔 Sending CONFIRMED notification for transaction {}", txId);
-                        try {
-                            // Resolve user ID from wallet for notification
-                            log.debug("   📮 Preparing to notify user about transaction confirmation");
-                            // Notification will be sent via TransactionWorker async event
-                        } catch (Exception e) {
-                            log.error("   ⚠️  Erro ao enviar notificação de confirmação: {}", e.getMessage());
-                        }
-                    });
-                    
+                    finalizeConfirmedTransaction(txId, txHash);
                     log.info("✅ === POLL COMPLETADO COM SUCESSO ===\n");
                     throw new RuntimeException("Polling completed successfully");
                     
@@ -192,17 +147,161 @@ public class TransactionWorker {
                 log.warn("   Motivo: Transação não confirmada em {} minutos", (MAX_ATTEMPTS * POLL_INTERVAL_SECONDS) / 60);
                 
                 pollTask.cancel(false);
-                
-                // Atualizar status para PENDING (ainda aguardando)
-                transactionRepository.findById(txId).ifPresent(tx -> {
-                    if (tx.getStatus() == Transaction.TransactionStatus.BROADCASTED) {
-                        log.info("   ℹ️  Mantendo status BROADCASTED (aguardando confirmação futura)");
-                    }
-                });
+                finalizeFailedTransaction(txId, "Broadcast polling timeout after " + ((MAX_ATTEMPTS * POLL_INTERVAL_SECONDS) / 60) + " minutes");
                 
                 log.warn("❌ === FIM DO POLL COM TIMEOUT ===\n");
             }
         }, MAX_ATTEMPTS * POLL_INTERVAL_SECONDS, TimeUnit.SECONDS);
+    }
+
+    public void finalizeConfirmedTransaction(String txId, String txHash) {
+        synchronized (getTransactionLock(txId)) {
+            Transaction tx = transactionRepository.findById(txId).orElse(null);
+            if (tx == null) {
+                log.warn("   ⚠️ finalizeConfirmedTransaction: transaction {} not found", txId);
+                return;
+            }
+
+            if (tx.getStatus() == Transaction.TransactionStatus.CONFIRMED) {
+                log.info("   ℹ️ Transaction {} already CONFIRMED, skipping", txId);
+                return;
+            }
+            if (tx.getStatus() == Transaction.TransactionStatus.FAILED) {
+                log.warn("   ℹ️ Transaction {} already FAILED, skipping confirmation", txId);
+                return;
+            }
+
+            updateTransactionStatus(txId, txHash, Transaction.TransactionStatus.CONFIRMED);
+
+            // Creditar receiver sempre
+            creditReceiver(tx);
+
+            // Fee só para transações normais
+            if (tx.getType() == Transaction.TransactionType.TRANSFER) {
+                transferFeeIfNeeded(tx);
+            } else {
+                log.info("   ℹ️ Refund transaction {}: fee is disabled", txId);
+            }
+        }
+    }
+
+    public void finalizeFailedTransaction(String txId, String reason) {
+        synchronized (getTransactionLock(txId)) {
+            Transaction tx = transactionRepository.findById(txId).orElse(null);
+            if (tx == null) {
+                log.warn("   ⚠️ finalizeFailedTransaction: transaction {} not found", txId);
+                return;
+            }
+
+            if (tx.getStatus() == Transaction.TransactionStatus.CONFIRMED) {
+                log.warn("   ℹ️ Transaction {} already CONFIRMED, skipping failure handling", txId);
+                return;
+            }
+            if (tx.getStatus() == Transaction.TransactionStatus.FAILED) {
+                log.info("   ℹ️ Transaction {} already FAILED, skipping", txId);
+                return;
+            }
+
+            updateTransactionStatus(txId, null, Transaction.TransactionStatus.FAILED);
+
+            // If this was a refund, allow the original refund request to be retried
+            if (tx.getType() == Transaction.TransactionType.REFUND && tx.getLinkedTxId() != null) {
+                transactionRepository.findById(tx.getLinkedTxId()).ifPresent(originalTx -> {
+                    originalTx.setRefunded(false);
+                    transactionRepository.save(originalTx);
+                    log.info("   ↩️ Original transaction {} refund flag reset", originalTx.getId());
+                });
+            }
+
+            log.warn("   ❌ Transaction {} marked as FAILED: {}", txId, reason);
+        }
+    }
+
+    private void creditReceiver(Transaction tx) {
+        transactionRepository.findById(tx.getId()).ifPresent(currentTx -> {
+            log.info("   💳 Processando crédito ao receiver: {}", currentTx.getToWallet());
+            walletRepository.findById(currentTx.getToWallet().toLowerCase()).ifPresentOrElse(wallet -> {
+                if ("EUR".equals(currentTx.getAsset())) {
+                    wallet.setLastTokenBalance(wallet.getLastTokenBalance().add(currentTx.getAmount()));
+                    log.info("   ✅ Creditados {} {} (EUR) ao receiver", currentTx.getAmount(), currentTx.getAsset());
+                } else if ("ETH".equals(currentTx.getAsset())) {
+                    wallet.setLastNativeBalance(wallet.getLastNativeBalance().add(currentTx.getAmount()));
+                    log.info("   ✅ Creditados {} {} (ETH) ao receiver", currentTx.getAmount(), currentTx.getAsset());
+                }
+                walletRepository.save(wallet);
+            }, () -> {
+                Wallet newWallet = new Wallet();
+                newWallet.setAddress(currentTx.getToWallet().toLowerCase());
+                newWallet.setLastNativeBalance(BigDecimal.ZERO);
+                newWallet.setLastTokenBalance(BigDecimal.ZERO);
+                if ("EUR".equals(currentTx.getAsset())) {
+                    newWallet.setLastTokenBalance(currentTx.getAmount());
+                } else if ("ETH".equals(currentTx.getAsset())) {
+                    newWallet.setLastNativeBalance(currentTx.getAmount());
+                }
+                walletRepository.save(newWallet);
+                log.info("   ✅ Receiver wallet created and credited: {}", currentTx.getToWallet());
+            });
+        });
+    }
+
+    private void transferFeeIfNeeded(Transaction tx) {
+        transactionFeeRepository.findFirstByTransactionId(tx.getId()).ifPresent(fee -> {
+            if (fee.getFeeAmount() == null || fee.getFeeAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn("   ⚠️ Fee inexistente ou zero para tx {}. Nada a transferir.", tx.getId());
+                return;
+            }
+
+            if (fee.getRecipientAddress() == null || fee.getRecipientAddress().isBlank()) {
+                log.warn("   ⚠️ Fee recipient em falta para tx {}. Nada a transferir.", tx.getId());
+                return;
+            }
+
+            if (fee.isTransferredToRecipient()) {
+                log.info("   ℹ️ Fee already transferred for tx {}", tx.getId());
+                return;
+            }
+
+            try {
+                String privateKey = keyManagementService.getPrivateKeyForWallet(tx.getFromWallet());
+                log.info("   💸 Enviando fee {} {} para {}", fee.getFeeAmount(), fee.getAsset(), fee.getRecipientAddress());
+                String feeTxHash = blockchainProvider.sendTransaction(
+                        tx.getFromWallet(),
+                        fee.getRecipientAddress(),
+                        fee.getFeeAmount(),
+                        privateKey
+                );
+                fee.setTransferredToRecipient(true);
+                fee.setTransferTxHash(feeTxHash);
+                transactionFeeRepository.save(fee);
+                log.info("   ✅ Fee enviada! Hash: {}", feeTxHash);
+
+                String normalizedFeeRecipient = fee.getRecipientAddress().toLowerCase();
+                Wallet feeWallet = walletRepository.findById(normalizedFeeRecipient)
+                        .orElseGet(() -> {
+                            Wallet newWallet = new Wallet();
+                            newWallet.setAddress(normalizedFeeRecipient);
+                            newWallet.setLastNativeBalance(BigDecimal.ZERO);
+                            newWallet.setLastTokenBalance(BigDecimal.ZERO);
+                            return walletRepository.save(newWallet);
+                        });
+
+                if ("EUR".equals(tx.getAsset())) {
+                    feeWallet.setLastTokenBalance(feeWallet.getLastTokenBalance().add(fee.getFeeAmount()));
+                    log.info("   ✅ Creditados {} EUR ao fee recipient cache", fee.getFeeAmount());
+                } else if ("ETH".equals(tx.getAsset())) {
+                    feeWallet.setLastNativeBalance(feeWallet.getLastNativeBalance().add(fee.getFeeAmount()));
+                    log.info("   ✅ Creditados {} ETH ao fee recipient cache", fee.getFeeAmount());
+                }
+                walletRepository.save(feeWallet);
+            } catch (Exception feeError) {
+                log.error("   ❌ Erro ao transferir fee para {}: {}", fee.getRecipientAddress(), feeError.getMessage(), feeError);
+            }
+        });
+    }
+
+    private Object getTransactionLock(String txId) {
+        return transactionLocks.computeIfAbsent(txId, ignored -> new Object());
     }
 
     @Transactional

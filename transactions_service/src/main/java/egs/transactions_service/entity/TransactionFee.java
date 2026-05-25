@@ -44,6 +44,13 @@ public class TransactionFee {
     
     @Column(nullable = false, length = 10)
     private String asset;  // "ETH" ou "EUR"
+
+    @Column(name = "fee_transferred_to_recipient", nullable = false)
+    @Builder.Default
+    private boolean transferredToRecipient = false;
+
+    @Column(name = "fee_transfer_tx_hash", length = 66)
+    private String transferTxHash;
     
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
