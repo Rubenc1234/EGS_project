@@ -139,7 +139,7 @@ def _notify_transactions_service(payment_id: str) -> None:
             json={"status": "concluded"},
             headers={
                 "Content-Type": "application/json",
-                "X-Internal-Key": config.NOTIFICATIONS_API_KEY
+                "X-Internal-Key": config.INTERNAL_API_KEY
             },
             timeout=5
         )
