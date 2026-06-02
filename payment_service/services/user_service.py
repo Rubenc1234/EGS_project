@@ -76,6 +76,24 @@ def save_card(user_id: str, stripe_pm_id: str) -> SavedCard:
     return card
 
 
+def get_summary(user_id: str) -> dict:
+    from payment_service.repository import payment_repository
+    payments = payment_repository.find_by_user_id(user_id)
+    cards = user_repository.get_cards(user_id)
+
+    concluded = [p for p in payments if p.status == "concluded"]
+    pending = [p for p in payments if p.status == "pending"]
+    recent = sorted(payments, key=lambda p: p.created_at or 0, reverse=True)[:5]
+
+    return {
+        "total_spent": round(sum(p.amount for p in concluded), 2),
+        "payment_count": len(payments),
+        "pending_count": len(pending),
+        "recent_payments": [p.to_dict() for p in recent],
+        "saved_cards_count": len(cards),
+    }
+
+
 def delete_card(user_id: str, card_id: str) -> None:
     card = user_repository.get_card(card_id)
     if card is None or card.user_id != user_id:

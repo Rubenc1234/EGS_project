@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   Box,
-  Button,
-  CircularProgress,
   Container,
   Paper,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -45,7 +43,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function StatsPage() {
-  const navigate = useNavigate()
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,33 +64,36 @@ export default function StatsPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        pt: 6,
+        pt: 10,
         pb: 6,
       }}
     >
       <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" fontWeight={700} color="white">
-            Estatísticas do Serviço
-          </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => navigate('/payments')}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
-          >
-            ← Voltar
-          </Button>
-        </Box>
+        <Typography variant="h5" fontWeight={700} color="white" sx={{ mb: 3 }}>
+          Estatísticas do Serviço
+        </Typography>
 
         {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-            <CircularProgress sx={{ color: 'white' }} />
-          </Box>
+          <>
+            <Skeleton variant="text" width={180} height={36} sx={{ mb: 1.5 }} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 4 }}>
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} variant="rectangular" height={88} sx={{ borderRadius: 2 }} />
+              ))}
+            </Box>
+            <Skeleton variant="text" width={120} height={36} sx={{ mb: 1.5 }} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 4 }}>
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} variant="rectangular" height={88} sx={{ borderRadius: 2 }} />
+              ))}
+            </Box>
+            <Skeleton variant="text" width={220} height={36} sx={{ mb: 1.5 }} />
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 4 }} />
+          </>
         )}
 
         {error && (

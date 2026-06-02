@@ -7,6 +7,7 @@ import {
   CircularProgress,
   Container,
   Paper,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -16,19 +17,9 @@ import {
   Tab,
   Tabs,
 } from '@mui/material'
-import { cancelPayment, clearToken, downloadReceipt, getUserIdFromToken, getUserPayments, isOperator, PaymentResponse } from '../api'
-
-const STATUS_COLOR: Record<string, 'warning' | 'success' | 'error'> = {
-  pending: 'warning',
-  concluded: 'success',
-  cancelled: 'error',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Pendente',
-  concluded: 'Concluído',
-  cancelled: 'Cancelado',
-}
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import { cancelPayment, downloadReceipt, getUserIdFromToken, getUserPayments, PaymentResponse } from '../api'
+import StatusChip, { getStatusLabel } from '../components/StatusChip'
 
 const TABS = ['all', 'pending', 'concluded', 'cancelled'] as const
 const TAB_LABEL: Record<string, string> = {
@@ -87,11 +78,6 @@ export default function PaymentsPage() {
     }
   }
 
-  function handleLogout() {
-    clearToken()
-    navigate('/', { replace: true })
-  }
-
   const concluded = payments.filter(p => p.status === 'concluded')
   const pending = payments.filter(p => p.status === 'pending')
   const totalSpent = concluded.reduce((sum, p) => sum + p.amount, 0)
@@ -102,64 +88,56 @@ export default function PaymentsPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        pt: 6,
+        pt: 10,
         pb: 6,
       }}
     >
       <Container maxWidth="lg">
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" fontWeight={700} color="white">
-            Os meus pagamentos
-          </Typography>
-          <Button variant="outlined" size="small" onClick={() => navigate('/profile')}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
-            My Profile
-          </Button>
-          {isOperator() && (
-            <Button variant="outlined" size="small" onClick={() => navigate('/stats')}
-              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
-              Stats
-            </Button>
-          )}
-          <Button variant="outlined" size="small" onClick={handleLogout}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}>
-            Logout
-          </Button>
-        </Box>
+        <Typography variant="h5" fontWeight={700} color="white" sx={{ mb: 3 }}>
+          Os meus pagamentos
+        </Typography>
 
         {/* Summary cards */}
-        {!loading && !error && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
-            <Paper elevation={4} sx={{ borderRadius: 2, p: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>TOTAL GASTO</Typography>
-              <Typography variant="h5" fontWeight={800} color="primary">€{totalSpent.toFixed(2)}</Typography>
-              <Typography variant="caption" color="text.secondary">{concluded.length} pagamento{concluded.length !== 1 ? 's' : ''} concluído{concluded.length !== 1 ? 's' : ''}</Typography>
-            </Paper>
-            <Paper elevation={4} sx={{ borderRadius: 2, p: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>TOTAL PAGAMENTOS</Typography>
-              <Typography variant="h5" fontWeight={800}>{payments.length}</Typography>
-              <Typography variant="caption" color="text.secondary">desde o início</Typography>
-            </Paper>
-            <Paper elevation={4} sx={{ borderRadius: 2, p: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>PENDENTES</Typography>
-              <Typography variant="h5" fontWeight={800} color={pending.length > 0 ? 'warning.main' : 'text.primary'}>
-                {pending.length}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">a aguardar confirmação</Typography>
-            </Paper>
-          </Box>
-        )}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
+          {loading
+            ? [0, 1, 2].map(i => (
+                <Skeleton key={i} variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
+              ))
+            : !error && (
+                <>
+                  <Paper elevation={4} sx={{ borderRadius: 2, p: 2.5 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>TOTAL GASTO</Typography>
+                    <Typography variant="h5" fontWeight={800} color="primary">€{totalSpent.toFixed(2)}</Typography>
+                    <Typography variant="caption" color="text.secondary">{concluded.length} pagamento{concluded.length !== 1 ? 's' : ''} concluído{concluded.length !== 1 ? 's' : ''}</Typography>
+                  </Paper>
+                  <Paper elevation={4} sx={{ borderRadius: 2, p: 2.5 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>TOTAL PAGAMENTOS</Typography>
+                    <Typography variant="h5" fontWeight={800}>{payments.length}</Typography>
+                    <Typography variant="caption" color="text.secondary">desde o início</Typography>
+                  </Paper>
+                  <Paper elevation={4} sx={{ borderRadius: 2, p: 2.5 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>PENDENTES</Typography>
+                    <Typography variant="h5" fontWeight={800} color={pending.length > 0 ? 'warning.main' : 'text.primary'}>
+                      {pending.length}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">a aguardar confirmação</Typography>
+                  </Paper>
+                </>
+              )
+          }
+        </Box>
 
         {/* Table card */}
         <Paper elevation={8} sx={{ borderRadius: 3 }}>
           {loading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <CircularProgress />
+            <Box sx={{ p: 2 }}>
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} variant="rectangular" height={40} sx={{ mb: 1, borderRadius: 1 }} />
+              ))}
             </Box>
           )}
 
@@ -193,9 +171,24 @@ export default function PaymentsPage() {
               </Tabs>
 
               {filtered.length === 0 ? (
-                <Typography color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
-                  Nenhum pagamento {tab !== 'all' ? `com estado "${STATUS_LABEL[tab]}"` : ''}.
-                </Typography>
+                <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <ReceiptLongIcon sx={{ fontSize: 56, color: 'text.disabled' }} />
+                  <Typography variant="subtitle1" color="text.secondary" fontWeight={600}>
+                    {tab !== 'all'
+                      ? `Nenhum pagamento com estado "${getStatusLabel(tab)}"`
+                      : 'Ainda não há pagamentos'}
+                  </Typography>
+                  <Typography variant="body2" color="text.disabled" textAlign="center">
+                    {tab !== 'all'
+                      ? 'Tente selecionar um filtro diferente.'
+                      : 'Os seus pagamentos aparecerão aqui assim que fizer o primeiro.'}
+                  </Typography>
+                  {tab === 'all' && (
+                    <Button variant="contained" size="small" onClick={() => navigate('/pay')} sx={{ mt: 1 }}>
+                      Fazer primeiro pagamento
+                    </Button>
+                  )}
+                </Box>
               ) : (
                 <Table size="small">
                   <TableHead>
@@ -210,23 +203,24 @@ export default function PaymentsPage() {
                   </TableHead>
                   <TableBody>
                     {filtered.map((p) => (
-                      <TableRow key={p.id} hover>
+                      <TableRow
+                        key={p.id}
+                        hover
+                        onClick={() => navigate(`/payments/${p.id}`)}
+                        sx={{ cursor: 'pointer' }}
+                      >
                         <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                           {p.id.slice(0, 8)}…
                         </TableCell>
                         <TableCell>{p.wallet_id ?? '—'}</TableCell>
                         <TableCell align="right">{p.amount.toFixed(2)}</TableCell>
                         <TableCell align="center">
-                          <Chip
-                            label={STATUS_LABEL[p.status] ?? p.status}
-                            color={STATUS_COLOR[p.status] ?? 'default'}
-                            size="small"
-                          />
+                          <StatusChip status={p.status} />
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
                           {formatDate(p.created_at)}
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end' }}>
                             {p.status === 'pending' && (
                               <Button

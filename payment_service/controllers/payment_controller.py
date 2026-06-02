@@ -27,6 +27,17 @@ def register_routes(app):
             return jsonify({"error": "user_id and amount are required"}), 400
 
         try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            return jsonify({"error": "amount must be a number"}), 400
+
+        if amount <= 0 or amount > 10000:
+            return jsonify({"error": "amount must be between 0.01 and 10000 EUR"}), 400
+
+        if not wallet_id:
+            return jsonify({"error": "wallet_id is required"}), 400
+
+        try:
             payment = payment_service.create_payment(
                 user_id,
                 float(amount),
@@ -118,7 +129,10 @@ def register_routes(app):
                 return jsonify({"verified": True}), 200
             return jsonify({"verified": False, "error": "invalid_or_expired_code"}), 400
         except ValueError as e:
-            return jsonify({"error": str(e)}), 404
+            reason = str(e)
+            if reason == "otp_blocked":
+                return jsonify({"verified": False, "error": "otp_blocked_too_many_attempts"}), 429
+            return jsonify({"error": reason}), 404
 
     @app.route("/v1/payments/webhook", methods=["POST"])
     def stripe_webhook():

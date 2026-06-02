@@ -346,11 +346,29 @@ export default function Dashboard() {
             <TextField label="From wallet" value={wallet?.id ?? ''} disabled fullWidth />
             <TextField label="To wallet (0x...) or user id" value={toWallet} onChange={(e) => setToWallet(e.target.value)} fullWidth />
             <TextField label="Amount (EUR)" value={amount} onChange={(e) => setAmount(e.target.value)} fullWidth />
+            {(() => {
+              const numAmount = parseFloat(amount) || 0;
+              const fee = numAmount * 0.02;
+              const netAmount = numAmount - fee;
+              if (numAmount <= 0) return null;
+              return (
+                <Box sx={{ mt: 1, padding: 1.5, borderRadius: 1, backgroundColor: '#f9f9f9', border: '1px solid #e0e0e0' }}>
+                  <Typography variant="body2" color="textSecondary">
+                    Tax (2%): <strong>€{fee.toFixed(2)}</strong>
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Recipient receives: <strong>€{netAmount.toFixed(2)}</strong>
+                  </Typography>
+                </Box>
+              );
+            })()}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseSend} disabled={loadingSend}>Cancel</Button>
-          <Button onClick={handleSubmitSend} variant="contained" disabled={loadingSend}>Send</Button>
+          <Button onClick={handleSubmitSend} variant="contained" disabled={loadingSend || (parseFloat(amount) || 0) <= 0}>
+            {loadingSend ? 'Sending...' : `Send`}
+          </Button>
         </DialogActions>
       </Dialog>
 

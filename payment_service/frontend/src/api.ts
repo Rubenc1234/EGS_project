@@ -106,6 +106,11 @@ export async function getUserPayments(userId: string): Promise<PaymentResponse[]
   return res.data
 }
 
+export async function getPayment(paymentId: string): Promise<PaymentResponse> {
+  const res = await api.get(`/v1/payments/${paymentId}`)
+  return res.data
+}
+
 export async function cancelPayment(paymentId: string): Promise<PaymentResponse> {
   const res = await api.patch(`/v1/payments/${paymentId}`, { status: 'cancelled' })
   return res.data
@@ -186,6 +191,17 @@ export function isOperator(): boolean {
     return Array.isArray(payload.realm_access?.roles) && payload.realm_access.roles.includes('operator')
   } catch {
     return false
+  }
+}
+
+export function getUsername(): string {
+  const token = getToken()
+  if (!token) return ''
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.preferred_username ?? payload.email ?? payload.sub ?? ''
+  } catch {
+    return ''
   }
 }
 

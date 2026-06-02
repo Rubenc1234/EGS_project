@@ -195,6 +195,9 @@ def send_otp(payment_id: str, user_id: str) -> None:
     twilio_service.send_otp_whatsapp(profile.phone_number, code)
 
 
+MAX_OTP_ATTEMPTS = 3
+
+
 def verify_otp(payment_id: str, user_id: str, code: str) -> bool:
     payment = payment_repository.find_by_id(payment_id)
     if not payment or payment.user_id != user_id:
@@ -206,6 +209,12 @@ def verify_otp(payment_id: str, user_id: str, code: str) -> bool:
 
     code_hash = hashlib.sha256(code.encode()).hexdigest()
     if not hmac.compare_digest(otp.code_hash, code_hash):
+        otp.failed_attempts = (otp.failed_attempts or 0) + 1
+        if otp.failed_attempts >= MAX_OTP_ATTEMPTS:
+            otp.used = True
+            otp_repository.save_otp(otp)
+            raise ValueError("otp_blocked")
+        otp_repository.save_otp(otp)
         return False
 
     otp.used = True

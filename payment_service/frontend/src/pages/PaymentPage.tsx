@@ -190,20 +190,20 @@ function CheckoutForm({
     <>
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
         {!hasPhone && (
-          <Alert 
-            severity="info" 
-            variant="outlined"
-            sx={{ 
-              borderRadius: '12px', 
-              borderColor: '#e0e0e0',
-              bgcolor: '#fcfcfd',
-              color: '#555',
+          <Alert
+            severity="info"
+            variant="standard"
+            sx={{
+              borderRadius: '12px',
+              bgcolor: '#ecfeff',
+              color: '#0e7490',
+              borderLeft: '3px solid #0891b2',
               fontSize: '0.85rem',
-              '& .MuiAlert-icon': { color: '#757575' }
+              '& .MuiAlert-icon': { color: '#0891b2' }
             }}
           >
             Sem contacto telefónico associado. A verificação OTP será ignorada.{' '}
-            <a href="/profile" style={{ color: '#1976d2', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid' }}>
+            <a href="/profile" style={{ color: '#0891b2', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid' }}>
               Adicionar telefone no perfil
             </a>
           </Alert>
@@ -212,7 +212,7 @@ function CheckoutForm({
         {/* Saved cards selection */}
         {savedCards.length > 0 && (
           <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.5px' }}>
+            <Typography variant="caption" sx={{ color: '#0891b2', fontWeight: 700, mb: 1.5, display: 'block', letterSpacing: '0.5px' }}>
               MÉTODO DE PAGAMENTO
             </Typography>
             <FormControl fullWidth>
@@ -239,7 +239,7 @@ function CheckoutForm({
                             <Chip 
                               label="Predefinido" 
                               size="small" 
-                              sx={{ ml: 'auto', height: 20, fontSize: '0.65rem', fontWeight: 600, bgcolor: '#f0f4f9', color: '#1a73e8' }} 
+                              sx={{ ml: 'auto', height: 20, fontSize: '0.65rem', fontWeight: 600, bgcolor: '#cffafe', color: '#0e7490' }} 
                             />
                           )}
                         </Box>
@@ -247,14 +247,14 @@ function CheckoutForm({
                       sx={{ 
                         border: '1px solid', 
                         borderColor: isSelected ? 'primary.main' : '#e0e0e0', 
-                        bgcolor: isSelected ? '#f8faff' : '#ffffff',
+                        bgcolor: isSelected ? '#ecfeff' : '#ffffff',
                         borderRadius: '12px', 
                         mx: 0, 
                         mb: 1.2, 
                         p: 2,
                         cursor: 'pointer',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        '&:hover': { borderColor: isSelected ? 'primary.main' : '#b0b0b0', bgcolor: isSelected ? '#f8faff' : '#fafafa' }
+                        '&:hover': { borderColor: isSelected ? 'primary.main' : '#b0b0b0', bgcolor: isSelected ? '#ecfeff' : '#fafafa' }
                       }}
                     />
                   )
@@ -274,13 +274,13 @@ function CheckoutForm({
                   sx={{ 
                     border: '1px solid', 
                     borderColor: selectedCard === 'new' ? 'primary.main' : '#e0e0e0', 
-                    bgcolor: selectedCard === 'new' ? '#f8faff' : '#ffffff',
+                    bgcolor: selectedCard === 'new' ? '#ecfeff' : '#ffffff',
                     borderRadius: '12px', 
                     mx: 0, 
                     p: 2,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    '&:hover': { borderColor: selectedCard === 'new' ? 'primary.main' : '#b0b0b0', bgcolor: selectedCard === 'new' ? '#f8faff' : '#fafafa' }
+                    '&:hover': { borderColor: selectedCard === 'new' ? 'primary.main' : '#b0b0b0', bgcolor: selectedCard === 'new' ? '#ecfeff' : '#fafafa' }
                   }}
                 />
               </RadioGroup>
@@ -292,7 +292,7 @@ function CheckoutForm({
         {(savedCards.length === 0 || selectedCard === 'new') && (
           <Fade in timeout={300}>
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.5px' }}>
+              <Typography variant="caption" sx={{ color: '#0891b2', fontWeight: 700, mb: 1.5, display: 'block', letterSpacing: '0.5px' }}>
                 DADOS DO CARTÃO
               </Typography>
               <Box
@@ -303,7 +303,7 @@ function CheckoutForm({
                   borderRadius: '12px',
                   p: 2.2,
                   boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                  '&:focus-within': { borderColor: 'primary.main', boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.12)' },
+                  '&:focus-within': { borderColor: 'primary.main', boxShadow: '0 0 0 3px rgba(8, 145, 178, 0.12)' },
                   transition: 'all 0.2s ease',
                 }}
               >
@@ -425,13 +425,8 @@ function TestParamsForm({ onSubmit }: { onSubmit: (w: string, a: number, r: stri
   return (
     <Box 
       sx={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#f8fafd',
-        backgroundImage: `
-          radial-gradient(at 0% 0%, hsla(210, 100%, 85%, 0.4) 0px, transparent 50%),
-          radial-gradient(at 100% 0%, hsla(220, 100%, 75%, 0.2) 0px, transparent 50%),
-          radial-gradient(at 100% 100%, hsla(240, 100%, 90%, 0.4) 0px, transparent 50%)
-        `,
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
@@ -495,13 +490,7 @@ export default function PaymentPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#6297e5',
-        backgroundImage: `
-          radial-gradient(at 0% 0%, hsla(210, 100%, 85%, 0.4) 0px, transparent 50%),
-          radial-gradient(at 100% 0%, hsla(220, 100%, 75%, 0.2) 0px, transparent 50%),
-          radial-gradient(at 100% 100%, hsla(240, 100%, 90%, 0.4) 0px, transparent 50%),
-          radial-gradient(at 0% 100%, hsla(200, 100%, 80%, 0.2) 0px, transparent 50%)
-        `,
+        background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -522,35 +511,33 @@ export default function PaymentPage() {
           }}
         >
           {/* Header Minimalista */}
-          <Box sx={{ pt: 4, px: 4, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ pt: 3, px: 4, pb: 2, borderBottom: '1px solid #f0fdff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ width: 10, height: 10, bgcolor: '#10b981', borderRadius: '50%', boxShadow: '0 0 8px rgba(16,185,129,0.4)' }} /> 
+              <Box sx={{ width: 10, height: 10, bgcolor: '#10b981', borderRadius: '50%', boxShadow: '0 0 8px rgba(16,185,129,0.4)' }} />
               <Typography variant="subtitle1" fontWeight={700} color="text.primary">
                 Carregamento
               </Typography>
             </Box>
-            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.disabled', bgcolor: '#f4f5f6', px: 1, py: 0.5, borderRadius: '6px' }}>
-              ID: {walletId.slice(-8)}
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#0e7490', bgcolor: '#ecfeff', px: 1.5, py: 0.5, borderRadius: '6px', fontWeight: 600 }}>
+              {walletId.slice(-8)}
             </Typography>
           </Box>
 
-          <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {/* Secção de Montante Re-desenhada */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ letterSpacing: '0.8px' }}>
+          <Box sx={{ p: 4, pt: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* Secção de Montante */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, bgcolor: '#cffafe', borderRadius: 2, p: 2 }}>
+              <Typography variant="caption" sx={{ color: '#0891b2', fontWeight: 700, letterSpacing: '0.8px' }}>
                 VALOR A DEPOSITAR
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-                <Typography variant="h3" fontWeight={800} color="text.primary" sx={{ letterSpacing: '-1.5px' }}>
+                <Typography variant="h3" fontWeight={800} sx={{ color: '#0891b2', letterSpacing: '-1.5px' }}>
                   €{amount.toFixed(2)}
                 </Typography>
-                <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
+                <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
                   EUR
                 </Typography>
               </Box>
             </Box>
-
-            <Divider sx={{ borderColor: '#f1f3f5' }} />
 
             <Elements stripe={stripePromise}>
               <CheckoutForm walletId={walletId} amount={amount} redirectUrl={redirectUrl} profile={profile} />

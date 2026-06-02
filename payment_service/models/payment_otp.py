@@ -10,3 +10,4 @@ class PaymentOTP(db.Model):
     code_hash = db.Column(db.String, nullable=False)  # SHA256 hex
     expires_at = db.Column(db.DateTime, nullable=False)  # UTC
     used = db.Column(db.Boolean, nullable=False, default=False)
+    failed_attempts = db.Column(db.Integer, nullable=False, default=0)
