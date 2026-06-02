@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/v1")
 @Slf4j
 // Allow frontend dev servers (5173, 5174 and 5175). In production, lock this down to your real origin(s).
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt", "https://transactions-frontend.grupo3-egs-deti-ua.pt", "https://payment.grupo3-egs-deti-ua.pt"})
 public class AuthController {
 
     @Value("${keycloak.url}")
@@ -40,12 +40,18 @@ public class AuthController {
     @Value("${keycloak.client-secret}")
     private String clientSecret;
 
+    @Value("${app.public-url:http://app.pt}")
+    private String appPublicUrl;
+
+    @Value("${transactions.public-url:http://transactions.pt}")
+    private String transactionsPublicUrl;
+
     @GetMapping("/login")
     public ResponseEntity<Void> getLoginUrl(@RequestParam(value = "redirect_uri", required = false) String redirectUri,
                                             @RequestParam(value = "state", required = false) String clientState,
                                             HttpServletRequest request) {
         if (redirectUri == null || redirectUri.isEmpty()) {
-            redirectUri = "http://app.pt/callback";
+            redirectUri = appPublicUrl + "/callback";
         }
 
         // Generate a secure random state per login attempt and store it in the user's session
@@ -62,7 +68,7 @@ public class AuthController {
         session.setAttribute("post_login_redirect", redirectUri);
 
         // For robust server-side flow use the server callback as Keycloak's redirect_uri
-        String serverCallback = "http://transactions.pt/v1/callback";
+        String serverCallback = transactionsPublicUrl + "/v1/callback";
 
         // Force login prompt and require fresh authentication (avoid silent SSO)
         String loginUrl = String.format(
@@ -92,14 +98,14 @@ public class AuthController {
         String expectedState = session != null ? (String) session.getAttribute("oidc_state") : null;
         if (expectedState == null || returnedState == null || !expectedState.equals(returnedState)) {
             log.warn("OIDC state mismatch: expected={} returned={}", expectedState, returnedState);
-            String frontendErr = "http://app.pt/?error=invalid_state";
+            String frontendErr = appPublicUrl + "/?error=invalid_state";
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(java.net.URI.create(frontendErr));
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
         }
 
         if (code == null || code.isEmpty()) {
-            String frontendErr = "http://app.pt/?error=code_required";
+            String frontendErr = appPublicUrl + "/?error=code_required";
             HttpHeaders headers = new HttpHeaders();
             headers.setLocation(java.net.URI.create(frontendErr));
             return new ResponseEntity<>(headers, HttpStatus.FOUND);
@@ -116,7 +122,7 @@ public class AuthController {
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
         form.add("code", code);
-        form.add("redirect_uri", "http://transactions.pt/v1/callback");
+        form.add("redirect_uri", transactionsPublicUrl + "/v1/callback");
 
         HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(form, headers);
 
@@ -138,7 +144,7 @@ public class AuthController {
             log.info("Successfully exchanged code for token (GET callback)." );
             String postLogin = session != null ? (String) session.getAttribute("post_login_redirect") : null;
             if (postLogin == null || postLogin.isEmpty()) {
-                postLogin = "http://app.pt/";
+                postLogin = appPublicUrl + "/";
             }
 
             StringBuilder sb = new StringBuilder(postLogin);
@@ -155,7 +161,7 @@ public class AuthController {
             return new ResponseEntity<>(out, HttpStatus.FOUND);
         } catch (Exception ex) {
             log.error("Failed to exchange code for token (GET callback): {}", ex.getMessage());
-            String frontendErr = "http://app.pt/?error=failed_to_exchange_code";
+            String frontendErr = appPublicUrl + "/?error=failed_to_exchange_code";
             HttpHeaders headersOut = new HttpHeaders();
             headersOut.setLocation(java.net.URI.create(frontendErr));
             return new ResponseEntity<>(headersOut, HttpStatus.FOUND);
@@ -166,7 +172,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> handleCallback(@RequestBody Map<String, String> payload,
                                                               HttpServletRequest request) {
         String code = payload.get("code");
-        String redirectUri = payload.getOrDefault("redirect_uri", "http://app.pt/callback");
+        String redirectUri = payload.getOrDefault("redirect_uri", appPublicUrl + "/callback");
         String returnedState = payload.get("state");
 
         // Validate state against session-stored value

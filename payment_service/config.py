@@ -14,7 +14,7 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", os.getenv("STRIPE_Secret_key"
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_Publishable_key", "")
 
 NOTIFICATIONS_BASE_URL = os.getenv("NOTIFICATIONS_BASE_URL", "http://localhost:8082")
-NOTIFICATIONS_API_KEY = os.getenv("NOTIFICATIONS_API_KEY", "")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")

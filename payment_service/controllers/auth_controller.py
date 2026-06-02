@@ -45,7 +45,7 @@ def require_token(f):
     def decorated(*args, **kwargs):
         # 1. Check for Internal API Key bypass
         internal_key = request.headers.get("X-Internal-Key")
-        current_internal_key = config.NOTIFICATIONS_API_KEY
+        current_internal_key = config.INTERNAL_API_KEY
         log.warning("Checking bypass: received=%s, expected=%s", internal_key, current_internal_key)
         if internal_key and current_internal_key and internal_key == current_internal_key:
             log.warning("Bypassing token check via internal API key")

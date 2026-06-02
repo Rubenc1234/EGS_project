@@ -1,7 +1,11 @@
 import logging
 import requests
 import urllib.parse
+import urllib3
 from payment_service.config import KEYCLOAK_URL, KEYCLOAK_PUBLIC_URL, REALM, CLIENT_ID, CLIENT_SECRET
+
+# Disable SSL warnings for verify=False requests
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +42,7 @@ def exchange_code_for_token(code: str, redirect_uri: str) -> dict:
         "code": code,
         "redirect_uri": redirect_uri,
     }
-    res = requests.post(url, data=data, timeout=5)
+    res = requests.post(url, data=data, timeout=5, verify=False)
     res.raise_for_status()
     js = res.json()
     return {"access_token": js.get("access_token"), "expires_in": js.get("expires_in")}
@@ -52,7 +56,7 @@ def introspect_token(token: str) -> bool:
     """
     url = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/userinfo"
     try:
-        res = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=5)
+        res = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=5, verify=False)
         log.warning("Userinfo HTTP %s", res.status_code)
         return res.status_code == 200
     except Exception as exc:

@@ -56,4 +56,4 @@ app:
   # Transaction/Fee Settings
   transaction:
     fee-percentage: 2.0  # Taxa: 2% em cada transação
-    fee-recipient: "0xf22b7e23782b4f7ec38e4c4148e1171a5eb5fc4e"  # Bank's wallet (where fees go)
+    fee-recipient: ${APP_TRANSACTION_FEE_RECIPIENT:${app.bank-wallet}}  # Dynamically defaults to Bank's wallet
