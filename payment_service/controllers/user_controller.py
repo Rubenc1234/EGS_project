@@ -1,6 +1,10 @@
+import re
+
 from flask import jsonify, request
 from payment_service.controllers.auth_controller import require_token, get_user_id_from_token
 from payment_service.services import user_service
+
+_E164_RE = re.compile(r"^\+[1-9]\d{7,14}$")
 
 
 def _user_id() -> str:
@@ -21,8 +25,15 @@ def register_routes(app):
     def update_profile():
         data = request.get_json(silent=True) or {}
         phone = data.get("phone_number")
+        if phone and not _E164_RE.match(phone):
+            return jsonify({"error": "phone_number must be in E.164 format (e.g. +351912345678)"}), 400
         profile = user_service.update_phone(_user_id(), phone)
         return jsonify({"user_id": profile.user_id, "phone_number": profile.phone_number}), 200
+
+    @app.route("/v1/users/summary", methods=["GET"])
+    @require_token
+    def get_summary():
+        return jsonify(user_service.get_summary(_user_id())), 200
 
     @app.route("/v1/users/cards", methods=["POST"])
     @require_token
