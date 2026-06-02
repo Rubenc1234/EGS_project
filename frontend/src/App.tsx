@@ -59,19 +59,19 @@ export default function App() {
         {/* Notification subscription status indicator */}
           {subscriptionStatus === 'subscribed' && (
             <div style={{ background: '#d4edda', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
-              ✅ Push notifications enabled
+              Push notifications enabled
             </div>
           )}
           
           {subscriptionStatus === 'error' && error && (
             <div style={{ background: '#f8d7da', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
-              ⚠️ Notification setup failed: {error}
+              Notification setup failed: {error}
             </div>
           )}
           
           {subscriptionStatus === 'loading' && (
             <div style={{ background: '#fff3cd', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
-              ⏳ Setting up notifications...
+              Setting up notifications...
             </div>
           )}
       </Container>

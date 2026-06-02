@@ -30,14 +30,14 @@ export default function Callback() {
             const walletData = await res.json()
             const walletId = walletData.walletId || walletData.wallet || walletData.address || walletData.id
             if (walletId) {
-              console.log('✅ Wallet initialized:', walletId)
+              console.log('Wallet initialized:', walletId)
               localStorage.setItem('egs_wallet_id', walletId)
             }
           } else {
-            console.warn('⚠️ Failed to initialize wallet:', res.status, res.statusText)
+            console.warn('Failed to initialize wallet:', res.status, res.statusText)
           }
         } catch (err) {
-          console.error('❌ Wallet initialization error:', err)
+          console.error('Wallet initialization error:', err)
           // Don't block navigation if wallet init fails
         }
       }
@@ -127,14 +127,14 @@ export default function Callback() {
               const walletData = await walletRes.json()
               const walletId = walletData.walletId || walletData.wallet || walletData.address || walletData.id
               if (walletId) {
-                console.log('✅ Wallet initialized:', walletId)
+                console.log('Wallet initialized:', walletId)
                 localStorage.setItem('egs_wallet_id', walletId)
               }
             } else {
-              console.warn('⚠️ Failed to initialize wallet:', walletRes.status, walletRes.statusText)
+              console.warn('Failed to initialize wallet:', walletRes.status, walletRes.statusText)
             }
           } catch (err) {
-            console.error('❌ Wallet initialization error:', err)
+            console.error('Wallet initialization error:', err)
             // Don't block navigation if wallet init fails
           }
 

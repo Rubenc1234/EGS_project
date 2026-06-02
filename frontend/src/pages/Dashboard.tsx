@@ -239,7 +239,7 @@ export default function Dashboard() {
       {/* Header */}
       <Box sx={{ marginBottom: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Welcome back, {userInfo?.name || 'User'}! 👋
+          Welcome back, {userInfo?.name || 'User'}!
         </Typography>
         <Typography variant="body2" color="textSecondary">
           {userInfo?.email}
@@ -250,12 +250,14 @@ export default function Dashboard() {
         {/* Wallet Card */}
         <Grid item xs={12} md={6}>
           <Card sx={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            backgroundColor: '#1976d2',
             color: 'white',
             minHeight: 200,
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            borderRadius: '12px',
+            boxShadow: '0 4px 15px rgba(25, 118, 210, 0.2)'
           }}>
             <CardContent>
               <Typography variant="h6" sx={{ opacity: 0.9 }}>
@@ -288,8 +290,18 @@ export default function Dashboard() {
                 size="large"
                 onClick={handleSendMoney}
                 sx={{ 
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  padding: '12px 24px'
+                  backgroundColor: '#1976d2',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 15px rgba(25, 118, 210, 0.2)',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)',
+                    backgroundColor: '#1565c0',
+                  }
                 }}
               >
                 Send Money to User
@@ -303,8 +315,18 @@ export default function Dashboard() {
                 size="large"
                 onClick={handleOpenAddFunds}
                 sx={{ 
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  padding: '12px 24px'
+                  backgroundColor: '#1976d2',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 15px rgba(25, 118, 210, 0.2)',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)',
+                    backgroundColor: '#1565c0',
+                  }
                 }}
               >
                 Add funds to wallet
@@ -332,9 +354,34 @@ export default function Dashboard() {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAddFunds}>Cancel</Button>
-          <Button onClick={handleSubmitAddFunds} variant="contained">Continue to Payment</Button>
+        <DialogActions sx={{ p: 2.5, gap: 1.5 }}>
+          <Button 
+            onClick={handleCloseAddFunds}
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+              color: 'text.secondary'
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmitAddFunds} 
+            variant="contained"
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+              padding: '8px 20px',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Continue to Payment
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -364,9 +411,34 @@ export default function Dashboard() {
             })()}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseSend} disabled={loadingSend}>Cancel</Button>
-          <Button onClick={handleSubmitSend} variant="contained" disabled={loadingSend || (parseFloat(amount) || 0) <= 0}>
+        <DialogActions sx={{ p: 2.5, gap: 1.5 }}>
+          <Button 
+            onClick={handleCloseSend} 
+            disabled={loadingSend}
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+              color: 'text.secondary'
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmitSend} 
+            variant="contained" 
+            disabled={loadingSend || (parseFloat(amount) || 0) <= 0}
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+              padding: '8px 20px',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none'
+              }
+            }}
+          >
             {loadingSend ? 'Sending...' : `Send`}
           </Button>
         </DialogActions>
@@ -390,9 +462,34 @@ export default function Dashboard() {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenRefund(false)} disabled={loadingRefund}>Cancel</Button>
-          <Button onClick={handleSubmitRefund} variant="contained" color="primary" disabled={loadingRefund}>
+        <DialogActions sx={{ p: 2.5, gap: 1.5 }}>
+          <Button 
+            onClick={() => setOpenRefund(false)} 
+            disabled={loadingRefund}
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+              color: 'text.secondary'
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmitRefund} 
+            variant="contained" 
+            disabled={loadingRefund}
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+              padding: '8px 20px',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none'
+              }
+            }}
+          >
             Submit Request
           </Button>
         </DialogActions>
@@ -405,7 +502,7 @@ export default function Dashboard() {
       {/* Transaction History */}
       <Box sx={{ marginTop: 4 }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold', marginBottom: 2 }}>
-          📊 Recent Transactions
+          Recent Transactions
         </Typography>
         <TableContainer component={Paper}>
           <Table>
@@ -522,6 +619,17 @@ export default function Dashboard() {
                             variant="outlined" 
                             startIcon={<RefreshIcon />}
                             onClick={() => handleRequestRefund(t.tx_id || t.txId || t.id)}
+                            sx={{
+                              borderRadius: '8px',
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              borderColor: 'rgba(0, 0, 0, 0.23)',
+                              color: 'text.primary',
+                              '&:hover': {
+                                borderColor: 'text.primary',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                              }
+                            }}
                           >
                             Refund
                           </Button>
@@ -534,7 +642,6 @@ export default function Dashboard() {
                           <Tooltip title="Accept Refund">
                             <IconButton 
                               size="small" 
-                              color="success" 
                               onClick={() => handleAcceptRefund(t.tx_id || t.txId || t.id)}
                             >
                               <CheckIcon />
@@ -543,7 +650,6 @@ export default function Dashboard() {
                           <Tooltip title="Deny Refund">
                             <IconButton 
                               size="small" 
-                              color="error" 
                               onClick={() => handleDenyRefund(t.tx_id || t.txId || t.id)}
                             >
                               <CloseIcon />

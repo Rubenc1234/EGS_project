@@ -27,19 +27,55 @@ export default function Home() {
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 6 }}>
-        <Paper elevation={2} sx={{ p: { xs: 3, md: 6 } }}>
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-            EGS Composer
+        <Paper elevation={2} sx={{ p: { xs: 3, md: 6 }, borderRadius: '16px' }}>
+          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700, letterSpacing: '-0.5px' }}>
+            PayNexus
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Frontend do Composer — login via Keycloak (OIDC redirect). Usa o botão abaixo para entrar.
+            Frontend do PayNexus — login via Keycloak (OIDC redirect). Usa o botão abaixo para entrar.
           </Typography>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-            <Button variant="contained" color="primary" size="large" href={LOGIN_REDIRECT}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              size="large" 
+              href={LOGIN_REDIRECT}
+              sx={{
+                borderRadius: '12px',
+                fontWeight: 600,
+                textTransform: 'none',
+                padding: '12px 32px',
+                transition: 'all 0.2s ease-in-out',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.15)',
+                }
+              }}
+            >
               Login
             </Button>
-            <Button variant="outlined" color="primary" size="large" onClick={handleSignup}>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              size="large" 
+              onClick={handleSignup}
+              sx={{
+                borderRadius: '12px',
+                fontWeight: 600,
+                textTransform: 'none',
+                padding: '12px 32px',
+                transition: 'all 0.2s ease-in-out',
+                borderColor: 'rgba(0, 0, 0, 0.23)',
+                color: 'text.primary',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  borderColor: 'text.primary',
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                }
+              }}
+            >
               Sign Up
             </Button>
           </Stack>

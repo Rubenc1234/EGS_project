@@ -73,13 +73,13 @@ export default function Header() {
       
       if (permission === 'granted') {
         setNotificationEnabled(true);
-        toast.success('✅ Notifications enabled! Now creating subscription...');
+        toast.success('Notifications enabled! Now creating subscription...');
         // Give the app a moment to register the subscription
         setTimeout(() => {
           window.location.reload();
         }, 500);
       } else {
-        toast.error('❌ You denied notification permission');
+        toast.error('You denied notification permission');
         setNotificationEnabled(false);
       }
     } catch (err) {
@@ -92,8 +92,7 @@ export default function Header() {
     <AppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box component="span" sx={{ fontWeight: 700, cursor: 'pointer' }} onClick={() => navigate('/')}>EGS</Box>
-          <Box component="span" sx={{ opacity: 0.85 }}>Composer</Box>
+          <Box component="span" sx={{ fontWeight: 700, cursor: 'pointer' }} onClick={() => navigate('/')}>PayNexus</Box>
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <IconButton color="inherit" aria-label="toggle-theme" onClick={toggleColorMode}>
@@ -105,7 +104,18 @@ export default function Header() {
                 color="inherit" 
                 onClick={handleEnableNotifications}
                 startIcon={<NotificationsIcon />}
-                sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '0.85rem',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '6px 16px',
+                  '&:hover': {
+                    border: '1px solid rgba(255, 255, 255, 0.7)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  }
+                }}
               >
                 Enable Notifications
               </Button>
@@ -115,20 +125,44 @@ export default function Header() {
             <Tooltip title="Push notifications enabled">
               <IconButton color="inherit" aria-label="notifications">
                 <Badge>
-                  <NotificationsActiveIcon sx={{ color: '#4caf50' }} />
+                  <NotificationsActiveIcon />
                 </Badge>
               </IconButton>
             </Tooltip>
           )}
           {isLoggedIn ? (
             <>
-              <Button color="inherit" onClick={() => navigate('/dashboard')}>Dashboard</Button>
-              <Button color="inherit" onClick={handleLogout} sx={{ fontWeight: 'bold', color: '#ffcdd2' }}>Logout</Button>
+              <Button 
+                color="inherit" 
+                onClick={() => navigate('/dashboard')}
+                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+              >
+                Dashboard
+              </Button>
+              <Button 
+                color="inherit" 
+                onClick={handleLogout} 
+                sx={{ fontWeight: 'bold', textTransform: 'none', color: '#ffcdd2', borderRadius: '8px' }}
+              >
+                Logout
+              </Button>
             </>
           ) : (
             <>
-              <Button color="inherit" onClick={() => navigate('/')}>Home</Button>
-              <Button color="inherit" onClick={() => navigate('/login')}>Login</Button>
+              <Button 
+                color="inherit" 
+                onClick={() => navigate('/')}
+                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+              >
+                Home
+              </Button>
+              <Button 
+                color="inherit" 
+                onClick={() => navigate('/login')}
+                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+              >
+                Login
+              </Button>
             </>
           )}
         </Box>
