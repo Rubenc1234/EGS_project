@@ -261,7 +261,7 @@ export default function Dashboard() {
           }}>
             <CardContent>
               <Typography variant="h6" sx={{ opacity: 0.9 }}>
-                Current Balance (REAL)
+                Current Balance
               </Typography>
               <Typography variant="h3" sx={{ fontWeight: 'bold', marginTop: 2, marginBottom: 3 }}>
                 {loadingRealBalance ? (
@@ -537,12 +537,13 @@ export default function Dashboard() {
                   
                   const isSender = wallet?.id && t.from && wallet.id.toLowerCase() === t.from.toLowerCase()
                   const isReceiver = wallet?.id && t.to && wallet.id.toLowerCase() === t.to.toLowerCase()
+                  const isFromBank = t.from && t.from.toLowerCase() === '0xf2f1fd6b53b3aa9c1acfd92ec827b0a040860948'
 
                   return (
                   <TableRow key={key} hover>
                     <TableCell>{dateStr}</TableCell>
                     <TableCell>
-                      {t.description || t.type || 'Transaction'}
+                      {(isReceiver && isFromBank) ? (t.type === 'REFUND' ? 'REFUND' : 'FUND WALLET') : (t.description || t.type || 'Transaction')}
                       {isSender && <Typography variant="caption" display="block" color="textSecondary">Outbound to {t.to?.substring(0, 10)}...</Typography>}
                       {isReceiver && <Typography variant="caption" display="block" color="textSecondary">Inbound from {t.from?.substring(0, 10)}...</Typography>}
                     </TableCell>
@@ -558,39 +559,28 @@ export default function Dashboard() {
                         let bgColor = '#fff3e0'; // Default warning/pending
                         let color = '#e65100';
 
-                        if (t.type === 'REFUND') {
-                          if (t.status === 'AWAITING_APPROVAL') {
-                            displayStatus = 'REFUND REQUESTED';
-                            bgColor = '#e3f2fd'; // Light blue
-                            color = '#1976d2';
-                          } else if (t.status === 'PENDING') {
-                            displayStatus = 'ACCEPTED - SUBMITTING';
-                            bgColor = '#fff8e1';
-                            color = '#ff8f00';
-                          } else if (t.status === 'BROADCASTED') {
-                            displayStatus = 'SENT TO BLOCKCHAIN';
-                            bgColor = '#ede7f6';
-                            color = '#5e35b1';
-                          } else if (t.status === 'FAILED') {
-                            displayStatus = 'REJECTED';
-                            bgColor = '#ffebee'; // Light red
-                            color = '#c62828';
-                          } else if (t.status === 'CONFIRMED') {
-                            displayStatus = 'REFUND CONFIRMED';
-                            bgColor = '#e8f5e9';
-                            color = '#2e7d32';
-                          } else {
-                            displayStatus = t.status;
-                          }
-                        } else {
-                          // Regular transaction logic
-                          if (t.status === 'CONFIRMED' || t.status === 'completed') {
-                            bgColor = '#e8f5e9';
-                            color = '#2e7d32';
-                          } else if (t.status === 'AWAITING_APPROVAL') {
-                            bgColor = '#e3f2fd';
-                            color = '#1976d2';
-                          }
+                        const status = (t.status || '').toUpperCase();
+
+                        if (status === 'CONFIRMED' || status === 'COMPLETED') {
+                          displayStatus = 'CONFIRMED';
+                          bgColor = '#e8f5e9'; // Light green
+                          color = '#2e7d32';
+                        } else if (status === 'FAILED' || status === 'REJECTED') {
+                          displayStatus = 'FAILED';
+                          bgColor = '#ffebee'; // Light red
+                          color = '#c62828';
+                        } else if (status === 'AWAITING_APPROVAL') {
+                          displayStatus = 'AWAITING APPROVAL';
+                          bgColor = '#e3f2fd'; // Light blue
+                          color = '#1976d2';
+                        } else if (status === 'BROADCASTED') {
+                          displayStatus = 'BROADCASTED';
+                          bgColor = '#ede7f6'; // Light purple
+                          color = '#5e35b1';
+                        } else if (status === 'PENDING') {
+                          displayStatus = 'PENDING';
+                          bgColor = '#fff8e1'; // Light yellow
+                          color = '#ff8f00';
                         }
 
                         return (
