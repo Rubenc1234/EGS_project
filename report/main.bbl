@@ -1,0 +1,57 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Thomson and Beverloo(2017)]{rfc8292}
+M.~Thomson and P.~Beverloo.
+\newblock Voluntary application server identification (vapid) for web push.
+\newblock RFC 8292, Internet Engineering Task Force (IETF), 2017.
+\newblock URL \url{https://datatracker.ietf.org/doc/html/rfc8292}.
+
+\bibitem[{Red Hat, Inc.}(2024)]{keycloak}
+{Red Hat, Inc.}
+\newblock Keycloak: Open source identity and access management, 2024.
+\newblock URL \url{https://www.keycloak.org/documentation}.
+\newblock Versão 26.1.
+
+\bibitem[Hardt(2012)]{oauth2}
+D.~Hardt.
+\newblock The oauth 2.0 authorization framework, 2012.
+\newblock URL \url{https://datatracker.ietf.org/doc/html/rfc6749}.
+\newblock RFC 6749.
+
+\bibitem[{HashiCorp, Inc.}(2024{\natexlab{a}})]{vault-approle}
+{HashiCorp, Inc.}
+\newblock Vault approle auth method, 2024{\natexlab{a}}.
+\newblock URL \url{https://developer.hashicorp.com/vault/docs/auth/approle}.
+\newblock HashiCorp Vault 1.17.
+
+\bibitem[{HashiCorp, Inc.}(2024{\natexlab{b}})]{vault-agent}
+{HashiCorp, Inc.}
+\newblock Vault agent, 2024{\natexlab{b}}.
+\newblock URL
+  \url{https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent}.
+\newblock HashiCorp Vault 1.17.
+
+\bibitem[{Docker, Inc.}(2024)]{docker-multistage}
+{Docker, Inc.}
+\newblock Multi-stage builds, 2024.
+\newblock URL \url{https://docs.docker.com/build/building/multi-stage/}.
+\newblock Docker documentation.
+
+\bibitem[{The Linux Foundation}(2024)]{kubernetes}
+{The Linux Foundation}.
+\newblock Kubernetes documentation, 2024.
+\newblock URL \url{https://kubernetes.io/docs/home/}.
+\newblock kubernetes.io.
+
+\bibitem[{Grafana Labs}(2024)]{grafana}
+{Grafana Labs}.
+\newblock Grafana documentation, 2024.
+\newblock URL \url{https://grafana.com/docs/grafana/latest/}.
+\newblock Versão 10.0.0.
+
+\end{thebibliography}

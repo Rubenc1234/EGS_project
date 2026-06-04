@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="oJ5bCxKXmNd9uKixEnCm">
+    <mxGraphModel dx="1885" dy="953" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="internal_net" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b85450;dashed=1;strokeWidth=2;verticalAlign=top;align=left;spacing=10;fontColor=#b85450;" value="&lt;b&gt;Rede internal:true&lt;/b&gt;&lt;br&gt;(Inacessível pelo Gateway)" vertex="1">
+          <mxGeometry height="160" width="1001" x="530" y="485" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Browser / Utilizador&lt;/b&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="80" x="675" y="11" as="geometry" />
+        </mxCell>
+        <mxCell id="traefik" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;Traefik v3.1 API Gateway&lt;/b&gt;&lt;br&gt;(:80 - Único Ponto Exposto)" vertex="1">
+          <mxGeometry height="40" width="1330" x="50" y="122" as="geometry" />
+        </mxCell>
+        <mxCell id="fe" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Frontend&lt;/b&gt;&lt;br&gt;React/Vite/nginx" vertex="1">
+          <mxGeometry height="60" width="120" x="50" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="pfe" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Payment Frontend&lt;/b&gt;&lt;br&gt;React/MUI/nginx" vertex="1">
+          <mxGeometry height="60" width="130" x="250" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="iam" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;IAM Service&lt;/b&gt;&lt;br&gt;Python/Flask :5000" vertex="1">
+          <mxGeometry height="60" width="120" x="450" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="pay" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Payment Service&lt;/b&gt;&lt;br&gt;Python/Flask :5002" vertex="1">
+          <mxGeometry height="60" width="130" x="650" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="tx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Transactions Service&lt;/b&gt;&lt;br&gt;Java/Spring :8081" vertex="1">
+          <mxGeometry height="60" width="140" x="900" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="notif" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Notifications Service&lt;/b&gt;&lt;br&gt;Go/Gin :8080" vertex="1">
+          <mxGeometry height="60" width="130" x="1250" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="kc_comp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;Keycloak&lt;/b&gt;&lt;br&gt;Composer Realm" vertex="1">
+          <mxGeometry height="60" width="120" x="344" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="kc_pay" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;Keycloak&lt;/b&gt;&lt;br&gt;Payments Realm" vertex="1">
+          <mxGeometry height="60" width="120" x="834" y="326" as="geometry" />
+        </mxCell>
+        <mxCell id="stripe" parent="1" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;Stripe&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="120" x="532" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="twilio" parent="1" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;Twilio WhatsApp&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="120" x="721" y="386" as="geometry" />
+        </mxCell>
+        <mxCell id="eth" parent="1" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#f5f5f5;strokeColor=#666666;" value="&lt;b&gt;Ethereum Sepolia&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="130" x="1070" y="345" as="geometry" />
+        </mxCell>
+        <mxCell id="db_pay" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;PostgreSQL 15&lt;/b&gt;&lt;br&gt;(Pagamentos)" vertex="1">
+          <mxGeometry height="80" width="120" x="655" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="db_tx" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;PostgreSQL 15&lt;/b&gt;&lt;br&gt;(Transações)" vertex="1">
+          <mxGeometry height="80" width="120" x="918" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="db_notif" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;PostgreSQL 15&lt;/b&gt;&lt;br&gt;(Notificações)" vertex="1">
+          <mxGeometry height="80" width="120" x="1255" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;Redis 7&lt;/b&gt;" vertex="1">
+          <mxGeometry height="80" width="100" x="1400" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="vault" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;HashiCorp Vault&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="50" y="434" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;Grafana&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="918" y="677" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_traefik" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="traefik">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tr_fe" edge="1" parent="1" source="traefik" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="fe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tr_pfe" edge="1" parent="1" source="traefik" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="pfe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tr_iam" edge="1" parent="1" source="traefik" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="iam">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tr_pay" edge="1" parent="1" source="traefik" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="pay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tr_tx" edge="1" parent="1" source="traefik" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="tx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tr_notif" edge="1" parent="1" source="traefik" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="notif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_iam_kc_comp" edge="1" parent="1" source="iam" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;exitX=0.292;exitY=1.019;exitDx=0;exitDy=0;exitPerimeter=0;" target="kc_comp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pay_kc_pay" edge="1" parent="1" source="pay" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;exitX=0.951;exitY=1.017;exitDx=0;exitDy=0;exitPerimeter=0;" target="kc_pay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pay_stripe" edge="1" parent="1" source="pay" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" target="stripe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pay_twilio" edge="1" parent="1" source="pay" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;exitX=0.687;exitY=0.959;exitDx=0;exitDy=0;exitPerimeter=0;" target="twilio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tx_eth" edge="1" parent="1" source="tx" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="eth">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1135" y="270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pay_db_pay" edge="1" parent="1" source="pay" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;" target="db_pay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tx_db_tx" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="db_tx">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="978" y="285" as="sourcePoint" />
+            <mxPoint x="978" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_notif_db_notif" edge="1" parent="1" source="notif" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="db_notif">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1320" y="285" as="sourcePoint" />
+            <mxPoint x="1320" y="605" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_notif_redis" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="redis">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1381" y="255" as="sourcePoint" />
+            <mxPoint x="1450" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pay_tx" edge="1" parent="1" source="pay" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;fontStyle=1;" target="tx" value="PATCH">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tx_notif" edge="1" parent="1" source="tx" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;fontStyle=1;" target="notif" value="POST">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_notif_user" edge="1" parent="1" source="notif" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#000000;fontStyle=1;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" target="user" value="Web Push">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1450" y="255" />
+              <mxPoint x="1450" y="50" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_vault_iam" edge="1" parent="1" source="vault" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;dashed=1;" target="iam">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_vault_pay" edge="1" parent="1" source="vault" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="149.9999999999999" y="485" as="sourcePoint" />
+            <mxPoint x="695" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_vault_tx" edge="1" parent="1" source="vault" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="163" y="485" as="sourcePoint" />
+            <mxPoint x="963" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_vault_notif" edge="1" parent="1" source="vault" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="154" y="485" as="sourcePoint" />
+            <mxPoint x="1299" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_graf_db_pay" edge="1" parent="1" source="grafana" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;" target="db_pay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_graf_db_tx" edge="1" parent="1" source="grafana" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;" target="db_tx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_graf_db_notif" edge="1" parent="1" source="grafana" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#b85450;" target="db_notif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

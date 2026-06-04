@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="XjCxS00Yv0vahehDiSVP">
+    <mxGraphModel dx="1178" dy="596" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="pod3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b3b3b3;dashed=1;" vertex="1">
+          <mxGeometry height="320" width="840" x="280" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="pod2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b3b3b3;dashed=1;" vertex="1">
+          <mxGeometry height="320" width="840" x="270" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pod_main" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;align=left;spacing=10;fontColor=#6c8ebf;" value="&lt;b&gt;&amp;nbsp; &amp;nbsp;Service Pod&lt;/b&gt;&lt;br&gt;&amp;nbsp; &amp;nbsp;(Padrão repetido 9x: 1 por serviço / base de dados)" vertex="1">
+          <mxGeometry height="320" width="840" x="260" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="vault" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;HashiCorp Vault 1.17&lt;/b&gt;" vertex="1">
+          <mxGeometry height="90" width="130" x="40" y="148" as="geometry" />
+        </mxCell>
+        <mxCell id="agent" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;b&gt;vault-agent&lt;/b&gt;&lt;br&gt;&lt;br&gt;AppRole Login&lt;br&gt;(role_id + secret_id)" vertex="1">
+          <mxGeometry height="80" width="160" x="320" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="tmpl" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;.env.tmpl&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="100" x="350" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="vol" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;strokeWidth=1;dashed=1;verticalAlign=top;align=center;spacing=5;fontColor=#9673a6;fontStyle=1" value="Volume Partilhado" vertex="1">
+          <mxGeometry height="130" width="160" x="592" y="137" as="geometry" />
+        </mxCell>
+        <mxCell id="env" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;.env&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="100" x="619" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="service" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="&lt;b&gt;Processo do Serviço&lt;/b&gt;&lt;br&gt;(Aplicação principal)" vertex="1">
+          <mxGeometry height="80" width="160" x="880" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="e_vault_agent" edge="1" parent="1" source="vault" style="endArrow=block;html=1;strokeColor=#b85450;edgeStyle=orthogonalEdgeStyle;rounded=1;fontStyle=1;exitX=0.996;exitY=0.475;exitDx=0;exitDy=0;exitPerimeter=0;" value="Fornece segredos">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="170" y="215" as="sourcePoint" />
+            <mxPoint x="320" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_agent_tmpl" edge="1" parent="1" source="agent" style="endArrow=block;html=1;strokeColor=#000000;edgeStyle=orthogonalEdgeStyle;rounded=1;" target="tmpl" value="Lê template">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_agent_env" edge="1" parent="1" source="agent" style="endArrow=block;html=1;strokeColor=#000000;edgeStyle=orthogonalEdgeStyle;rounded=1;" target="env" value="Renderiza e escreve">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_env_service" edge="1" parent="1" source="env" style="endArrow=block;html=1;strokeColor=#000000;edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;" target="service" value="Lê variáveis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

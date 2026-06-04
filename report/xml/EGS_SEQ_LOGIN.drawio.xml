@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="18R3rJu-sNjACDFJemPB">
+    <mxGraphModel dx="1414" dy="715" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ll_u" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" value="Utilizador" vertex="1">
+          <mxGeometry height="360" width="100" x="80" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ll_fe" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="Frontend&#xa;(app.pt)" vertex="1">
+          <mxGeometry height="360" width="120" x="260" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ll_iam" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="IAM Service&#xa;(iam.pt)" vertex="1">
+          <mxGeometry height="360" width="140" x="460" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ll_kc" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" value="Keycloak&#xa;(composer realm)" vertex="1">
+          <mxGeometry height="360" width="160" x="680" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="msg1" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;" value="(1) Clica &#39;Login&#39;">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="130" y="120" as="sourcePoint" />
+            <mxPoint x="320" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;" value="(2) GET /v1/login">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="320" y="139" as="sourcePoint" />
+            <mxPoint x="530" y="139" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;rounded=0;strokeColor=#b85450;fontStyle=1;" value="(3) Redirect para Keycloak (OAuth2 auth code, parâmetro state)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="530" y="172" as="sourcePoint" />
+            <mxPoint x="130" y="172" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;" value="(4) Introduz credenciais">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="130" y="201" as="sourcePoint" />
+            <mxPoint x="760" y="201" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#b85450;fontStyle=1;" value="(5) Callback com authorization code">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="760" y="238" as="sourcePoint" />
+            <mxPoint x="530" y="238" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;" value="(6) Troca code por tokens (client_secret)">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="530" y="281" as="sourcePoint" />
+            <mxPoint x="760" y="281" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;rounded=0;strokeColor=#000000;" value="(7) Access Token + ID Token (JWT)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="320" as="sourcePoint" />
+            <mxPoint x="530" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg8" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;" value="(8) JWT de sessão">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="530" y="340" as="sourcePoint" />
+            <mxPoint x="320" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg9" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#82b366;fontStyle=1;" value="(9) Chamadas protegidas com Bearer JWT">
+          <mxGeometry relative="1" width="80" as="geometry">
+            <mxPoint x="320" y="374" as="sourcePoint" />
+            <mxPoint x="530" y="374" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
