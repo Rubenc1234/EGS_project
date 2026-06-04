@@ -20,8 +20,12 @@
 \usepackage{tabularx}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{colortbl}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+% Separador de linha cinza claro entre linhas de dados
+\newcommand{\rowsep}{\arrayrulecolor{gray!30}\hline\arrayrulecolor{black}}
+\setlength{\extrarowheight}{2pt}
 
 % ----- Figuras e floats -----
 \usepackage{graphicx}
@@ -161,18 +165,31 @@ um conjunto de microserviços independentes.
 \textbf{Aspeto} & \textbf{Descrição} \\
 \midrule
 Domínio & Carteira digital / pagamentos / transações \emph{blockchain} \\
+\rowsep
 Arquitetura & Microserviços com \emph{gateway} único \\
+\rowsep
 Microserviços & \textbf{6} (4 \emph{backends} + 2 \emph{frontends}) \\
+\rowsep
 Linguagens & \textbf{4} --- Python, Java, Go, TypeScript \\
+\rowsep
 Autenticação & Keycloak (OAuth2/OIDC), \textbf{dois \emph{realms}} \\
+\rowsep
 Pagamentos & Stripe (PaymentIntent + \emph{webhooks}) + OTP Twilio \\
+\rowsep
 \emph{Blockchain} & Ethereum \textbf{Sepolia} testnet via Web3j \\
+\rowsep
 Tempo real & Notificações Web Push (multi-\emph{tenant}) \\
+\rowsep
 Dados & PostgreSQL 15 por serviço + Redis 7 \\
+\rowsep
 \emph{Gateway} & Traefik v3.1 (apenas porta 80 exposta) \\
+\rowsep
 Segredos & HashiCorp Vault (AppRole + \emph{agent sidecars}) \\
+\rowsep
 Observabilidade & Dashboards Grafana 10 \\
+\rowsep
 Desenvolvimento & Docker Compose ($\approx$17 contentores) \\
+\rowsep
 Produção & Kubernetes (cluster DETI/UA) \\
 \bottomrule
 \end{tabularx}
@@ -197,13 +214,21 @@ conforme indicado na Tabela~\ref{tab:routing}.
 \textbf{Host} & \textbf{Serviço} & \textbf{Porta interna} \\
 \midrule
 \texttt{app.pt}              & Frontend principal      & 80    \\
+\rowsep
 \texttt{payment.pt}          & Payment frontend        & 5174  \\
+\rowsep
 \texttt{iam.pt}              & IAM service             & 5000  \\
+\rowsep
 \texttt{transactions.pt}     & Transactions service    & 8081  \\
+\rowsep
 \texttt{payment-api.pt}      & Payment backend         & 5002  \\
+\rowsep
 \texttt{notifications.pt}    & Notifications service   & 8080  \\
+\rowsep
 \texttt{keycloak.pt}         & Keycloak (compositor)   & 8080  \\
+\rowsep
 \texttt{payment-keycloak.pt} & Keycloak (pagamentos)   & 8080  \\
+\rowsep
 \texttt{grafana.pt}          & Grafana                 & 3000  \\
 \bottomrule
 \end{tabularx}
@@ -228,10 +253,15 @@ no projeto.
 \textbf{Princípio} & \textbf{Aplicação no PayNexus} \\
 \midrule
 \emph{Bounded contexts} & Cada serviço possui um domínio exclusivo: identidade, pagamentos, transações, notificações \\
+\rowsep
 Implantação independente & Cada serviço tem o seu próprio \texttt{Dockerfile}, imagem e ciclo de vida \\
+\rowsep
 Desenvolvimento políglota & Python (APIs web rápidas), Java/Spring (blockchain + tipagem forte), Go (notificações de alto débito) \\
+\rowsep
 Base de dados por serviço & Sem esquema partilhado; instância PostgreSQL isolada por serviço em rede própria \\
+\rowsep
 Isolamento de falhas & Uma falha no serviço de notificações não afeta os pagamentos \\
+\rowsep
 Ponto de entrada único & O Traefik esconde a topologia interna atrás de uma única porta \\
 \bottomrule
 \end{tabularx}
@@ -247,27 +277,30 @@ clica), e autenticação inter-serviços que num monolito não seria necessária
 A Tabela~\ref{tab:catalogo} apresenta o catálogo completo dos seis serviços que compõem
 a plataforma.
 
-\begin{longtable}{@{}L{2.8cm}L{3.5cm}L{2.5cm}C{1.2cm}L{3.2cm}@{}}
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \caption{Catálogo de microserviços do PayNexus}
-\label{tab:catalogo}\\
+\label{tab:catalogo}
+\begin{tabularx}{\linewidth}{@{}L{3.0cm}L{3.6cm}L{2.8cm}C{1.1cm}X@{}}
 \toprule
 \textbf{Serviço} & \textbf{Responsabilidade} & \textbf{Framework} & \textbf{Porta} & \textbf{Bibliotecas-chave} \\
 \midrule
-\endfirsthead
-\multicolumn{5}{l}{\small\textit{(continuação da Tabela~\ref{tab:catalogo})}}\\
-\toprule
-\textbf{Serviço} & \textbf{Responsabilidade} & \textbf{Framework} & \textbf{Porta} & \textbf{Bibliotecas-chave} \\
-\midrule
-\endhead
+\path{iam_service}           & Registo, login e validação de \emph{tokens} via Keycloak & Python/Flask 3.1 & 5000 & python-keycloak, Flask \\
+\rowsep
+\path{payment_service}       & Pagamentos com cartão, OTP, recibos, cartões guardados   & Python/Flask 3.1 & 5002 & Stripe 14.4, Twilio, SQLAlchemy, ReportLab \\
+\rowsep
+\path{transactions_service}  & Carteiras, transações \emph{blockchain}, composição BFF  & Java 21 / Spring Boot 3.4.3 & 8081 & Web3j 4.10, Spring Data JPA, SpringDoc \\
+\rowsep
+\path{notifications_service} & Clientes, subscrições, Web Push em tempo real & Go/Gin & 8080 & gin, gorm, webpush-go, jwt \\
+\rowsep
+frontend                     & UI principal da carteira e histórico & React 18 + TypeScript + Vite & 80 & React Router, Axios, React Query \\
+\rowsep
+payment frontend             & UI de pagamento dedicada & React 18 + TypeScript + MUI & 5174 & @stripe/react-stripe-js, MUI \\
 \bottomrule
-\endfoot
-iam\_service & Registo, login e validação de \emph{tokens} via Keycloak & Python/Flask 3.1 & 5000 & python-keycloak, Flask \\[4pt]
-payment\_service & Pagamentos com cartão, OTP, recibos, cartões guardados & Python/Flask 3.1 & 5002 & Stripe 14.4, Twilio, SQLAlchemy, ReportLab \\[4pt]
-transactions\_service & Carteiras, transações \emph{blockchain}, composição BFF & Java 21/Spring Boot 3.4.3 & 8081 & Web3j 4.10, Spring Data JPA, SpringDoc \\[4pt]
-notifications\_service & Clientes, subscrições, Web Push em tempo real & Go/Gin & 8080 & gin, gorm, webpush-go, jwt \\[4pt]
-frontend & UI principal da carteira e histórico & React 18 + TypeScript + Vite & 80 & React Router, Axios, React Query \\[4pt]
-payment frontend & UI de pagamento dedicada & React 18 + TypeScript + MUI & 5174 & @stripe/react-stripe-js, MUI \\
-\end{longtable}
+\end{tabularx}
+\end{table}
 
 % ============================================================
 \section{Stack Tecnológica}
@@ -276,7 +309,7 @@ payment frontend & UI de pagamento dedicada & React 18 + TypeScript + MUI & 5174
 A Tabela~\ref{tab:stack} resume todas as tecnologias utilizadas na plataforma, organizadas
 por camada funcional.
 
-\begin{longtable}{@{}L{3cm}L{4cm}L{5.5cm}@{}}
+\begin{longtable}{@{}L{3cm}L{4cm}L{8.1cm}@{}}
 \caption{Stack tecnológica completa do PayNexus}
 \label{tab:stack}\\
 \toprule
@@ -291,23 +324,41 @@ por camada funcional.
 \bottomrule
 \endfoot
 \emph{Frontend} & React + TypeScript + Vite & React 18.2, Vite 5.5, servido via nginx \\
+\rowsep
  & Material-UI (MUI) & 7.3.9 --- biblioteca de componentes UI \\
- & Axios, React Query, React Router & HTTP, \emph{data fetching}, roteamento \\[4pt]
+\rowsep
+ & Axios, React Query, React Router & HTTP, \emph{data fetching}, roteamento \\
+\midrule
 \emph{Backend} & Python 3.11 + Flask 3.1 & IAM e Payment services \\
- & Java 21 + Spring Boot & Transactions service (versão 3.4.3) \\
- & Go + Gin 1.10 & Notifications service \\[4pt]
+\rowsep
+ & Java 21 + Spring Boot 3.4.3 & Transactions service \\
+\rowsep
+ & Go + Gin 1.10 & Notifications service \\
+\midrule
 Dados & PostgreSQL 15 & Uma instância por serviço \\
+\rowsep
  & Redis 7 & Notificações --- cache e pub/sub \\
- & ORMs & SQLAlchemy, Spring Data JPA, GORM \\[4pt]
-Autenticação & Keycloak 26.1 & Dois \emph{realms}, OAuth2/OIDC, JWT \\[4pt]
-\emph{Gateway} & Traefik v3.1 & Roteamento por \emph{host}, multi-instância \\[4pt]
+\rowsep
+ & ORMs & SQLAlchemy, Spring Data JPA, GORM \\
+\midrule
+Autenticação & Keycloak 26.1 & Dois \emph{realms}, OAuth2/OIDC, JWT \\
+\midrule
+\emph{Gateway} & Traefik v3.1 & Roteamento por \emph{host}, multi-instância \\
+\midrule
 Contentores & Docker + Docker Compose & \emph{Multi-stage builds} \\
-Orquestração & Kubernetes & Cluster DETI, Traefik Ingress \\[4pt]
-Segredos & HashiCorp Vault 1.17 & AppRole + \emph{agent sidecars} \\[4pt]
-Observabilidade & Grafana 10 & Datasources PostgreSQL por serviço \\[4pt]
+\rowsep
+Orquestração & Kubernetes & Cluster DETI, Traefik Ingress \\
+\midrule
+Segredos & HashiCorp Vault 1.17 & AppRole + \emph{agent sidecars} \\
+\midrule
+Observabilidade & Grafana 10 & Datasources PostgreSQL por serviço \\
+\midrule
 Pagamentos & Stripe SDK 14.4.1 & PaymentIntent + \emph{webhooks} \\
+\rowsep
 OTP/SMS & Twilio SDK 9.10.4 & WhatsApp OTP \\
+\rowsep
 \emph{Blockchain} & Web3j 4.10 + Ethereum Sepolia & Chain ID: 11155111 \\
+\rowsep
 \emph{Push} & Web Push API + webpush-go & VAPID por cliente \emph{tenant} \\
 \end{longtable}
 
@@ -350,21 +401,31 @@ PostgreSQL~15, é responsável por todo o ciclo de vida dos pagamentos com cart�
 
 \begin{table}[H]
 \centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
 \caption{Endpoints principais do Payment Service}
 \label{tab:endpoints-payment}
-\begin{tabularx}{\linewidth}{@{}L{3.5cm}L{2cm}X@{}}
+\begin{tabularx}{\linewidth}{@{}>{\footnotesize\ttfamily\raggedright\arraybackslash}p{4.6cm}C{1.6cm}X@{}}
 \toprule
 \textbf{Endpoint} & \textbf{Método} & \textbf{Descrição} \\
 \midrule
-\texttt{/v1/payments} & POST & Cria PaymentIntent na Stripe \\
-\texttt{/v1/payments} & GET & Lista pagamentos do utilizador (Bearer JWT) \\
-\texttt{/v1/payments/\{id\}} & PATCH & Atualiza estado do pagamento \\
-\texttt{/v1/payments/\{id\}/send-otp} & POST & Envia OTP via Twilio WhatsApp \\
-\texttt{/v1/payments/\{id\}/verify} & POST & Valida código OTP \\
-\texttt{/v1/payments/webhook} & POST & Recebe \emph{webhook} Stripe (HMAC) \\
-\texttt{/v1/payments/\{id\}/receipt} & GET & Gera recibo PDF (ReportLab) \\
-\texttt{/v1/users/profile} & GET/PUT & Perfil do utilizador \\
-\texttt{/v1/users/cards} & GET/POST & Cartões guardados (Stripe Customer) \\
+/v1/payments          & POST    & Cria PaymentIntent na Stripe \\
+\rowsep
+/v1/payments          & GET     & Lista pagamentos do utilizador (Bearer JWT) \\
+\rowsep
+/v1/payments/\{id\}   & PATCH   & Atualiza estado do pagamento \\
+\rowsep
+/v1/payments/\{id\}/send-otp & POST & Envia OTP via Twilio WhatsApp \\
+\rowsep
+/v1/payments/\{id\}/verify   & POST & Valida código OTP \\
+\rowsep
+/v1/payments/webhook  & POST    & Recebe \emph{webhook} Stripe (HMAC) \\
+\rowsep
+/v1/payments/\{id\}/receipt  & GET  & Gera recibo PDF (ReportLab) \\
+\rowsep
+/v1/users/profile     & GET/PUT  & Perfil do utilizador \\
+\rowsep
+/v1/users/cards       & GET/POST & Cartões guardados (Stripe Customer) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -464,15 +525,19 @@ de serviço-a-serviço que não devem expor credenciais de utilizador.
 \centering
 \caption{Chamadas inter-serviços no PayNexus}
 \label{tab:interservice}
-\begin{tabularx}{\linewidth}{@{}L{3.5cm}L{3cm}L{3cm}L{3cm}@{}}
+\begin{tabularx}{\linewidth}{@{}L{3.2cm}L{3.0cm}XL{3.0cm}@{}}
 \toprule
 \textbf{Chamada} & \textbf{De → Para} & \textbf{Endpoint} & \textbf{Autenticação} \\
 \midrule
-Concluir pagamento & Payment → Transactions & \texttt{PATCH /v1/payments/\{id\}} & \texttt{X-Internal-Key} \\
+Concluir pagamento & Payment → Transactions & \texttt{PATCH /v1/pay\-ments/\{id\}} & \texttt{X-Internal-Key} \\
+\rowsep
 Emitir evento & Transactions → Notifications & \texttt{POST /v1/events} & \texttt{Bearer <api-key>} \\
+\rowsep
 Login/tokens & Frontend → IAM → Keycloak & Fluxo OIDC code & OAuth2 \\
+\rowsep
 Entrega Web Push & Notifications → Browser & Web Push cifrado & Chaves VAPID \\
-\emph{Webhook} Stripe & Stripe → Payment & \texttt{POST /v1/payments/webhook} & HMAC \texttt{Stripe-Signature} \\
+\rowsep
+\emph{Webhook} Stripe & Stripe → Payment & \texttt{POST /v1/pay\-ments/web\-hook} & HMAC \texttt{Stripe-Sig\-na\-ture} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -540,17 +605,31 @@ com o padrão \textbf{AppRole + \emph{agent sidecar}}:
 
 \begin{table}[H]
 \centering
+\small
 \caption{Segredos geridos por serviço no Vault}
 \label{tab:vault}
-\begin{tabularx}{\linewidth}{@{}L{4cm}X@{}}
+\begin{tabularx}{\linewidth}{@{}L{3.8cm}X@{}}
 \toprule
 \textbf{Serviço} & \textbf{Segredos injetados} \\
 \midrule
-payment\_service & \texttt{STRIPE\_SECRET\_KEY}, \texttt{STRIPE\_WEBHOOK\_SECRET}, \texttt{TWILIO\_ACCOUNT\_SID/AUTH\_TOKEN}, credenciais Keycloak, \texttt{DATABASE\_URL}, \texttt{INTERNAL\_API\_KEY} \\
-transactions\_service & \texttt{MASTER\_KEY\_FOR\_WALLET} (AES), \texttt{NOTIFICATIONS\_API\_KEY}, \texttt{APP\_INTERNAL\_API\_KEY}, \texttt{BLOCKCHAIN\_NODE\_URL} \\
-notifications\_service & \texttt{MASTER\_ADMIN\_SECRET}, \texttt{JWT\_SECRET}, \texttt{DATABASE\_URL} \\
-iam\_service & \texttt{CLIENT\_SECRET} (Keycloak) \\
-\emph{Bases de dados} & Passwords PostgreSQL por instância \\
+\path{payment_service} &
+  \texttt{STRIPE\_SECRET\_KEY}, \texttt{STRIPE\_WEBHOOK\_SECRET} \newline
+  \texttt{TWILIO\_ACCOUNT\_SID}, \texttt{TWILIO\_AUTH\_TOKEN} \newline
+  \texttt{DATABASE\_URL}, \texttt{INTERNAL\_API\_KEY}, credenciais Keycloak \\
+\rowsep
+\path{transactions_service} &
+  \texttt{MASTER\_KEY\_FOR\_WALLET} (chave AES para carteiras) \newline
+  \texttt{NOTIFICATIONS\_API\_KEY}, \texttt{APP\_INTERNAL\_API\_KEY} \newline
+  \texttt{BLOCKCHAIN\_NODE\_URL} \\
+\rowsep
+\path{notifications_service} &
+  \texttt{MASTER\_ADMIN\_SECRET}, \texttt{JWT\_SECRET}, \texttt{DATABASE\_URL} \\
+\rowsep
+\path{iam_service} &
+  \texttt{CLIENT\_SECRET} (Keycloak) \\
+\rowsep
+\emph{Bases de dados} &
+  Password PostgreSQL por cada instância (\path{payment_postgres}, \path{transaction_postgres}, \path{notifications_postgres}) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -573,10 +652,15 @@ iam\_service & \texttt{CLIENT\_SECRET} (Keycloak) \\
 \textbf{Mecanismo} & \textbf{Aplicação} \\
 \midrule
 RBAC (\emph{role} \texttt{operator}) & Endpoints de administração (estatísticas, criação de clientes) apenas acessíveis com papel \emph{operator} no JWT \\
+\rowsep
 Verificação HMAC \emph{webhook} & Cabeçalho \texttt{Stripe-Signature} verificado com a chave \texttt{STRIPE\_WEBHOOK\_SECRET} antes de processar qualquer evento \\
+\rowsep
 Encriptação AES de carteiras & Chaves privadas Ethereum encriptadas com \texttt{MASTER\_KEY\_FOR\_WALLET} antes de persistir na base de dados \\
+\rowsep
 OTP com hash SHA-256 & Código OTP armazenado apenas como hash; expiração de 5 minutos; flag \texttt{used} impede reutilização \\
+\rowsep
 Isolamento de rede & Redes de bases de dados com \texttt{internal: true} --- inacessíveis pelo Traefik ou pela rede pública \\
+\rowsep
 VAPID por \emph{tenant} & Isolamento criptográfico entre clientes nas notificações Web Push \\
 \bottomrule
 \end{tabularx}
@@ -594,16 +678,21 @@ Todos os serviços de aplicação usam \emph{multi-stage builds}:
 
 \begin{table}[H]
 \centering
+\small
+\setlength{\tabcolsep}{5pt}
 \caption{Imagens Docker por serviço (\emph{multi-stage builds})}
 \label{tab:docker}
-\begin{tabularx}{\linewidth}{@{}L{4cm}L{4cm}L{4.5cm}@{}}
+\begin{tabularx}{\linewidth}{@{}L{3.5cm}XL{4.0cm}@{}}
 \toprule
 \textbf{Serviço} & \textbf{Imagem de build} & \textbf{Imagem de runtime} \\
 \midrule
-Transactions (Java) & \texttt{maven:3.9-eclipse-temurin-21} & \texttt{eclipse-temurin:21-jre} \\
-IAM / Payment (Python) & --- & \texttt{python:3.11-slim} \\
-Notifications (Go) & \texttt{golang:alpine} & \texttt{alpine} \\
-Frontends (React) & \texttt{node:20-slim} & \texttt{nginx:alpine} \\
+Transactions (Java) & \path{maven:3.9-eclipse-temurin-21} & \path{eclipse-temurin:21-jre} \\
+\rowsep
+IAM / Payment (Python) & --- & \path{python:3.11-slim} \\
+\rowsep
+Notifications (Go) & \path{golang:alpine} & \path{alpine} \\
+\rowsep
+Frontends (React) & \path{node:20-slim} & \path{nginx:alpine} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -622,15 +711,32 @@ Em produção, a plataforma corre no cluster Kubernetes do DETI/UA, no namespace
 
 \begin{table}[H]
 \centering
+\small
+\setlength{\tabcolsep}{5pt}
 \caption{Manifestos Kubernetes disponíveis}
 \label{tab:k8s-manifests}
-\begin{tabularx}{\linewidth}{@{}L{5.5cm}X@{}}
+\begin{tabularx}{\linewidth}{@{}L{5.2cm}X@{}}
 \toprule
 \textbf{Manifesto} & \textbf{Recursos definidos} \\
 \midrule
-\texttt{k8s/transactions-frontend.yaml} & Deployment (2 réplicas), ConfigMap (\texttt{VITE\_TRANSACTIONS\_BASE\_URL}), Service ClusterIP, Traefik Ingress (\texttt{transactions-frontend.grupo3-egs-deti-ua.pt}) \\
-\texttt{k8s/notifications.yaml} & Notifications API Deployment (2 réplicas), PostgreSQL Deployment + PVC (1Gi), Redis Deployment, 4 Services ClusterIP, K8s Secret, Traefik Ingress (\texttt{notifications.grupo3-egs-deti-ua.pt}) \\
-\texttt{k8s/grafana.yaml} & Grafana Deployment, 3 ConfigMaps (datasources, providers, 4 dashboards JSON embutidos), K8s Secret, Service, Traefik Ingress (\texttt{grafana.grupo3-egs-deti-ua.pt}) \\
+\path{k8s/transactions-frontend.yaml} &
+  Deployment (2 réplicas) \newline
+  ConfigMap (\texttt{VITE\_TRANSACTIONS\_BASE\_URL}) \newline
+  Service ClusterIP \newline
+  Traefik Ingress (\texttt{transactions-frontend.\allowbreak grupo3-egs-deti-ua.pt}) \\
+\rowsep
+\path{k8s/notifications.yaml} &
+  Notifications API Deployment (2 réplicas) \newline
+  PostgreSQL Deployment + PVC (1\,Gi) \newline
+  Redis Deployment \newline
+  4 Services ClusterIP + K8s Secret \newline
+  Traefik Ingress (\texttt{notifications.\allowbreak grupo3-egs-deti-ua.pt}) \\
+\rowsep
+\path{k8s/grafana.yaml} &
+  Grafana Deployment \newline
+  3 ConfigMaps: datasources, providers, 4 dashboards JSON \newline
+  K8s Secret, Service ClusterIP \newline
+  Traefik Ingress (\texttt{grafana.\allowbreak grupo3-egs-deti-ua.pt}) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -646,11 +752,17 @@ A Tabela~\ref{tab:compose-vs-k8s} compara as duas estratégias de orquestração
 \textbf{Aspeto} & \textbf{Docker Compose} & \textbf{Kubernetes} \\
 \midrule
 Uso & Desenvolvimento local e demonstrações & Produção (cluster DETI) \\
+\rowsep
 Escalamento & Manual & Declarativo via \texttt{replicas} \\
+\rowsep
 Roteamento & Contentor Traefik & Traefik Ingress Controller \\
+\rowsep
 Segredos & Vault agents $\to$ \texttt{.env} & K8s Secrets \\
+\rowsep
 Armazenamento & Volumes nomeados & PersistentVolumeClaims \\
+\rowsep
 Âmbito & $\approx$17 contentores, um \emph{host} & Namespace, distribuído por nós \\
+\rowsep
 Limites de recursos & Não definidos & CPU/memória por contentor \\
 \bottomrule
 \end{tabularx}
@@ -700,10 +812,15 @@ o Grafana arranca totalmente configurado.
 \textbf{Desafio} & \textbf{Aprendizagem} \\
 \midrule
 Operações políglota & 4 linguagens = 4 cadeias de build/runtime para containerizar e manter consistentes \\
+\rowsep
 Segredos à escala & Vault + \emph{agent sidecars} eliminou segredos do código, mas acrescentou componentes móveis ao sistema \\
+\rowsep
 Dois \emph{realms} Keycloak & Isolamento forte entre utilizadores da carteira e do pagamento, ao custo de duplicação de configuração \\
+\rowsep
 Pagamentos por \emph{webhook} & Confiar nos \emph{webhooks} da Stripe (não no cliente) obriga a abraçar a consistência eventual \\
+\rowsep
 \emph{Testnet} Ethereum & Transações reais na Sepolia requerem \emph{gas}, encriptação de chaves e um \emph{mock provider} para desenvolvimento \\
+\rowsep
 \emph{Gateway} único & O Traefik simplificou a superfície de ataque --- uma porta exposta, tudo o resto interno \\
 \bottomrule
 \end{tabularx}
