@@ -11,7 +11,7 @@
 
 % ----- Layout -----
 \usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
-\usepackage{microtype}
+%\usepackage{microtype}
 \usepackage{parskip}
 \setlength{\parskip}{6pt}
 
@@ -65,7 +65,7 @@
 \usepackage[hidelinks]{hyperref}
 \hypersetup{
   pdftitle={PayNexus: Uma Carteira Digital Distribuída em Microserviços},
-  pdfauthor={Grupo 3 EGS --- UA/DETI},
+  pdfauthor={Grupo 3 EGS - UA/DETI},
 }
 
 % ----- Referências -----
@@ -78,10 +78,14 @@
 
 \title{%
   \textbf{PayNexus: Uma Carteira Digital Distribuída em Microserviços}\\[0.5em]
-  \large Relatório Técnico --- Engenharia e Gestão de Serviços (EGS)
+  \large Relatório Técnico - Engenharia e Gestão de Serviços (EGS)
 }
 \author{
-  Grupo 3 --- DETI, Universidade de Aveiro\\[0.3em]
+  Grupo 3 - DETI, Universidade de Aveiro\\[0.3em]
+  Pedro Melo, nº XXXXXX\\
+  Simão Almeida, nº XXXXXX\\
+  Tiago Garcia, nº XXXXXX\\
+  Rúben Costa, nº 114190\\
   \small\textit{Engenharia de Computadores e Telemática}
 }
 \date{Junho de 2026}
@@ -91,7 +95,7 @@
 % ============================================================
 \begin{abstract}
 Este relatório descreve o projeto \textbf{PayNexus}, uma plataforma de carteira digital
-implementada como um conjunto de microserviços independentes. O problema central
+implementada como um conjunto de microsserviços independentes. O problema central
 abordado é o carregamento direto de dinheiro para a \emph{blockchain}: um utilizador
 paga com cartão de crédito (Stripe), o pagamento é confirmado por \emph{webhook} com
 verificação HMAC e protegido por código OTP via WhatsApp (Twilio), e o valor é
@@ -112,20 +116,15 @@ e Kubernetes (produção no cluster DETI).
 \section{Introdução}
 \label{sec:introducao}
 
-O carregamento de dinheiro diretamente para a \emph{blockchain} é um processo que
-envolve domínios tecnicamente distintos: autenticação segura de utilizadores, processamento
-de pagamentos com cartão, integração com redes \emph{blockchain} descentralizadas, e
-entrega de notificações em tempo real. Construir esta funcionalidade num único monolito
-implicaria misturar linguagens, bibliotecas, ritmos de evolução e modos de falha
-fundamentalmente diferentes --- tornando o sistema difícil de desenvolver, escalar e
-operar.
+O projeto \textbf{PayNexus} nasce com o propósito de democratizar o acesso ao ecossistema 
+\emph{blockchain}, eliminando as barreiras técnicas tradicionais de entrada no mundo Web3. 
+A nossa proposta de valor centra-se na criação de uma ponte fluida e segura entre o sistema 
+financeiro tradicional (Web2) e as redes descentralizadas (Web3), permitindo que qualquer 
+utilizador carregue e movimente saldo \emph{on-chain} recorrendo simplesmente a um cartão de crédito.
 
-O projeto \textbf{PayNexus} responde a este desafio através de uma arquitetura de
-\textbf{microserviços}, onde cada domínio é encapsulado num serviço independente, com o
-seu próprio ciclo de vida e a sua própria base de dados. Esta abordagem vai ao encontro
-dos objetivos curriculares da unidade de Engenharia e Gestão de Serviços (EGS): a
-arquitetura em si é o \emph{deliverable} principal, demonstrando princípios como
-\emph{bounded contexts}, implantação independente, desenvolvimento políglota, e
+Para viabilizar este modelo de negócio complexo — que exige a orquestração de domínios com 
+ciclos de vida e modos de falha completamente distintos — afastámo-nos de uma abordagem 
+monolítica tradicional. Em vez disso, o \textbf{PayNexus} foi desenvolvido com uma arquitetura baseada de \textbf{microsserviços} independentes. Cada serviço está isolado e foca-se num domínio específico do sistema, o que facilita a manutenção e reduz dependências entre componentes. Esta abordagem vai ao encontro dos objetivos curriculares da unidade de Engenharia e Gestão de Serviços (EGS): a arquitetura em si é o \emph{deliverable} principal, demonstrando princípios como \emph{bounded contexts}, implantação independente, desenvolvimento políglota, e
 orquestração com contentores.
 
 \textbf{Objetivos do projeto:}
@@ -139,7 +138,7 @@ orquestração com contentores.
 
 Este relatório está organizado da seguinte forma: a Secção~\ref{sec:visao} apresenta
 uma visão geral do sistema; a Secção~\ref{sec:arquitetura} detalha a arquitetura de
-microserviços; a Secção~\ref{sec:stack} descreve a \emph{stack} tecnológica; a
+microsserviços; a Secção~\ref{sec:stack} descreve a \emph{stack} tecnológica; a
 Secção~\ref{sec:servicos} documenta a implementação de cada serviço; a
 Secção~\ref{sec:comunicacao} analisa a comunicação inter-serviços; a
 Secção~\ref{sec:seguranca} cobre os mecanismos de segurança; a
@@ -153,8 +152,8 @@ Secção~\ref{sec:conclusao} apresenta os desafios e conclusões.
 
 A plataforma PayNexus é uma \textbf{carteira digital distribuída}: os utilizadores
 autenticam-se, carregam a carteira com um pagamento real por cartão, movem fundos como
-transações \emph{blockchain}, e recebem notificações em tempo real --- tudo entregue por
-um conjunto de microserviços independentes.
+transações \emph{blockchain}, e recebem notificações em tempo real, tudo entregue por
+um conjunto de microsserviços independentes.
 
 \begin{table}[H]
 \centering
@@ -170,7 +169,7 @@ Arquitetura & Microserviços com \emph{gateway} único \\
 \rowsep
 Microserviços & \textbf{6} (4 \emph{backends} + 2 \emph{frontends}) \\
 \rowsep
-Linguagens & \textbf{4} --- Python, Java, Go, TypeScript \\
+Linguagens & \textbf{4}Python, Java, Go, TypeScript \\
 \rowsep
 Autenticação & Keycloak (OAuth2/OIDC), \textbf{dois \emph{realms}} \\
 \rowsep
@@ -240,13 +239,13 @@ conforme indicado na Tabela~\ref{tab:routing}.
 
 \subsection{Princípios Aplicados}
 
-A arquitetura do PayNexus foi desenhada com os princípios fundamentais de microserviços
+A arquitetura do PayNexus foi desenhada com os princípios fundamentais de microsserviços
 em mente. A Tabela~\ref{tab:principios} descreve como cada princípio foi concretizado
 no projeto.
 
 \begin{table}[H]
 \centering
-\caption{Princípios de microserviços e aplicação no projeto}
+\caption{Princípios de microsserviços e aplicação no projeto}
 \label{tab:principios}
 \begin{tabularx}{\linewidth}{@{}L{4cm}X@{}}
 \toprule
@@ -260,17 +259,12 @@ Desenvolvimento políglota & Python (APIs web rápidas), Java/Spring (blockchain
 \rowsep
 Base de dados por serviço & Sem esquema partilhado; instância PostgreSQL isolada por serviço em rede própria \\
 \rowsep
-Isolamento de falhas & Uma falha no serviço de notificações não afeta os pagamentos \\
+Isolamento de falhas & A falha de um serviço não compromete a disponibilidade global do sistema, graças ao isolamento entre serviços e redes independentes \\
 \rowsep
 Ponto de entrada único & O Traefik esconde a topologia interna atrás de uma única porta \\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-\textbf{Trade-offs aceites:} a abordagem microserviços introduz maior complexidade
-operacional (muitos contentores, muitos segredos), consistência eventual entre serviços
-(o pagamento só é ``concluído'' após o \emph{webhook} da Stripe, não quando o utilizador
-clica), e autenticação inter-serviços que num monolito não seria necessária.
 
 \subsection{Catálogo de Serviços}
 
@@ -281,7 +275,7 @@ a plataforma.
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\caption{Catálogo de microserviços do PayNexus}
+\caption{Catálogo de microsserviços do PayNexus}
 \label{tab:catalogo}
 \begin{tabularx}{\linewidth}{@{}L{3.0cm}L{3.6cm}L{2.8cm}C{1.1cm}X@{}}
 \toprule
@@ -325,7 +319,7 @@ por camada funcional.
 \endfoot
 \emph{Frontend} & React + TypeScript + Vite & React 18.2, Vite 5.5, servido via nginx \\
 \rowsep
- & Material-UI (MUI) & 7.3.9 --- biblioteca de componentes UI \\
+ & Material-UI (MUI) & 7.3.9biblioteca de componentes UI \\
 \rowsep
  & Axios, React Query, React Router & HTTP, \emph{data fetching}, roteamento \\
 \midrule
@@ -337,7 +331,7 @@ por camada funcional.
 \midrule
 Dados & PostgreSQL 15 & Uma instância por serviço \\
 \rowsep
- & Redis 7 & Notificações --- cache e pub/sub \\
+ & Redis 7 & Notificações - cache e pub/sub \\
 \rowsep
  & ORMs & SQLAlchemy, Spring Data JPA, GORM \\
 \midrule
@@ -374,14 +368,19 @@ identidade ao Keycloak.
 
 \textbf{Responsabilidades:}
 \begin{itemize}[noitemsep]
-  \item Gerir o fluxo de \emph{sign-up} e \emph{login} via Keycloak (\emph{realm} compositor);
+  \item Gerir o fluxo de \emph{sign-up} e \emph{login} via Keycloak (\emph{realm} microservices);
   \item Trocar o código de autorização OAuth2 por \emph{tokens} JWT;
   \item Validar \emph{tokens} em pedidos subsequentes;
   \item Expor documentação Swagger em \texttt{/iam/docs}.
 \end{itemize}
 
-A biblioteca \texttt{python-keycloak} abstrai a integração OIDC, e o estado de sessão
-para validação do parâmetro \texttt{state} do OAuth2 é mantido em sistema de ficheiros.
+A integração com o protocolo OIDC/OAuth2 foi desenvolvida de raiz através de chamadas 
+HTTP diretas aos endpoints do Keycloak, utilizando a biblioteca \texttt{requests}. 
+O estado de sessãonecessário para a validação do parâmetro \texttt{state} do 
+OAuth2é gerido de forma \emph{stateless} no cliente. O \emph{backend} em Flask 
+assina criptograficamente os dados da sessão e armazena-os num \emph{cookie} seguro 
+no navegador do utilizador, garantindo que o serviço permanece completamente 
+independente de estado local e perfeitamente preparado para escalabilidade horizontal.
 
 \subsection{Payment Service (Serviço de Pagamentos)}
 
@@ -395,8 +394,7 @@ PostgreSQL~15, é responsável por todo o ciclo de vida dos pagamentos com cart�
   \item A Stripe envia um \emph{webhook} com assinatura HMAC para \texttt{POST /v1/payments/webhook};
   \item O serviço verifica a assinatura no cabeçalho \texttt{Stripe-Signature};
   \item É enviado um OTP de 6 dígitos via WhatsApp (Twilio), com validade de 5 minutos;
-  \item Após verificação do OTP, o pagamento é marcado como \texttt{concluded} e o serviço
-        chama o Transactions Service (Tabela~\ref{tab:endpoints-payment}).
+  \item Após verificação do OTP, o pagamento é marcado como \texttt{concluded} e o serviço chama o Transactions Service (Tabela~\ref{tab:endpoints-payment}).
 \end{enumerate}
 
 \begin{table}[H]
@@ -430,9 +428,9 @@ PostgreSQL~15, é responsável por todo o ciclo de vida dos pagamentos com cart�
 \end{tabularx}
 \end{table}
 
-\textbf{Modelo de dados (PostgreSQL):} o serviço mantém quatro tabelas ---
+\textbf{Modelo de dados (PostgreSQL):} o serviço mantém quatro tabelas 
 \texttt{payments} (UUID, user\_id, montante, estado, stripe\_payment\_intent\_id,
-wallet\_id), \texttt{user\_profiles} (stripe\_customer\_id, número de telefone),
+wallet\_id), \texttt{user\_profiles} (\allowbreak stripe\_customer\_id, número de telefone), 
 \texttt{saved\_cards} (payment\_method\_id, last4, marca, validade) e
 \texttt{payment\_otps} (código com hash SHA-256, expiração, flag de utilização).
 
@@ -442,34 +440,36 @@ wallet\_id), \texttt{user\_profiles} (stripe\_customer\_id, número de telefone)
 
 \subsection{Transactions Service (Serviço de Transações e Blockchain)}
 
-O \textbf{Transactions Service} é o serviço mais complexo da plataforma. Implementado em
-Java~21 com Spring Boot~3.4.3, integra a \emph{blockchain} Ethereum e age
-simultaneamente como serviço de carteiras, \emph{composer/BFF} e orquestrador do fluxo
-de pagamento.
+O \textbf{Transactions Service} é o núcleo central da plataforma. Implementado em
+Java~21 com Spring Boot~3.4.3, integra-se diretamente com a \emph{blockchain} Ethereum e atua 
+simultaneamente como motor de carteiras e como um \emph{API Composer/BFF} (Backend for Frontend), orquestrando o fluxo financeiro inter-serviços.
 
 \textbf{Integração blockchain (Web3j~4.10):}
 \begin{itemize}[noitemsep]
   \item \textbf{Rede:} Ethereum Sepolia testnet (chain ID: 11155111);
-  \item \textbf{Carteiras:} criadas por utilizador, com chaves privadas encriptadas
-        em AES com uma chave mestra (\texttt{MASTER\_KEY\_FOR\_WALLET} injetada via Vault);
-  \item \textbf{Operações:} consulta de saldo, estimativa de \emph{gas}, envio de transações,
-        cálculo de taxas;
-  \item \textbf{Modos:} \emph{mock provider} para desenvolvimento, \emph{real provider} para produção.
+  \item \textbf{Carteiras:} Criadas por utilizador, com as chaves privadas armazenadas 
+        e encriptadas em AES recorrendo a uma chave mestra (\texttt{MASTER\_KEY\_FOR\_WALLET} 
+        injetada em \emph{runtime} via Vault);
+  \item \textbf{Operações:} Consulta de saldos, estimativa de \emph{gas}, assinatura de 
+        \emph{Raw Transactions} e consulta assíncrona de recibos de blocos (\emph{Receipts});
+  \item \textbf{Modos:} \emph{Mock provider} para testes locais e \emph{real provider} para 
+        integração efetiva com a rede de testes.
 \end{itemize}
 
-\textbf{Papel de BFF (Backend for Frontend):} o serviço expõe os mesmos endpoints de
-autenticação do IAM Service (delegando ao Payment Service), e gere o fluxo de
-composição: criação de pagamento → crédito em carteira → emissão de evento de
-notificação. A anotação \texttt{@EnableAsync} permite que operações \emph{blockchain}
-e notificações sejam executadas de forma assíncrona.
+\textbf{Papel de Composer / BFF:} O serviço centraliza os pedidos do Frontend de Transações, 
+atuando como agregador. Ele expõe endpoints para iniciar o fluxo de autenticação do operador 
+(delegando as chamadas de \emph{login} e \emph{signup} ao \emph{Payment Service} em Python) 
+e coordena a transição de estados: validação de liquidação em Euros $\rightarrow$ transferência 
+\emph{on-chain} de fundos $\rightarrow$ notificação ao vivo do utilizador. As operações pesadas na \emph{blockchain} e as chamadas ao serviço de notificações são delegadas para execução assíncrona através de fios de execução (\emph{threads}) independentes geridos pela anotação \texttt{@EnableAsync}.
 
 \textbf{Endpoints principais:}
 \begin{itemize}[noitemsep]
-  \item \texttt{POST /v1/payments} --- cria pagamento e regista transação pendente;
-  \item \texttt{PATCH /v1/payments/\{id\}} --- conclui pagamento, credita carteira,
-        emite evento (chamado pelo Payment Service com cabeçalho \texttt{X-Internal-Key});
-  \item \texttt{GET /v1/payments/\{id\}} --- consulta detalhes;
-  \item Delegação de \texttt{/v1/pay/login} e \texttt{/v1/pay/signup} para o Payment Service.
+  \item \texttt{POST /v1/payments} Encaminha a solicitação de criação de uma intenção de 
+        pagamento para o \emph{Payment Service}; se o pagamento for imediatamente retornado como concluído, despoleta de imediato a transferência de fundos \emph{on-chain};
+  \item \texttt{PATCH /v1/payments/\{id\}} Atua como o \emph{endpoint} de receção de 
+        notificações internas; é invocado de forma assíncrona pelo \emph{Payment Service} (Python) após o sucesso do \emph{webhook} da Stripe, sendo protegido por um bypass de autenticação via cabeçalho \texttt{X-Internal-Key}. Ao receber este sinal, o serviço inicia a transferência de ETH a partir da \texttt{bankWallet} para a carteira do utilizador;
+  \item \texttt{GET /v1/payments/\{id\}} Consulta o detalhe e o estado atualizado de um pagamento;
+  \item \texttt{GET /v1/pay/login} e \texttt{GET /v1/pay/signup} Disponibilizam as URLs de redirecionamento OIDC geradas pelo ecossistema de pagamentos.
 \end{itemize}
 
 \subsection{Notifications Service (Serviço de Notificações)}
@@ -507,10 +507,13 @@ Transactions Service (BFF) para todas as operações. Servido por nginx Alpine.
 construída com React~18 + MUI~7.3 e integra o Stripe.js via
 \texttt{@stripe/react-stripe-js}. Isolada num Keycloak \emph{realm} separado, garantindo
 que credenciais de utilizadores de pagamento nunca se misturam com o \emph{realm}
-compositor.
+microservices.
 
-Ambos os \emph{frontends} usam \emph{multi-stage Docker builds} (nó de construção +
-nginx de runtime) e são roteados pelo Traefik através de cabeçalhos de \emph{host}.
+A estratégia de \emph{containerização} dos \emph{frontends} seguiu duas abordagens distintas:
+
+O \textbf{Transactions Frontend} utiliza um modelo \emph{multi-stage}. Na primeira fase, o código é compilado e, na fase final, os ficheiros estáticos são transferidos para um servidor \textbf{Nginx}, que os serve de forma leve no porto 80.
+
+Por outro lado, o \textbf{Payment Frontend} corre diretamente em modo de desenvolvimento através do servidor nativo do \textbf{Vite} (NodeJS) no porto 5174, sem recurso ao Nginx. Ambos os serviços são geridos e encaminhados para o exterior pelo \textbf{Traefik} com base no domínio de acesso.
 
 % ============================================================
 \section{Comunicação Inter-Serviços}
@@ -544,14 +547,14 @@ Entrega Web Push & Notifications → Browser & Web Push cifrado & Chaves VAPID \
 
 Uma consequência arquitetural importante é a \textbf{consistência eventual}: um pagamento
 só é marcado como ``concluído'' após o \emph{webhook} da Stripe ser recebido e
-verificado --- não quando o utilizador clica em ``pagar''. Isto significa que o sistema
+verificado  não quando o utilizador clica em ``pagar''. Isto significa que o sistema
 aceita um período de latência entre a ação do utilizador e a atualização de estado,
 em troca de garantia criptográfica de que o pagamento foi efetivamente processado.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.95\linewidth]{EGS_SEQ_ADD_FUNDS.png}
-  \caption{Diagrama de Sequência --- Fluxo de Pagamento e Carregamento de Carteira}
+  \caption{Diagrama de Sequência de Fluxo de Pagamento e Carregamento de Carteira}
   \label{fig:seq-payment}
 \end{figure}
 
@@ -568,7 +571,7 @@ O Keycloak~26.1 é o provedor de identidade central da plataforma, configurado c
 \textbf{dois \emph{realms} independentes}~\cite{keycloak,oauth2}:
 
 \begin{itemize}[noitemsep]
-  \item \textbf{\emph{Realm} compositor} (\texttt{keycloak.pt}): utilizado pela aplicação
+  \item \textbf{\emph{Realm} microservices} (\texttt{keycloak.pt}): utilizado pela aplicação
         principal e pelo IAM Service para autenticar os utilizadores da carteira;
   \item \textbf{\emph{Realm} de pagamentos} (\texttt{payment-keycloak.pt}): utilizado
         exclusivamente pelo Payment Service, garantindo isolamento total entre os dois
@@ -597,7 +600,7 @@ com o padrão \textbf{AppRole + \emph{agent sidecar}}:
   \item Cada serviço tem um \texttt{vault-agent} dedicado com \texttt{role\_id} e
         \texttt{secret\_id} próprios (AppRole);
   \item O agente autentica-se no Vault ao arrancar e renderiza o template
-        \texttt{vault/templates/<serviço>.env.tmpl};
+        \texttt{vault/\allowbreak templates/\allowbreak <serviço>.env.tmpl};
   \item O ficheiro \texttt{.env} resultante é montado em volume partilhado com o serviço;
   \item O processo do serviço lê as variáveis de ambiente sem nunca aceder diretamente
         ao Vault.
@@ -659,7 +662,7 @@ Encriptação AES de carteiras & Chaves privadas Ethereum encriptadas com \textt
 \rowsep
 OTP com hash SHA-256 & Código OTP armazenado apenas como hash; expiração de 5 minutos; flag \texttt{used} impede reutilização \\
 \rowsep
-Isolamento de rede & Redes de bases de dados com \texttt{internal: true} --- inacessíveis pelo Traefik ou pela rede pública \\
+Isolamento de rede & Redes de bases de dados com \texttt{internal: true}  inacessíveis pelo Traefik ou pela rede pública \\
 \rowsep
 VAPID por \emph{tenant} & Isolamento criptográfico entre clientes nas notificações Web Push \\
 \bottomrule
@@ -680,19 +683,21 @@ Todos os serviços de aplicação usam \emph{multi-stage builds}:
 \centering
 \small
 \setlength{\tabcolsep}{5pt}
-\caption{Imagens Docker por serviço (\emph{multi-stage builds})}
+\caption{Imagens Docker por serviço e estratégias de \emph{build}}
 \label{tab:docker}
 \begin{tabularx}{\linewidth}{@{}L{3.5cm}XL{4.0cm}@{}}
 \toprule
-\textbf{Serviço} & \textbf{Imagem de build} & \textbf{Imagem de runtime} \\
+\textbf{Serviço / Componente} & \textbf{Imagem de Build} & \textbf{Imagem de Runtime} \\
 \midrule
 Transactions (Java) & \path{maven:3.9-eclipse-temurin-21} & \path{eclipse-temurin:21-jre} \\
 \rowsep
-IAM / Payment (Python) & --- & \path{python:3.11-slim} \\
+Payment Service (Python) & --- & \path{python:3.11-slim} \\
 \rowsep
 Notifications (Go) & \path{golang:alpine} & \path{alpine} \\
 \rowsep
-Frontends (React) & \path{node:20-slim} & \path{nginx:alpine} \\
+Transactions Frontend (React) & \path{node:20-slim} & \path{nginx:alpine} \\
+\rowsep
+Payment Frontend (React) & --- & \path{node:20-slim} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -828,25 +833,11 @@ Pagamentos por \emph{webhook} & Confiar nos \emph{webhooks} da Stripe (não no c
 
 \subsection{Conclusões}
 
-O projeto PayNexus demonstra que é viável implementar um sistema fintech com carregamento
-direto de dinheiro para a \emph{blockchain} usando uma arquitetura de microserviços
-políglota. A separação em \emph{bounded contexts} independentes permitiu usar a melhor
-ferramenta para cada domínio: Python para APIs web rápidas, Java para a integração
-\emph{blockchain} com tipagem forte, e Go para o motor de notificações de alto débito.
+O projeto \textbf{PayNexus} demonstra com sucesso que é viável implementar um sistema \emph{fintech} com carregamento direto de dinheiro para a \emph{blockchain} usando uma arquitetura de microsserviços. A separação em \emph{bounded contexts} independentes permitiu usar a melhor ferramenta para cada domínio: Python para as APIs web, Java para a integração \emph{blockchain} com tipagem forte, e Go para o motor de notificações de alto débito.
 
-A segurança por camadas --- Keycloak, Vault, isolamento de rede, HMAC de \emph{webhooks},
-e encriptação AES de chaves privadas --- garante que nenhum vetor de ataque isolado
-compromete o sistema inteiro. A observabilidade com Grafana~10, aliada ao provisionamento
-declarativo, torna o sistema operacionalmente maduro.
+A segurança por camadas, assente na federação de identidades, isolamento estrito de rede, validação de \emph{webhooks} e centralização de segredos, garante que nenhum vetor de ataque isolado compromete a integridade total do ecossistema, blindando os dados sensíveis dos utilizadores.
 
-Do ponto de vista académico, o projeto cobre os temas centrais de Engenharia e Gestão de
-Serviços: \emph{bounded contexts}, implantação independente, desenvolvimento políglota,
-base de dados por serviço, \emph{API gateway}, segredos centralizados, e orquestração
-com contentores em dois ambientes (Docker Compose e Kubernetes).
-
-\textbf{Trabalho futuro:} integração de \emph{rate limiting} no Traefik, migração
-completa para Kubernetes com Helm charts, adição de \emph{distributed tracing}
-(OpenTelemetry), e extensão a redes Ethereum mainnet com \emph{fiat on-ramp} real.
+Em suma, a concretização deste projeto validou na prática os princípios fundamentais de Engenharia e Gestão de Serviços (EGS). Mais do que a simples integração tecnológica entre o mundo financeiro tradicional e as redes descentralizadas, o \textbf{PayNexus} provou que o verdadeiro valor de uma arquitetura políglota reside na capacidade de entregar resiliência, escalabilidade e independência operacional a cada serviço, resultando num produto final robusto, seguro e totalmente pronto para ambientes de produção.
 
 % ============================================================
 \bibliography{references}
