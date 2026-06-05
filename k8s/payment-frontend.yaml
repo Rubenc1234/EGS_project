@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-frontend-config
+  namespace: tenant-grupo3-egs-deti-ua-pt
+data:
+  VITE_PROXY_TARGET: "http://payment-service:5002"
+  VITE_PAYMENT_DEFAULT_REDIRECT_URL: "https://grupo3-egs-deti-ua.pt/payment/dashboard"
+  VITE_STRIPE_PUBLISHABLE_KEY: "pk_test_51TCK1LQkS9NEPri7omXaMroBsr4loEsDxqhh0dbFAoUQUbk83UABMnRR77n0xADSvDcLVMVsu8WP2ZH43V6CMsPv00mCNA7FOW"
+  VITE_BASE_PATH: "/payment/"
+  VITE_API_BASE_URL: "/payment-api"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-frontend
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-frontend
+  template:
+    metadata:
+      labels:
+        app: payment-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: registry.deti/project_egs_payment_frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5174
+          envFrom:
+            - configMapRef:
+                name: payment-frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-frontend-svc
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  type: ClusterIP
+  selector:
+    app: payment-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5174
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-frontend-ingress
+  namespace: tenant-grupo3-egs-deti-ua-pt
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: "traefik"
+  tls:
+    - hosts:
+        - grupo3-egs-deti-ua.pt
+      secretName: transactions-tls
+  rules:
+    - host: grupo3-egs-deti-ua.pt
+      http:
+        paths:
+          - path: /payment-api
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 5002
+          - path: /payment
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-frontend-svc
+                port:
+                  number: 80

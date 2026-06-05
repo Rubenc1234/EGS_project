@@ -2902,6 +2902,10 @@ spec:
           env:
             - name: GF_SECURITY_ADMIN_PASSWORD
               value: "admin"
+            - name: GF_SERVER_ROOT_URL
+              value: "https://grupo3-egs-deti-ua.pt/grafana"
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
             - name: TRANSACTION_DB_PASSWORD
               value: "mypassword"
             - name: NOTIFICATIONS_DB_PASSWORD
@@ -2947,14 +2951,19 @@ metadata:
   name: grafana-ingress
   namespace: tenant-grupo3-egs-deti-ua-pt
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: "traefik"
+  tls:
+    - hosts:
+        - grupo3-egs-deti-ua.pt
+      secretName: transactions-tls
   rules:
-    - host: grafana.grupo3-egs-deti-ua.pt
+    - host: grupo3-egs-deti-ua.pt
       http:
         paths:
-          - path: /
+          - path: /grafana
             pathType: Prefix
             backend:
               service:

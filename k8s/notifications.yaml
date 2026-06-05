@@ -222,14 +222,19 @@ metadata:
   name: egs-notifications-api-ingress
   namespace: tenant-grupo3-egs-deti-ua-pt
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: "traefik"
+  tls:
+    - hosts:
+        - grupo3-egs-deti-ua.pt
+      secretName: transactions-tls
   rules:
-    - host: notifications.grupo3-egs-deti-ua.pt
+    - host: grupo3-egs-deti-ua.pt
       http:
         paths:
-          - path: /
+          - path: /notifications
             pathType: Prefix
             backend:
               service:

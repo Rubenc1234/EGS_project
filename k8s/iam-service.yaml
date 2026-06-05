@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: iam-service-config
+  namespace: tenant-grupo3-egs-deti-ua-pt
+data:
+  KEYCLOAK_URL: "http://keycloak:8080/keycloak"
+  KEYCLOAK_PUBLIC_URL: "https://grupo3-egs-deti-ua.pt/keycloak"
+  REALM: "microservices"
+  CLIENT_ID: "iam-service"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: iam-service-secret
+  namespace: tenant-grupo3-egs-deti-ua-pt
+type: Opaque
+stringData:
+  CLIENT_SECRET: 4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam-service
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: iam-service
+  template:
+    metadata:
+      labels:
+        app: iam-service
+    spec:
+      containers:
+        - name: iam-service
+          image: registry.deti/project_egs_iam_service:latest
+          imagePullPolicy: Always
+          command: ["python", "-m", "iam_service.app_iam"]
+          envFrom:
+            - configMapRef:
+                name: iam-service-config
+            - secretRef:
+                name: iam-service-secret
+          ports:
+            - containerPort: 5000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iam-service
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  type: ClusterIP
+  selector:
+    app: iam-service
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: iam-service-ingress
+  namespace: tenant-grupo3-egs-deti-ua-pt
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: "traefik"
+  tls:
+    - hosts:
+        - grupo3-egs-deti-ua.pt
+      secretName: transactions-tls
+  rules:
+    - host: grupo3-egs-deti-ua.pt
+      http:
+        paths:
+          - path: /iam
+            pathType: Prefix
+            backend:
+              service:
+                name: iam-service
+                port:
+                  number: 5000

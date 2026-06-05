@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-keycloak-secret
+  namespace: tenant-grupo3-egs-deti-ua-pt
+type: Opaque
+stringData:
+  KEYCLOAK_ADMIN: admin
+  KEYCLOAK_ADMIN_PASSWORD: admin
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-keycloak-realm
+  namespace: tenant-grupo3-egs-deti-ua-pt
+data:
+  realm.json: |
+    {
+      "realm": "payments-realm",
+      "enabled": true,
+      "registrationAllowed": true,
+      "registrationEmailAsUsername": false,
+      "rememberMe": true,
+      "verifyEmail": false,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": true,
+      "roles": {
+        "realm": [
+          {
+            "name": "user",
+            "description": "Default payment user"
+          },
+          {
+            "name": "operator",
+            "description": "Service/operator role"
+          }
+        ]
+      },
+      "groups": [],
+      "users": [],
+      "clients": [
+        {
+          "clientId": "payments-client",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "wB0s7VvPaSfIHWJkkOh2gXA7Newnmwfm",
+          "redirectUris": [
+            "http://localhost:5174/callback",
+            "http://localhost:5175/callback",
+            "http://localhost:5001/v1/composer/callback",
+            "http://grupo3-egs-deti-ua.pt/payment/callback",
+            "http://grupo3-egs-deti-ua.pt/payment/*",
+            "http://grupo3-egs-deti-ua.pt/payment-api/*",
+            "http://grupo3-egs-deti-ua.pt/payment-keycloak/*",
+            "https://grupo3-egs-deti-ua.pt/payment/callback",
+            "https://grupo3-egs-deti-ua.pt/payment/*",
+            "https://grupo3-egs-deti-ua.pt/payment-api/*",
+            "https://grupo3-egs-deti-ua.pt/payment-keycloak/*"
+          ],
+          "webOrigins": [
+            "*"
+          ],
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": true,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "authorizationServicesEnabled": false
+        }
+      ]
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-keycloak
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-keycloak
+  template:
+    metadata:
+      labels:
+        app: payment-keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.1
+          imagePullPolicy: IfNotPresent
+          args: ["start-dev", "--import-realm"]
+          env:
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HOSTNAME
+              value: "grupo3-egs-deti-ua.pt"
+            - name: KC_HTTP_RELATIVE_PATH
+              value: "/payment-keycloak"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "false"
+          envFrom:
+            - secretRef:
+                name: payment-keycloak-secret
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import/realm.json
+              subPath: realm.json
+      volumes:
+        - name: realm
+          configMap:
+            name: payment-keycloak-realm
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-keycloak
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  selector:
+    app: payment-keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-keycloak-ingress
+  namespace: tenant-grupo3-egs-deti-ua-pt
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: "traefik"
+  tls:
+    - hosts:
+        - grupo3-egs-deti-ua.pt
+      secretName: transactions-tls
+  rules:
+    - host: grupo3-egs-deti-ua.pt
+      http:
+        paths:
+          - path: /payment-keycloak
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-keycloak
+                port:
+                  number: 8080

@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: transactions-postgres-secret
+  namespace: tenant-grupo3-egs-deti-ua-pt
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "mypassword"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: transactions-postgres-pvc
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "longhorn"
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transactions-postgres
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transactions-postgres
+  template:
+    metadata:
+      labels:
+        app: transactions-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_USER
+              value: "myuser"
+            - name: POSTGRES_DB
+              value: "transaction_db"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: transactions-postgres-secret
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U myuser -d transaction_db -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: transactions-postgres-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transactions-postgres
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  selector:
+    app: transactions-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: transactions-service-secret
+  namespace: tenant-grupo3-egs-deti-ua-pt
+type: Opaque
+stringData:
+  SPRING_DATASOURCE_PASSWORD: "mypassword"
+  KEYCLOAK_CLIENT_SECRET: "4g70qaoXmfnaIf7d9LgSRtnJCjIBBcha"
+  BLOCKCHAIN_NODE_URL: "https://sepolia.infura.io/v3/7b4aa3f390ee45888d7419ce37f62577"
+  MASTER_KEY_FOR_WALLET: "egs-blockchain-master-key-2026-!"
+  NOTIFICATIONS_API_KEY: "PLACEHOLDER_NOTIFICATIONS_API_KEY"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transactions-service-config
+  namespace: tenant-grupo3-egs-deti-ua-pt
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://transactions-postgres:5432/transaction_db"
+  SPRING_DATASOURCE_USERNAME: "myuser"
+  KEYCLOAK_URL: "http://keycloak:8080/keycloak"
+  KEYCLOAK_PUBLIC_URL: "https://grupo3-egs-deti-ua.pt/keycloak"
+  KEYCLOAK_REALM: "microservices"
+  KEYCLOAK_CLIENT_ID: "iam-service"
+  APP_DEV_MODE: "false"
+  APP_BANK_WALLET: "0xcc1d685797fc94209814476c97baf4be5a22f6de"
+  APP_PAYMENT_SERVICE_URL: "http://payment-service:5002/payment-api"
+  APP_TRANSACTION_FEE_PERCENTAGE: "2.0"
+  APP_TRANSACTION_FEE_RECIPIENT: "0xcc1d685797fc94209814476c97baf4be5a22f6de"
+  NOTIFICATIONS_BASE_URL: "http://notifications-service:8080/notifications"
+  APP_PUBLIC_URL: "https://grupo3-egs-deti-ua.pt/transactions"
+  TRANSACTIONS_PUBLIC_URL: "https://grupo3-egs-deti-ua.pt/transactions-api"
+  SERVER_SERVLET_CONTEXT_PATH: "/transactions-api"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transactions-service
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transactions-service
+  template:
+    metadata:
+      labels:
+        app: transactions-service
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:15
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h transactions-postgres -p 5432 -U myuser; do
+                echo "Waiting for transactions-postgres..."
+                sleep 2
+              done
+      containers:
+        - name: transactions-service
+          image: registry.deti/project_egs_transactions_service:latest
+          imagePullPolicy: Always
+          command: ["java", "-jar", "/app/app.jar"]
+          envFrom:
+            - configMapRef:
+                name: transactions-service-config
+            - secretRef:
+                name: transactions-service-secret
+          ports:
+            - containerPort: 8081
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transactions-service
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  selector:
+    app: transactions-service
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: transactions-service-ingress
+  namespace: tenant-grupo3-egs-deti-ua-pt
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: "traefik"
+  tls:
+    - hosts:
+        - grupo3-egs-deti-ua.pt
+      secretName: transactions-tls
+  rules:
+    - host: grupo3-egs-deti-ua.pt
+      http:
+        paths:
+          - path: /transactions-api
+            pathType: Prefix
+            backend:
+              service:
+                name: transactions-service
+                port:
+                  number: 8081

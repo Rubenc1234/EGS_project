@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stripe-listener
+  namespace: tenant-grupo3-egs-deti-ua-pt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stripe-listener
+  template:
+    metadata:
+      labels:
+        app: stripe-listener
+    spec:
+      containers:
+        - name: stripe-cli
+          image: stripe/stripe-cli:latest
+          args:
+            - "listen"
+            - "--api-key"
+            - "PLACEHOLDER_STRIPE_SECRET_KEY"
+            - "--forward-to"
+            - "http://payment-service:5002/payment-api/v1/payments/webhook"
