@@ -12,7 +12,7 @@ import HomePage from './pages/HomePage'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/callback" element={<CallbackPage />} />

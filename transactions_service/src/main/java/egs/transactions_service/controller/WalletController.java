@@ -17,7 +17,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/v1/wallet")
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt", "https://transactions-frontend.grupo3-egs-deti-ua.pt", "https://payment.grupo3-egs-deti-ua.pt"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt", "https://grupo3-egs-deti-ua.pt"}, allowCredentials = "true")
 public class WalletController {
     
     @Autowired

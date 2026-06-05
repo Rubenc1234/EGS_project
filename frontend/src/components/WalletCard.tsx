@@ -4,6 +4,7 @@ import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import CardActions from '@mui/material/CardActions'
+import { Link } from 'react-router-dom'
 
 export default function WalletCard({ wallet }: { wallet?: any }) {
   return (
@@ -16,7 +17,7 @@ export default function WalletCard({ wallet }: { wallet?: any }) {
         <Typography variant="h4">{wallet?.balance ?? '0.00'}</Typography>
       </CardContent>
       <CardActions>
-        <Button size="small" href="/dashboard">View</Button>
+        <Button size="small" component={Link} to="/dashboard">View</Button>
         <Button size="small" href="#">Send</Button>
       </CardActions>
     </Card>

@@ -5,6 +5,7 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Paper from '@mui/material/Paper'
+import { Link as RouterLink } from 'react-router-dom'
 
 const IAM_BASE = import.meta.env.VITE_IAM_BASE_URL || 'http://iam.pt'
 // When using the Python Composer (app.py) we use a local login page that POSTs to /v1/composer/login
@@ -12,7 +13,7 @@ const LOGIN_REDIRECT = '/login'
 
 const handleSignup = async () => {
   try {
-    const redirectUri = `${window.location.origin}/callback`
+    const redirectUri = window.location.origin + import.meta.env.BASE_URL + 'callback'
     const res = await fetch(`${IAM_BASE}/v1/signup?redirect_uri=${encodeURIComponent(redirectUri)}`)
     const data = await res.json()
     if (data.signup_url) {
@@ -40,7 +41,8 @@ export default function Home() {
               variant="contained" 
               color="primary" 
               size="large" 
-              href={LOGIN_REDIRECT}
+              component={RouterLink}
+              to="/login"
               sx={{
                 borderRadius: '12px',
                 fontWeight: 600,
@@ -81,7 +83,7 @@ export default function Home() {
           </Stack>
 
           <Typography variant="body2" color="text.secondary">
-            Depois de autenticado, vai para <a href="/dashboard">Dashboard</a>.
+            Depois de autenticado, vai para <RouterLink to="/dashboard">Dashboard</RouterLink>.
           </Typography>
         </Paper>
       </Box>

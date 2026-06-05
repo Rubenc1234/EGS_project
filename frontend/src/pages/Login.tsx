@@ -20,7 +20,7 @@ export default function Login() {
     }
 
     // Redirect the browser to transactions_service which will forward to Keycloak.
-    const redirect_uri = window.location.origin + '/callback'
+    const redirect_uri = window.location.origin + import.meta.env.BASE_URL + 'callback'
     const txBase = import.meta.env.VITE_TRANSACTIONS_BASE_URL || 'http://transactions.pt'
     const url = `${txBase}/v1/login?redirect_uri=${encodeURIComponent(redirect_uri)}`
     console.log('Redirecting browser to transactions_service login endpoint:', url)

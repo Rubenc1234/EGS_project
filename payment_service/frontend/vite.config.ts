@@ -5,6 +5,7 @@ const backendTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:5002'
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.VITE_BASE_PATH ?? '/',
   server: {
     port: 5174,
     host: true,

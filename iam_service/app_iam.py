@@ -29,5 +29,11 @@ def iam_static(filename):
 # Registrar rotas IAM
 register_routes(app)
 
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+app.wsgi_app = DispatcherMiddleware(
+    Flask('dummy_app'),
+    {'/iam': app.wsgi_app}
+)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

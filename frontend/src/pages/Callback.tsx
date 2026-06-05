@@ -91,7 +91,7 @@ export default function Callback() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             code,
-            redirect_uri: window.location.origin + '/callback',
+            redirect_uri: window.location.origin + import.meta.env.BASE_URL + 'callback',
             state: state || undefined,
           })
         })

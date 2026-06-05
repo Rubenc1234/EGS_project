@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/v1")
 @Slf4j
 // Allow frontend dev servers (5173, 5174 and 5175). In production, lock this down to your real origin(s).
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "http://payment-keycloak.pt", "https://transactions-frontend.grupo3-egs-deti-ua.pt", "https://payment.grupo3-egs-deti-ua.pt"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://app.pt", "http://payment.pt", "http://iam.pt", "http://transactions.pt", "http://notifications.pt", "http://keycloak.pt", "https://grupo3-egs-deti-ua.pt"})
 public class AuthController {
 
     @Value("${keycloak.url}")

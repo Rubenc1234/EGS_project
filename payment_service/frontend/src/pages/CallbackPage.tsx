@@ -20,7 +20,7 @@ export default function CallbackPage() {
     }
 
     // Use a fixed callback URL that matches the authorization request
-    const redirectUri = `${window.location.origin}/callback`
+    const redirectUri = window.location.origin + import.meta.env.BASE_URL + 'callback'
 
     exchangeCode(code, redirectUri)
       .then((token) => {

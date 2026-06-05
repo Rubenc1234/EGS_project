@@ -42,7 +42,7 @@ export default function LoginPage() {
       if (redirectUrl) localStorage.setItem('payment_redirect_url', redirectUrl)
 
       // Use a fixed callback URL that matches what's configured in Keycloak
-      const callbackUrl = `${window.location.origin}/callback`
+      const callbackUrl = window.location.origin + import.meta.env.BASE_URL + 'callback'
       const loginUrl = await fetchLoginUrl(callbackUrl)
       window.location.href = loginUrl
     } catch {

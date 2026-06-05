@@ -29,13 +29,15 @@ func SetupRoutes(db *gorm.DB, rdb *redis.Client) *gin.Engine {
 		c.Next()
 	})
 
+	notificationsGroup := router.Group("/notifications")
+
 	// Swagger Docs
-	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	router.GET("/docs", func(c *gin.Context) {
-		c.Redirect(http.StatusMovedPermanently, "/docs/index.html")
+	notificationsGroup.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	notificationsGroup.GET("/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/notifications/docs/index.html")
 	})
 
-	v1 := router.Group("/v1")
+	v1 := notificationsGroup.Group("/v1")
 
 	// Admin Route (To manage Client Apps & API Keys)
 	adminOnly := v1.Group("/admin")

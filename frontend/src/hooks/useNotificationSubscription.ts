@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 
-// NOTA: Substitui isto com a vapid_public_key obtida do POST /v1/admin/clients
-const VAPID_PUBLIC_KEY = 'BJx_S9f8lZmklgsYa96ZCd2jtMPfswUXEtF7hkU6HeObrmRvg06ozYZwYr4owlkulzRCGS7yKwrQE9Nq4jOn6rc';
+const VAPID_PUBLIC_KEY = 'BCAiKOS_VK65HlZnj8Ggl579qKE1b0tST8sm4-d9J8vwgFHKX5Dj99cVBn7xFmbQsQqgLtTBnngObVCOqfgyoXg';
 
 export const useNotificationSubscription = () => {
   const { token } = useAuth();
@@ -42,7 +41,7 @@ export const useNotificationSubscription = () => {
           console.error('[useNotificationSubscription] Push notifications not supported');
           throw new Error('Push notifications not supported in this browser');
         }
-        console.log('[useNotificationSubscription] Browser supports push notifications ✅');
+        console.log('[useNotificationSubscription] Browser supports push notifications');
 
         // Get service worker registration
         console.log('[useNotificationSubscription] Waiting for Service Worker...');
@@ -52,7 +51,7 @@ export const useNotificationSubscription = () => {
             setTimeout(() => reject(new Error('Service Worker registration timeout')), 5000)
           )
         ]) as ServiceWorkerRegistration;
-        console.log('[useNotificationSubscription] Service Worker is ready ✅');
+        console.log('[useNotificationSubscription] Service Worker is ready');
 
         // Check if already subscribed
         console.log('[useNotificationSubscription] Checking for existing subscription...');
@@ -64,9 +63,9 @@ export const useNotificationSubscription = () => {
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
           });
-          console.log('[useNotificationSubscription] ✅ New subscription created');
+          console.log('[useNotificationSubscription] New subscription created');
         } else {
-          console.log('[useNotificationSubscription] ✅ Already subscribed');
+          console.log('[useNotificationSubscription] Already subscribed');
         }
 
         // Extract user ID from JWT token
@@ -80,7 +79,8 @@ export const useNotificationSubscription = () => {
 
         // Send subscription to backend
         console.log('[useNotificationSubscription] Sending subscription to backend...');
-        const response = await fetch('/v1/users/me/subscription', {
+        const txBase = import.meta.env.VITE_TRANSACTIONS_BASE_URL || 'http://transactions.pt';
+        const response = await fetch(`${txBase}/v1/users/me/subscription`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -111,10 +111,10 @@ export const useNotificationSubscription = () => {
         }
 
         const result = await response.json();
-        console.log('[useNotificationSubscription] ✅ Subscription registered successfully!', result);
+        console.log('[useNotificationSubscription] Subscription registered successfully!', result);
         setSubscriptionStatus('subscribed');
       } catch (err) {
-        console.error('[useNotificationSubscription] ❌ Error:', err);
+        console.error('[useNotificationSubscription] Error:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
         setSubscriptionStatus('error');
       }

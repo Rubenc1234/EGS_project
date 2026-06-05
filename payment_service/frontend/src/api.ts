@@ -42,8 +42,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('payment_token')
       // Only redirect if we are not already on the login page
-      if (window.location.pathname !== '/') {
-        window.location.href = '/'
+      const loginPath = import.meta.env.BASE_URL || '/'
+      if (window.location.pathname !== loginPath) {
+        window.location.href = loginPath
       }
     }
     return Promise.reject(error)

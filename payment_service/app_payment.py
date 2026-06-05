@@ -48,5 +48,11 @@ register_auth_routes(app)
 register_payment_routes(app)
 register_user_routes(app)
 
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+app.wsgi_app = DispatcherMiddleware(
+    Flask('dummy_app'),
+    {'/payment-api': app.wsgi_app}
+)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002)

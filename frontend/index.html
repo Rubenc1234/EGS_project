@@ -2,9 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#000000" />
     <title>EGS Payment App</title>
   </head>
@@ -16,8 +16,9 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+          const basePath = window.location.pathname.startsWith('/transactions') ? '/transactions/' : '/';
           navigator.serviceWorker
-            .register('/sw.js')
+            .register(basePath + 'sw.js')
             .then((reg) => {
               console.log('[App] Service Worker registered:', reg);
             })

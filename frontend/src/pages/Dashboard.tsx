@@ -98,7 +98,7 @@ export default function Dashboard() {
     }
 
     const walletId = wallet?.id
-    const redirectUrl = window.location.origin + '/dashboard'
+    const redirectUrl = window.location.origin + import.meta.env.BASE_URL + 'dashboard'
     // Redirect to payment service with pre-filled parameters to skip the manual entry page
     const paymentUrl = `${paymentBaseUrl}/?wallet_id=${walletId}&amount=${amount}&redirect_url=${encodeURIComponent(redirectUrl)}`
     
@@ -537,7 +537,7 @@ export default function Dashboard() {
                   
                   const isSender = wallet?.id && t.from && wallet.id.toLowerCase() === t.from.toLowerCase()
                   const isReceiver = wallet?.id && t.to && wallet.id.toLowerCase() === t.to.toLowerCase()
-                  const isFromBank = t.from && t.from.toLowerCase() === '0xf2f1fd6b53b3aa9c1acfd92ec827b0a040860948'
+                  const isFromBank = t.from && t.from.toLowerCase() === '0xcc1d685797fc94209814476c97baf4be5a22f6de'
 
                   return (
                   <TableRow key={key} hover>
