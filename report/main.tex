@@ -82,10 +82,10 @@
 }
 \author{
   Grupo 3 - DETI, Universidade de Aveiro\\[0.3em]
-  Pedro Melo, nº 114208\\
-  Simão Almeida, nº 113085\\
-  Tiago Garcia, nº 114184\\
-  Rúben Costa, nº 114190\\
+  Pedro Melo, nº 114208 (25\%)\\
+  Simão Almeida, nº 113085 (25\%)\\
+  Tiago Garcia, nº 114184 (25\%)\\
+  Rúben Costa, nº 114190 (25\%)\\
   \small\textit{Engenharia de Computadores e Telemática}
 }
 \date{Junho de 2026}
@@ -190,6 +190,8 @@ Observabilidade & Dashboards Grafana 10 \\
 Desenvolvimento & Docker Compose ($\approx$17 contentores) \\
 \rowsep
 Produção & Kubernetes (cluster DETI/UA) \\
+\rowsep
+Repositório & \href{https://github.com/Rubenc1234/EGS_project}{github.com/Rubenc1234/EGS\_project} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -423,7 +425,7 @@ PostgreSQL~15, é responsável por todo o ciclo de vida dos pagamentos com cart�
 \rowsep
 /v1/users/profile     & GET/PUT  & Perfil do utilizador \\
 \rowsep
-/v1/users/cards       & GET/POST & Cartões guardados (Stripe Customer) \\
+/v1/users/cards       & POST/DELETE & Cartões guardados (Stripe Customer) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -471,6 +473,50 @@ e coordena a transição de estados: validação de liquidação em Euros $\righ
   \item \texttt{GET /v1/payments/\{id\}} Consulta o detalhe e o estado atualizado de um pagamento;
   \item \texttt{GET /v1/pay/login} e \texttt{GET /v1/pay/signup} Disponibilizam as URLs de redirecionamento OIDC geradas pelo ecossistema de pagamentos.
 \end{itemize}
+
+Para além dos \emph{endpoints} de orquestração (Composer/BFF) descritos acima, o serviço
+expõe a API central de carteiras e transações resumida na Tabela~\ref{tab:endpoints-transactions}.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\caption{Endpoints principais do Transactions Service}
+\label{tab:endpoints-transactions}
+\begin{tabularx}{\linewidth}{@{}>{\footnotesize\ttfamily\raggedright\arraybackslash}p{5.6cm}C{1.4cm}X@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Método} & \textbf{Descrição} \\
+\midrule
+/v1/users/me/wallet        & POST    & Cria a carteira \emph{on-chain} do utilizador \\
+\rowsep
+/v1/users/me/wallet        & GET     & Consulta a carteira do utilizador \\
+\rowsep
+/v1/wallet/init            & GET     & Inicializa/garante a carteira na primeira sessão \\
+\rowsep
+/v1/wallet/address         & GET     & Devolve o endereço público da carteira \\
+\rowsep
+/v1/wallets/\{id\}/\allowbreak balance & GET     & Consulta o saldo de uma carteira \\
+\rowsep
+/v1/transactions           & POST    & Cria uma transferência \emph{on-chain} \\
+\rowsep
+/v1/transactions           & GET     & Lista as transações do utilizador \\
+\rowsep
+/v1/transactions/\{id\}    & GET     & Consulta o detalhe de uma transação \\
+\rowsep
+/v1/transactions/refund    & POST    & Solicita o reembolso de uma transação \\
+\rowsep
+/v1/transactions/\allowbreak refund/\{id\}/\allowbreak accept & POST & Aceita um pedido de reembolso \\
+\rowsep
+/v1/transactions/\allowbreak refund/\{id\}/\allowbreak deny   & POST & Recusa um pedido de reembolso \\
+\rowsep
+/v1/blockchain/\{address\}/\allowbreak balance & GET & Consulta o saldo \emph{on-chain} de um endereço \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Existe ainda um conjunto de \emph{endpoints} auxiliares sob o prefixo \texttt{/v1/dev/*}
+(financiamento de carteiras, \emph{retry} de transações e consultas de saldo \emph{on-chain})
+destinados exclusivamente a testes locais e não expostos em produção.
 
 \subsection{Notifications Service (Serviço de Notificações)}
 
@@ -712,7 +758,47 @@ Payment Frontend (React) & --- & \path{node:20-slim} \\
 \subsection{Kubernetes (Produção)}
 
 Em produção, a plataforma corre no cluster Kubernetes do DETI/UA, no namespace
-\texttt{tenant-grupo3-egs-deti-ua-pt}~\cite{kubernetes}. Os manifestos disponíveis cobrem:
+\texttt{tenant-grupo3-egs-deti-ua-pt}~\cite{kubernetes}. Ao contrário do encaminhamento
+local por subdomínios, em produção todos os serviços são expostos a partir de um
+\textbf{único \emph{host}} (\texttt{grupo3-egs-deti-ua.pt}) com \textbf{encaminhamento por
+\emph{path}}, recorrendo a objetos \texttt{Ingress} padrão do Kubernetes anotados com
+\texttt{ingressClassName: traefik} e terminação TLS (\texttt{secretName: transactions-tls}).
+A única exceção é o Vault, exposto no subdomínio dedicado \texttt{vault.grupo3-egs-deti-ua.pt}.
+A Tabela~\ref{tab:k8s-routing} resume o mapeamento de \emph{paths} e a Tabela~\ref{tab:k8s-manifests}
+enumera os manifestos disponíveis.
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\caption{Encaminhamento por \emph{path} no Ingress Traefik (produção)}
+\label{tab:k8s-routing}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}L{3.6cm}>{\ttfamily\footnotesize}L{4.3cm}X@{}}
+\toprule
+\textbf{\normalfont Path} & \textbf{\normalfont Serviço (port)} & \textbf{\normalfont Descrição} \\
+\midrule
+/transactions      & transactions-frontend-svc:80   & \emph{Frontend} principal (carteira) \\
+\rowsep
+/transactions-api  & transactions-service:8081      & API/BFF de transações \\
+\rowsep
+/payment           & payment-frontend-svc:80        & \emph{Frontend} de pagamento \\
+\rowsep
+/payment-api       & payment-service:5002           & API de pagamentos \\
+\rowsep
+/iam               & iam-service:5000               & Serviço IAM \\
+\rowsep
+/notifications     & notifications-api:8080         & Serviço de notificações \\
+\rowsep
+/keycloak          & keycloak:8080                  & Keycloak (\emph{realm} microservices) \\
+\rowsep
+/payment-keycloak  & payment-keycloak:8080          & Keycloak (\emph{realm} pagamentos) \\
+\rowsep
+/grafana           & grafana:3000                   & Observabilidade \\
+\rowsep
+vault.\ldots/      & vault:8200                     & Vault (subdomínio próprio) \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{table}[H]
 \centering
@@ -720,28 +806,45 @@ Em produção, a plataforma corre no cluster Kubernetes do DETI/UA, no namespace
 \setlength{\tabcolsep}{5pt}
 \caption{Manifestos Kubernetes disponíveis}
 \label{tab:k8s-manifests}
-\begin{tabularx}{\linewidth}{@{}L{5.2cm}X@{}}
+\begin{tabularx}{\linewidth}{@{}L{4.8cm}X@{}}
 \toprule
 \textbf{Manifesto} & \textbf{Recursos definidos} \\
 \midrule
-\path{k8s/transactions-frontend.yaml} &
-  Deployment (2 réplicas) \newline
-  ConfigMap (\texttt{VITE\_TRANSACTIONS\_BASE\_URL}) \newline
-  Service ClusterIP \newline
-  Traefik Ingress (\texttt{transactions-frontend.\allowbreak grupo3-egs-deti-ua.pt}) \\
+\path{transactions-frontend.yaml} &
+  Deployment (2 réplicas), Service ClusterIP, Ingress (\texttt{/transactions}) \\
 \rowsep
-\path{k8s/notifications.yaml} &
-  Notifications API Deployment (2 réplicas) \newline
-  PostgreSQL Deployment + PVC (1\,Gi) \newline
-  Redis Deployment \newline
-  4 Services ClusterIP + K8s Secret \newline
-  Traefik Ingress (\texttt{notifications.\allowbreak grupo3-egs-deti-ua.pt}) \\
+\path{transactions-service.yaml} &
+  Deployment da API + Deployment PostgreSQL com PVC (1\,Gi), ConfigMap, Secrets, Services, Ingress (\texttt{/transactions-api}) \\
 \rowsep
-\path{k8s/grafana.yaml} &
-  Grafana Deployment \newline
-  3 ConfigMaps: datasources, providers, 4 dashboards JSON \newline
-  K8s Secret, Service ClusterIP \newline
-  Traefik Ingress (\texttt{grafana.\allowbreak grupo3-egs-deti-ua.pt}) \\
+\path{payment-frontend.yaml} &
+  Deployment, ConfigMap, Service, Ingress (\texttt{/payment} e \texttt{/payment-api}) \\
+\rowsep
+\path{payment-service.yaml} &
+  Deployment da API + Deployment PostgreSQL com PVC (1\,Gi), ConfigMap, Secrets, Services, Ingress (\texttt{/payment-api}) \\
+\rowsep
+\path{iam-service.yaml} &
+  Deployment (2 réplicas), ConfigMap, Secret, Service, Ingress (\texttt{/iam}) \\
+\rowsep
+\path{notifications-service.yaml} &
+  Deployment da API + Deployment PostgreSQL com PVC (1\,Gi) + Deployment Redis, ConfigMap, Secrets, Services, Ingress (\texttt{/notifications}) \\
+\rowsep
+\path{keycloak.yaml} &
+  Deployment, ConfigMap (\emph{realm}), Secret, Service e dois Ingress (\texttt{/keycloak} HTTPS + \emph{redirect} HTTP$\rightarrow$HTTPS) \\
+\rowsep
+\path{payment-keycloak.yaml} &
+  Deployment, ConfigMap (\emph{realm} de pagamentos), Secret, Service, Ingress (\texttt{/payment-keycloak}) \\
+\rowsep
+\path{vault.yaml} &
+  Deployment, Service, Ingress (subdomínio \texttt{vault.\allowbreak grupo3-egs-deti-ua.pt}) \\
+\rowsep
+\path{grafana.yaml} &
+  Deployment, 3 ConfigMaps (\emph{datasources}, \emph{providers}, \emph{dashboards}), Secret, Service, Ingress (\texttt{/grafana}) \\
+\rowsep
+\path{stripe-listener.yaml} &
+  Deployment do \emph{listener} Stripe CLI para reencaminhar \emph{webhooks} (sem Ingress) \\
+\rowsep
+\path{*-tls-secret.yaml} &
+  Três Secrets TLS (\texttt{transactions-tls}, \texttt{payment-tls}, \texttt{keycloak-tls}) com os certificados de terminação HTTPS \\
 \bottomrule
 \end{tabularx}
 \end{table}
