@@ -187,11 +187,13 @@ Segredos & HashiCorp Vault (AppRole + \emph{agent sidecars}) \\
 \rowsep
 Observabilidade & Dashboards Grafana 10 \\
 \rowsep
-Desenvolvimento & Docker Compose ($\approx$17 contentores) \\
+Desenvolvimento & Docker Compose (24 contentores) \\
 \rowsep
 Produção & Kubernetes (cluster DETI/UA) \\
 \rowsep
-Repositório & \href{https://github.com/Rubenc1234/EGS_project}{github.com/Rubenc1234/EGS\_project} \\
+Repositório & \url{https://github.com/Rubenc1234/EGS_project} \\
+\rowsep
+\emph{Vídeo demo} & \url{https://drive.google.com/file/d/1gJ6fvjBPGqH-XALS-913JTkQdW-j82iO/view?usp=sharing} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -283,7 +285,7 @@ a plataforma.
 \toprule
 \textbf{Serviço} & \textbf{Responsabilidade} & \textbf{Framework} & \textbf{Porta} & \textbf{Bibliotecas-chave} \\
 \midrule
-\path{iam_service}           & Registo, login e validação de \emph{tokens} via Keycloak & Python/Flask 3.1 & 5000 & python-keycloak, Flask \\
+\path{iam_service}           & Registo, login e validação de \emph{tokens} via Keycloak & Python/Flask 3.1 & 5000 & requests, Flask \\
 \rowsep
 \path{payment_service}       & Pagamentos com cartão, OTP, recibos, cartões guardados   & Python/Flask 3.1 & 5002 & Stripe 14.4, Twilio, SQLAlchemy, ReportLab \\
 \rowsep
@@ -291,7 +293,7 @@ a plataforma.
 \rowsep
 \path{notifications_service} & Clientes, subscrições, Web Push em tempo real & Go/Gin & 8080 & gin, gorm, webpush-go, jwt \\
 \rowsep
-frontend                     & UI principal da carteira e histórico & React 18 + TypeScript + Vite & 80 & React Router, Axios, React Query \\
+frontend                     & UI principal da carteira e histórico & React 18 + TypeScript + Vite & 80 & React Router, Axios, React Query, MUI \\
 \rowsep
 payment frontend             & UI de pagamento dedicada & React 18 + TypeScript + MUI & 5174 & @stripe/react-stripe-js, MUI \\
 \bottomrule
@@ -319,7 +321,7 @@ por camada funcional.
 \endhead
 \bottomrule
 \endfoot
-\emph{Frontend} & React + TypeScript + Vite & React 18.2, Vite 5.5, servido via nginx \\
+\emph{Frontend} & React + TypeScript + Vite & React 18.2, Vite 7.3, servido via nginx \\
 \rowsep
  & Material-UI (MUI) & 7.3.9biblioteca de componentes UI \\
 \rowsep
@@ -722,8 +724,10 @@ VAPID por \emph{tenant} & Isolamento criptográfico entre clientes nas notifica�
 \subsection{Docker Compose (Desenvolvimento)}
 
 Em desenvolvimento, a plataforma é orquestrada com Docker Compose num ficheiro raiz que
-define \textbf{17 contentores}, 4 redes e 6 volumes nomeados~\cite{docker-multistage}.
-Todos os serviços de aplicação usam \emph{multi-stage builds}:
+define \textbf{24 contentores} (15 de aplicação/infraestrutura e 9 \emph{agentes Vault}),
+4 redes e 6 volumes nomeados~\cite{docker-multistage}.
+O \emph{frontend} principal e o serviço de notificações usam \emph{multi-stage builds};
+os restantes correm em imagens \emph{single-stage}:
 
 \begin{table}[H]
 \centering
@@ -735,11 +739,11 @@ Todos os serviços de aplicação usam \emph{multi-stage builds}:
 \toprule
 \textbf{Serviço / Componente} & \textbf{Imagem de Build} & \textbf{Imagem de Runtime} \\
 \midrule
-Transactions (Java) & \path{maven:3.9-eclipse-temurin-21} & \path{eclipse-temurin:21-jre} \\
+Transactions (Java) & --- (\emph{jar} pré-compilado) & \path{eclipse-temurin:21-jre} \\
 \rowsep
 Payment Service (Python) & --- & \path{python:3.11-slim} \\
 \rowsep
-Notifications (Go) & \path{golang:alpine} & \path{alpine} \\
+Notifications (Go) & \path{golang:1.26-alpine} & \path{alpine} \\
 \rowsep
 Transactions Frontend (React) & \path{node:20-slim} & \path{nginx:alpine} \\
 \rowsep
@@ -869,7 +873,7 @@ Segredos & Vault agents $\to$ \texttt{.env} & K8s Secrets \\
 \rowsep
 Armazenamento & Volumes nomeados & PersistentVolumeClaims \\
 \rowsep
-Âmbito & $\approx$17 contentores, um \emph{host} & Namespace, distribuído por nós \\
+Âmbito & 24 contentores, um \emph{host} & Namespace, distribuído por nós \\
 \rowsep
 Limites de recursos & Não definidos & CPU/memória por contentor \\
 \bottomrule
@@ -894,7 +898,7 @@ própria instância, refletindo a separação de domínios da arquitetura.
   \item \texttt{main\_dashboard}: visão global do sistema --- transações realizadas,
         notificações enviadas, pagamentos concluídos;
   \item \texttt{payments\_dashboard}: volume de pagamentos, receita, taxa de sucesso,
-        estatísticas OTP, padrões horários (18 painéis);
+        estatísticas OTP, padrões horários (12 painéis);
   \item \texttt{transactions\_dashboard}: métricas \emph{blockchain} --- transações
         on-chain, saldos, taxas de gas;
   \item \texttt{notifications\_dashboard}: entrega de notificações, falhas, canais ativos.
