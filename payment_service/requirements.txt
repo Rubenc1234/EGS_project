@@ -10,4 +10,4 @@ SQLAlchemy==2.0.48
 stripe==14.4.1
 twilio==9.10.4
 Werkzeug==3.1.6
-pytest==9.0.2
+pytest==9.0.3
